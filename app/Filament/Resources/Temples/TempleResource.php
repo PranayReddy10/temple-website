@@ -5,6 +5,10 @@ namespace App\Filament\Resources\Temples;
 use App\Filament\Resources\Temples\Pages\CreateTemple;
 use App\Filament\Resources\Temples\Pages\EditTemple;
 use App\Filament\Resources\Temples\Pages\ListTemples;
+use App\Filament\Resources\Temples\RelationManagers\ClosuresRelationManager;
+use App\Filament\Resources\Temples\RelationManagers\PhotosRelationManager;
+use App\Filament\Resources\Temples\RelationManagers\PujasRelationManager;
+use App\Filament\Resources\Temples\RelationManagers\TimingsRelationManager;
 use App\Filament\Resources\Temples\Schemas\TempleForm;
 use App\Filament\Resources\Temples\Tables\TemplesTable;
 use App\Models\Temple;
@@ -70,6 +74,16 @@ class TempleResource extends Resource
     public static function getNavigationBadgeTooltip(): ?string
     {
         return 'Temples waiting for review';
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            PhotosRelationManager::class,
+            TimingsRelationManager::class,
+            PujasRelationManager::class,
+            ClosuresRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

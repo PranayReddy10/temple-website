@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Temples\Schemas;
 use App\Enums\TempleStatus;
 use App\Enums\VerificationStatus;
 use App\Models\District;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -26,6 +27,8 @@ class TempleForm
                 self::identitySection(),
                 self::locationSection(),
                 self::contentSection(),
+                self::rulesSection(),
+                self::facilitiesSection(),
                 self::contactSection(),
                 self::trustSection(),
                 self::publishingSection(),
@@ -195,6 +198,63 @@ class TempleForm
                     ->label('Built period')
                     ->maxLength(255)
                     ->helperText('Free text, because many temples are dated only by century or era.'),
+            ]);
+    }
+
+    protected static function rulesSection(): Section
+    {
+        return Section::make('Visitor rules')
+            ->description('Only rules the temple actually publishes. A guessed dress code can turn a devotee away at the gate.')
+            ->icon('heroicon-o-clipboard-document-check')
+            ->columns(2)
+            ->collapsed()
+            ->schema([
+                Textarea::make('dress_code')
+                    ->rows(2)
+                    ->columnSpanFull()
+                    ->placeholder('e.g. Traditional dress required for men: dhoti or pyjama with upper cloth'),
+
+                TextInput::make('photography_policy')
+                    ->label('Photography')
+                    ->maxLength(255)
+                    ->placeholder('e.g. Not permitted inside the sanctum'),
+
+                TextInput::make('mobile_policy')
+                    ->label('Mobile phones')
+                    ->maxLength(255)
+                    ->placeholder('e.g. Must be deposited at the cloakroom'),
+
+                TextInput::make('footwear_policy')
+                    ->label('Footwear')
+                    ->maxLength(255)
+                    ->placeholder('e.g. To be left at the designated stand'),
+
+                Textarea::make('entry_rules')
+                    ->label('Entry rules')
+                    ->rows(3)
+                    ->columnSpanFull(),
+
+                Textarea::make('queue_information')
+                    ->label('Queue information')
+                    ->rows(3)
+                    ->columnSpanFull()
+                    ->placeholder('e.g. Free darshan queue, special entry darshan, senior citizen queue'),
+            ]);
+    }
+
+    protected static function facilitiesSection(): Section
+    {
+        return Section::make('Facilities')
+            ->description('Tick only what has been confirmed. An unverified claim of wheelchair access is worse than no claim at all.')
+            ->icon('heroicon-o-building-office')
+            ->collapsed()
+            ->schema([
+                CheckboxList::make('facilities')
+                    ->label('Available facilities')
+                    ->relationship('facilities', 'name')
+                    ->columns(3)
+                    ->searchable()
+                    ->bulkToggleable(),
             ]);
     }
 

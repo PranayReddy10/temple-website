@@ -114,7 +114,53 @@ To choose the password yourself, set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in
 Re-running the seeder never overwrites an existing admin account, so it is safe
 to run again after adding new states or deities.
 
-## 7. Cache for production
+## 7. Media storage on DigitalOcean Spaces
+
+Temple photos do **not** belong on the web host. A shared Hostinger plan has a
+modest disk quota and no CDN, and a gallery across thousands of temples would
+exhaust both. Spaces is S3-compatible, so Laravel's own `s3` driver talks to it
+with no DigitalOcean-specific package.
+
+1. In the DigitalOcean control panel, create a **Space** and choose the region
+   closest to your users (`blr1` for India).
+2. Enable the **CDN** on that Space.
+3. Create a **Spaces access key** and copy the key and secret. The secret is
+   shown once.
+4. Set the file listing to **restricted**; individual uploads are made public by
+   the app, so the bucket itself does not need to be browsable.
+5. Fill in `.env`:
+
+```dotenv
+MEDIA_DISK=spaces
+DO_SPACES_REGION=blr1
+DO_SPACES_BUCKET=your-space-name
+DO_SPACES_KEY=...
+DO_SPACES_SECRET=...
+DO_SPACES_ENDPOINT=https://blr1.digitaloceanspaces.com
+DO_SPACES_CDN_ENDPOINT=https://your-space-name.blr1.cdn.digitaloceanspaces.com
+```
+
+Point `DO_SPACES_CDN_ENDPOINT` at the **CDN** hostname, not the origin.
+Getting this wrong works — and quietly serves every image from the origin,
+which is slower and costs more in bandwidth.
+
+`MEDIA_DISK` defaults to the local `public` disk, so a fresh clone, the test
+suite and CI all run with no DigitalOcean account at all. Only production needs
+these values.
+
+Each photo row records the disk it was written to, so photos uploaded before
+the switch keep resolving from local storage afterwards. Moving existing files
+is a separate copy step, not something the switch does for you.
+
+### Image variants
+
+Uploads are resized to a 1200px medium and a 400px thumbnail, in WebP where the
+server's GD build supports it and JPEG otherwise. This runs **synchronously**
+during the admin upload, which is the right trade on shared hosting: there is no
+long-running queue worker, and the cost falls on an editor rather than a
+devotee. When volume grows, move `TemplePhotoProcessor` into a queued job.
+
+## 8. Cache for production
 
 ```bash
 php artisan config:cache
@@ -126,7 +172,7 @@ php artisan storage:link
 Run all four again after **every** deploy that changes config, routes or views.
 A stale config cache is the usual reason a `.env` change appears to do nothing.
 
-## 8. Permissions
+## 9. Permissions
 
 ```bash
 chmod -R 775 storage bootstrap/cache
@@ -176,13 +222,17 @@ notifications later in the roadmap.
 
 ## When to leave shared hosting
 
-Shared hosting is right for slices 1 to 4. Plan to move to a VPS when any of
-these become true:
+Moving photos to Spaces removes the reason that would otherwise have forced a
+VPS at slice 2, so shared hosting now carries the project comfortably through
+slice 4 and well beyond. Revisit when any of these become true:
 
-- Temple photo storage outgrows the plan's disk quota (slice 2 adds galleries).
-- Queued image processing needs a long-running worker rather than cron.
-- The API needs Redis for caching or rate limiting.
+- Image processing volume makes synchronous resizing on upload too slow for
+  editors, and a real queue worker is needed.
+- The API needs Redis for caching or rate limiting rather than the database.
 - Traffic makes shared CPU limits the bottleneck.
+- Full-text temple search outgrows MySQL and needs a dedicated search service.
+
+Note that none of these is about storage any more.
 
 Because the Flutter app only ever talks to `/api/v1`, that move is a hosting
 change, not an app release.

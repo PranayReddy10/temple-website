@@ -54,10 +54,10 @@ leaves the system in a working state. **Nothing is built all at once.**
 | # | Slice | Scope | Status |
 | --- | --- | --- | --- |
 | 1 | **Admin auth + Temple CRUD** | Admin login, roles, temples table, deities, categories, states/districts, draft→published workflow, trust labelling, seed data | ✅ **Done** |
-| 2 | Temple media + timings | Photo gallery upload, image processing, opening/darshan/aarti timings, special-day and closure overrides | ⬜ Next |
-| 3 | Puja / Seva + facilities | Published pujas with time, duration, eligibility, fee, official booking route; visitor rules and facilities | ⬜ |
-| 4 | Public REST API v1 | Read endpoints for the Flutter app: search, filter, nearby, temple detail, deity and category listings | ⬜ |
-| 5 | Flutter app shell | Temple-themed design system, 5-tab navigation (Home, Explore, Passport, Yatra, Profile), API client | ⬜ |
+| 2 | **Temple media + timings** | Photo gallery on DigitalOcean Spaces with generated variants, opening/darshan/aarti timings, closure and special-hour overrides | ✅ **Done** |
+| 3 | **Puja / Seva + facilities** | Published pujas with time, duration, eligibility, fee and official booking route; visitor rules; facilities including accessibility | ✅ **Done** |
+| 4 | **Public REST API v1** | Read endpoints for the Flutter app: search, filter, nearby with real distance ordering, temple detail, deity/category/state/facility listings | ✅ **Done** |
+| 5 | Flutter app shell | Temple-themed design system, 5-tab navigation (Home, Explore, Passport, Yatra, Profile), API client | ⬜ **Next** |
 | 6 | Explorer + temple profile | Search by name/deity/city/state, nearby, filters, full temple profile screen | ⬜ |
 | 7 | User accounts + Passport | Registration, visited/unvisited state, manual check-in, digital stamps, collections | ⬜ |
 | 8 | Photo Stamp | Upload visit photo, generate temple-themed memory card, save original and stamp separately, share | ⬜ |
@@ -79,6 +79,21 @@ AI assistant grounded in verified temple data · expanded Indian-language
 support.
 
 ---
+
+## Storage
+
+Temple photos live in **DigitalOcean Spaces**, not on the web host. Spaces is
+S3-compatible, so Laravel's own `s3` driver reaches it with no
+DigitalOcean-specific package, and images are delivered from its CDN.
+
+This matters for the hosting plan: photo storage was the thing that would
+otherwise have forced a move off shared Hostinger at slice 2. With media
+elsewhere, shared hosting carries the project comfortably through slice 4.
+
+`MEDIA_DISK` defaults to the local `public` disk, so a fresh clone, the test
+suite and CI all run with no DigitalOcean account. Only production sets it to
+`spaces`. Each photo row records the disk it was written to, so photos uploaded
+before the switch keep resolving afterwards.
 
 ## Data quality is the product
 

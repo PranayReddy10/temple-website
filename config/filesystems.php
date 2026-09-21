@@ -17,6 +17,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Media Disk
+    |--------------------------------------------------------------------------
+    |
+    | Where temple photos are written and served from. Production sets this to
+    | 'spaces'. It deliberately defaults to the local 'public' disk so that a
+    | fresh clone, the test suite and CI all work with no cloud credentials at
+    | all — nobody needs a DigitalOcean account to run the project.
+    |
+    */
+
+    'media' => env('MEDIA_DISK', 'public'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |
@@ -42,6 +56,33 @@ return [
             'driver' => 'local',
             'root' => storage_path('app/public'),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
+        /*
+         * DigitalOcean Spaces. S3-compatible, so Laravel's own s3 driver works
+         * with a custom endpoint — no DigitalOcean-specific package needed.
+         *
+         * Keeping temple photos here rather than on the web host matters: a
+         * shared Hostinger plan has a modest disk quota and no CDN, and a
+         * gallery of thousands of temples would exhaust both. Spaces also means
+         * the app server can stay small for much longer.
+         *
+         * 'url' should be the CDN endpoint (…​.cdn.digitaloceanspaces.com), not
+         * the origin, so delivered images come off the edge cache.
+         */
+        'spaces' => [
+            'driver' => 's3',
+            'key' => env('DO_SPACES_KEY'),
+            'secret' => env('DO_SPACES_SECRET'),
+            'region' => env('DO_SPACES_REGION', 'blr1'),
+            'bucket' => env('DO_SPACES_BUCKET'),
+            'endpoint' => env('DO_SPACES_ENDPOINT'),
+            'url' => env('DO_SPACES_CDN_ENDPOINT', env('DO_SPACES_ENDPOINT')),
+            // Spaces uses virtual-host style addressing, like S3 itself.
+            'use_path_style_endpoint' => false,
             'visibility' => 'public',
             'throw' => false,
             'report' => false,
