@@ -9,6 +9,12 @@ admin theme is plain CSS on purpose.
 - Required extensions (all standard on Hostinger): `pdo_mysql`, `mbstring`,
   `openssl`, `tokenizer`, `xml`, `ctype`, `json`, `bcmath`, `fileinfo`, `curl`.
 
+`composer.json` pins `config.platform.php` to `8.2.0`. That makes Composer
+resolve every dependency against PHP 8.2 regardless of which PHP the developer
+runs locally, so `composer install` on an 8.2 or 8.3 Hostinger plan cannot hit
+a package that secretly needs 8.4. Do not remove the pin without also raising
+the minimum PHP version documented here.
+
 ---
 
 ## 1. Create the database
