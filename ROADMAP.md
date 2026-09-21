@@ -26,12 +26,17 @@ backend can migrate to Node/VPS in a later phase without an app release.
 
 ---
 
-## Why Laravel + MySQL
+## Why Laravel 12 + MySQL
 
 Hosting is **shared Hostinger**, which runs PHP 8.2+ and MySQL 8 on every plan
 but cannot run persistent Node.js processes (that needs a VPS). The project
 plan lists Laravel as an accepted backend, so we take the option that deploys
 to the hosting we actually have.
+
+Laravel **12**, not 11: the 11.x line is past security support and carries two
+unpatched advisories (CRLF injection in the default email rule, signed-URL path
+confusion) that were fixed only in 12.x. Laravel 12 needs PHP 8.2, which shared
+Hostinger has; Laravel 13 needs PHP 8.3, which is less reliably available.
 
 Geospatial "temples near me" uses MySQL spatial functions
 (`ST_Distance_Sphere`) rather than PostGIS. This is comfortable well past
@@ -48,7 +53,7 @@ leaves the system in a working state. **Nothing is built all at once.**
 
 | # | Slice | Scope | Status |
 | --- | --- | --- | --- |
-| 1 | **Admin auth + Temple CRUD** | Admin login, roles, temples table, deities, categories, states/districts, draft→published workflow, seed data | ✅ **Done** |
+| 1 | **Admin auth + Temple CRUD** | Admin login, roles, temples table, deities, categories, states/districts, draft→published workflow, trust labelling, seed data | ✅ **Done** |
 | 2 | Temple media + timings | Photo gallery upload, image processing, opening/darshan/aarti timings, special-day and closure overrides | ⬜ Next |
 | 3 | Puja / Seva + facilities | Published pujas with time, duration, eligibility, fee, official booking route; visitor rules and facilities | ⬜ |
 | 4 | Public REST API v1 | Read endpoints for the Flutter app: search, filter, nearby, temple detail, deity and category listings | ⬜ |
