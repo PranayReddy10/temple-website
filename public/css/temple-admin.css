@@ -1,0 +1,71 @@
+/*
+ * Temple admin theme.
+ *
+ * Plain CSS on purpose: shared Hostinger plans have no Node toolchain, so the
+ * admin panel must never need an npm build to deploy. Filament's own compiled
+ * stylesheet ships in the package; this file layers the temple identity on top
+ * using Filament's CSS custom properties and a few scoped overrides.
+ */
+
+:root {
+    --temple-saffron: #e07a1f;
+    --temple-kumkum: #9b1b30;
+    --temple-gold: #c9a227;
+    --temple-sandal: #f5ebdc;
+    --temple-deep: #3e2723;
+}
+
+/* --- Sign-in screen: warm sandal wash instead of flat grey --- */
+.fi-simple-layout {
+    background-image:
+        radial-gradient(circle at 18% 12%, rgba(224, 122, 31, 0.16), transparent 42%),
+        radial-gradient(circle at 82% 88%, rgba(155, 27, 48, 0.14), transparent 45%);
+    background-color: var(--temple-sandal);
+}
+
+.dark .fi-simple-layout {
+    background-image:
+        radial-gradient(circle at 18% 12%, rgba(224, 122, 31, 0.12), transparent 42%),
+        radial-gradient(circle at 82% 88%, rgba(155, 27, 48, 0.12), transparent 45%);
+    background-color: var(--temple-deep);
+}
+
+/* --- Brand mark carries the saffron-to-kumkum gradient --- */
+.fi-logo {
+    background: linear-gradient(95deg, var(--temple-saffron), var(--temple-kumkum));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+}
+
+/* --- A thin gold rule under the topbar, echoing temple trim --- */
+.fi-topbar nav {
+    border-bottom: 2px solid transparent;
+    border-image: linear-gradient(
+            90deg,
+            var(--temple-saffron),
+            var(--temple-gold),
+            var(--temple-kumkum)
+        )
+        1;
+}
+
+/* --- Verification badges must stay visually distinct (plan, section 20) --- */
+.fi-badge {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+/* --- Section headings in forms read as temple signage --- */
+.fi-section-header-heading {
+    letter-spacing: -0.01em;
+}
+
+/* Respect users who ask for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+    .fi-simple-layout {
+        background-image: none;
+    }
+}

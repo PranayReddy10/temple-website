@@ -1,0 +1,326 @@
+<?php
+
+namespace App\Filament\Resources\Temples\Schemas;
+
+use App\Enums\TempleStatus;
+use App\Enums\VerificationStatus;
+use App\Models\District;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+
+class TempleForm
+{
+    public static function configure(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                self::identitySection(),
+                self::locationSection(),
+                self::contentSection(),
+                self::contactSection(),
+                self::trustSection(),
+                self::publishingSection(),
+            ])
+            ->columns(1);
+    }
+
+    protected static function identitySection(): Section
+    {
+        return Section::make('Identity')
+            ->description('The temple name as it is commonly known, plus the local and alternate names devotees actually search for.')
+            ->icon('heroicon-o-building-library')
+            ->columns(2)
+            ->schema([
+                TextInput::make('name')
+                    ->label('Temple name')
+                    ->required()
+                    ->maxLength(255)
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(function (Get $get, Set $set, ?string $state): void {
+                        // Keep the slug in step while drafting, but never
+                        // silently rewrite the URL of a published temple.
+                        if (self::statusOf($get('status')) !== TempleStatus::Published) {
+                            $set('slug', Str::slug((string) $state));
+                        }
+                    }),
+
+                TextInput::make('slug')
+                    ->label('URL slug')
+                    ->required()
+                    ->maxLength(255)
+                    ->unique(ignoreRecord: true)
+                    ->helperText('Used in the public web address. Changing it on a published temple breaks existing links.')
+                    ->disabled(fn (): bool => ! Auth::user()?->isSuperAdmin())
+                    ->dehydrated(),
+
+                Select::make('deity_id')
+                    ->label('Primary deity')
+                    ->relationship('deity', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->native(false),
+
+                Select::make('categories')
+                    ->label('Pilgrimage circuits and categories')
+                    ->relationship('categories', 'name')
+                    ->multiple()
+                    ->searchable()
+                    ->preload()
+                    ->helperText('For example Jyotirlinga, Shakti Peetha or Char Dham.'),
+
+                Repeater::make('aliases')
+                    ->label('Alternate and local names')
+                    ->relationship()
+                    ->schema([
+                        TextInput::make('name')
+                            ->label('Name')
+                            ->required()
+                            ->maxLength(255),
+                        Select::make('locale')
+                            ->label('Language')
+                            ->options(self::locales())
+                            ->default('en')
+                            ->required()
+                            ->native(false),
+                    ])
+                    ->columns(2)
+                    ->defaultItems(0)
+                    ->addActionLabel('Add another name')
+                    ->helperText('A devotee searching "Tirupati" should still find Sri Venkateswara Swamy Temple.')
+                    ->columnSpanFull(),
+            ]);
+    }
+
+    protected static function locationSection(): Section
+    {
+        return Section::make('Location')
+            ->description('Where the temple is, and the coordinates that power the map and "temples near me".')
+            ->icon('heroicon-o-map-pin')
+            ->columns(2)
+            ->schema([
+                Select::make('state_id')
+                    ->label('State / Union Territory')
+                    ->relationship('state', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->native(false)
+                    ->live()
+                    ->afterStateUpdated(fn (Set $set) => $set('district_id', null)),
+
+                Select::make('district_id')
+                    ->label('District')
+                    ->options(fn (Get $get): array => $get('state_id')
+                        ? District::where('state_id', $get('state_id'))->orderBy('name')->pluck('name', 'id')->all()
+                        : [])
+                    ->searchable()
+                    ->native(false)
+                    ->disabled(fn (Get $get): bool => ! $get('state_id'))
+                    ->helperText('Choose a state first.'),
+
+                TextInput::make('city')
+                    ->label('City / town / village')
+                    ->maxLength(255),
+
+                TextInput::make('pincode')
+                    ->label('PIN code')
+                    ->maxLength(10)
+                    ->rule('regex:/^[1-9][0-9]{5}$/')
+                    ->helperText('Six digits, not starting with zero.'),
+
+                Textarea::make('address')
+                    ->label('Full address')
+                    ->rows(3)
+                    ->columnSpanFull(),
+
+                TextInput::make('latitude')
+                    ->numeric()
+                    ->minValue(-90)
+                    ->maxValue(90)
+                    ->step('0.0000001')
+                    ->helperText('Decimal degrees, e.g. 17.3850000.')
+                    // Coordinates are only meaningful as a pair, so neither is
+                    // accepted without the other.
+                    ->requiredWith('longitude'),
+
+                TextInput::make('longitude')
+                    ->numeric()
+                    ->minValue(-180)
+                    ->maxValue(180)
+                    ->step('0.0000001')
+                    ->helperText('Decimal degrees, e.g. 78.4867000.')
+                    ->requiredWith('latitude'),
+            ]);
+    }
+
+    protected static function contentSection(): Section
+    {
+        return Section::make('Description and significance')
+            ->description('What a devotee should know before visiting.')
+            ->icon('heroicon-o-book-open')
+            ->columns(2)
+            ->collapsed()
+            ->schema([
+                Textarea::make('short_description')
+                    ->label('Short description')
+                    ->rows(3)
+                    ->maxLength(500)
+                    ->helperText('One or two sentences, shown in search results and list cards.')
+                    ->columnSpanFull(),
+
+                Textarea::make('history')
+                    ->label('History')
+                    ->rows(8)
+                    ->columnSpanFull(),
+
+                Textarea::make('significance')
+                    ->label('Religious significance')
+                    ->rows(8)
+                    ->columnSpanFull(),
+
+                TextInput::make('architecture_style')
+                    ->label('Architecture style')
+                    ->maxLength(255)
+                    ->helperText('For example Dravidian, Nagara, Hoysala, Kalinga.'),
+
+                TextInput::make('built_period')
+                    ->label('Built period')
+                    ->maxLength(255)
+                    ->helperText('Free text, because many temples are dated only by century or era.'),
+            ]);
+    }
+
+    protected static function contactSection(): Section
+    {
+        return Section::make('Official contact')
+            ->description('Only details published by the temple or a government source.')
+            ->icon('heroicon-o-phone')
+            ->columns(2)
+            ->collapsed()
+            ->schema([
+                TextInput::make('official_website')
+                    ->label('Official website')
+                    ->url()
+                    ->maxLength(255)
+                    ->prefixIcon('heroicon-o-globe-alt'),
+
+                TextInput::make('contact_phone')
+                    ->label('Phone')
+                    ->tel()
+                    ->maxLength(40),
+
+                TextInput::make('contact_email')
+                    ->label('Email')
+                    ->email()
+                    ->maxLength(255),
+            ]);
+    }
+
+    protected static function trustSection(): Section
+    {
+        return Section::make('Trust and provenance')
+            ->description('Where this information came from, and how far it can be trusted. Official, verified and community content must never be blurred together.')
+            ->icon('heroicon-o-shield-check')
+            ->columns(2)
+            ->schema([
+                Select::make('verification_status')
+                    ->label('Verification level')
+                    ->options(VerificationStatus::class)
+                    ->default(VerificationStatus::Unverified)
+                    ->required()
+                    ->native(false)
+                    ->live()
+                    ->helperText(fn (Get $get): string => self::verificationOf($get('verification_status'))?->description() ?? ''),
+
+                DatePicker::make('last_verified_at')
+                    ->label('Last verified on')
+                    ->maxDate(now())
+                    ->helperText('Timings and fees drift. Records not checked for a year are flagged as stale.'),
+
+                TextInput::make('source_name')
+                    ->label('Source name')
+                    ->maxLength(255)
+                    ->placeholder('e.g. TTD official website, ASI listing')
+                    // Claiming "verified" or "official" without naming a source
+                    // is exactly the sloppiness the plan warns against.
+                    ->required(fn (Get $get): bool => self::verificationOf($get('verification_status'))?->requiresSource() ?? false),
+
+                TextInput::make('source_url')
+                    ->label('Source URL')
+                    ->url()
+                    ->maxLength(255)
+                    ->required(fn (Get $get): bool => self::verificationOf($get('verification_status'))?->requiresSource() ?? false),
+            ]);
+    }
+
+    protected static function publishingSection(): Section
+    {
+        return Section::make('Publishing')
+            ->icon('heroicon-o-check-badge')
+            ->columns(2)
+            ->schema([
+                Select::make('status')
+                    ->label('Status')
+                    ->options(function (): array {
+                        // Editors move records to review; only a super admin
+                        // decides what actually goes live.
+                        $canPublish = Auth::user()?->canPublish() ?? true;
+
+                        return collect(TempleStatus::cases())
+                            ->reject(fn (TempleStatus $case) => $case === TempleStatus::Published && ! $canPublish)
+                            ->mapWithKeys(fn (TempleStatus $case) => [$case->value => $case->getLabel()])
+                            ->all();
+                    })
+                    ->default(TempleStatus::Draft)
+                    ->required()
+                    ->native(false)
+                    ->helperText(fn (): string => Auth::user()?->canPublish()
+                        ? 'Only published temples appear in the app.'
+                        : 'Set to In Review when ready. A super admin publishes.'),
+            ]);
+    }
+
+
+    /**
+     * Form state carries an enum instance when it comes from a default or a
+     * cast model attribute, and a plain string when it comes from user input.
+     * These normalise both shapes so the closures above work either way.
+     */
+    protected static function verificationOf(mixed $state): ?VerificationStatus
+    {
+        return $state instanceof VerificationStatus
+            ? $state
+            : VerificationStatus::tryFrom((string) $state);
+    }
+
+    protected static function statusOf(mixed $state): ?TempleStatus
+    {
+        return $state instanceof TempleStatus
+            ? $state
+            : TempleStatus::tryFrom((string) $state);
+    }
+
+    /** @return array<string, string> */
+    protected static function locales(): array
+    {
+        return [
+            'en' => 'English',
+            'te' => 'Telugu',
+            'hi' => 'Hindi',
+            'ta' => 'Tamil',
+            'kn' => 'Kannada',
+            'ml' => 'Malayalam',
+            'mr' => 'Marathi',
+            'bn' => 'Bengali',
+            'sa' => 'Sanskrit',
+        ];
+    }
+}
