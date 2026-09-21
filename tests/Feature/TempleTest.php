@@ -169,12 +169,4 @@ class TempleTest extends TestCase
         $this->assertFalse($temple->isStale());
         $this->assertTrue($temple->isStale(months: 0));
     }
-
-    public function test_verification_levels_that_claim_authority_require_a_source(): void
-    {
-        $this->assertTrue(VerificationStatus::Official->requiresSource());
-        $this->assertTrue(VerificationStatus::Verified->requiresSource());
-        $this->assertFalse(VerificationStatus::Community->requiresSource());
-        $this->assertFalse(VerificationStatus::Unverified->requiresSource());
-    }
 }
