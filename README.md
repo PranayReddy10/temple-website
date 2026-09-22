@@ -54,10 +54,27 @@ password to something you choose.
 php artisan test
 ```
 
+## Planned logins
+
+Three audiences, three entry points. Only the first exists today.
+
+| Audience | Entry point | Auth | Stored in | Status |
+| --- | --- | --- | --- | --- |
+| Staff — super admin, editors | `/admin` | Session | `users` | ✅ Built |
+| Temple authority — trust, temple office | `/temple` | Session | `users`, scoped by `temple_user` | ⬜ Slice 6 |
+| Devotees — app and web | Flutter app | Sanctum token | `devotees` (separate table) | ⬜ Slice 8 |
+
+Devotees get their own table on purpose: they are expected in the millions
+against a few hundred staff, they will sign in by OTP or a social provider
+rather than a password, and keeping them apart makes "a devotee account
+acquires a staff role" impossible rather than merely unlikely.
+
+See [ROADMAP.md](ROADMAP.md) for the full reasoning and slice order.
+
 ## What Phase 1 delivers so far
 
-Slices 1 to 4 are complete. Slice 5 (the Flutter app shell) is next and lives
-in `temple-app`.
+Slices 1 to 4 are complete. Phase 2 adds the temple and devotee logins, admin
+settings, temple events and daily devotional content.
 
 ## Slice 1 — admin auth and temple CRUD
 
@@ -75,6 +92,8 @@ in `temple-app`.
   "verified" or "official" without a source is rejected.
 - Dashboard leading on data quality: MVP progress, review queue, share of
   source-backed records, temples missing coordinates.
+- **Light and dark themes**, both carrying the temple palette, with a
+  Light / Dark / System switcher in the user menu.
 - 22 starter temples, seeded honestly as *community* level with no source — they
   are there to be verified, not to pad a count.
 
