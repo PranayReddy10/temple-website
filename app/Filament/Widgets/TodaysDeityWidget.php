@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Resources\DevotionalDays\DevotionalDayResource;
 use App\Models\DevotionalDay;
 use Filament\Widgets\Widget;
 
@@ -38,5 +39,23 @@ class TodaysDeityWidget extends Widget
     public function getFormattedDate(): string
     {
         return now()->format('j F Y');
+    }
+
+    /**
+     * Where to go to change what devotees are seeing right now.
+     *
+     * Editing a day is the only thing anyone wants to do from this panel, so
+     * it links straight to that record — or to the list, when there is no day
+     * set and the answer is to add one.
+     */
+    public function dayUrl(?DevotionalDay $day = null): ?string
+    {
+        if (! DevotionalDayResource::canAccess()) {
+            return null;
+        }
+
+        return $day === null
+            ? DevotionalDayResource::getUrl('index')
+            : DevotionalDayResource::getUrl('edit', ['record' => $day]);
     }
 }

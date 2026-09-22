@@ -4,7 +4,9 @@ namespace App\Filament\Widgets;
 
 use App\Enums\TempleStatus;
 use App\Enums\VerificationStatus;
+use App\Filament\Resources\Temples\TempleResource;
 use App\Models\Temple;
+use App\Support\AdminLinks;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
@@ -14,6 +16,9 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
  * Deliberately separate from TempleWorkQueueWidget, which covers what needs
  * a person. Showing a count in both places made the dashboard read as though
  * there were two different numbers for the same thing.
+ *
+ * Every tile links to the list it counts, with the same filters applied, so
+ * the dashboard is a way into the data rather than a picture of it.
  */
 class TempleDatabaseOverview extends StatsOverviewWidget
 {
@@ -38,21 +43,33 @@ class TempleDatabaseOverview extends StatsOverviewWidget
             ])
             ->count();
 
+        $temples = TempleResource::getUrl('index');
+
         return [
             Stat::make('Temples recorded', number_format($total))
                 ->description($published.' published, '.$draft.' draft')
                 ->descriptionIcon('heroicon-m-building-library')
-                ->color('primary'),
+                ->color('primary')
+                ->url($temples),
 
             Stat::make('Progress to MVP', $this->progressLabel($published))
                 ->description('Target is 1,000 high-quality profiles')
                 ->descriptionIcon('heroicon-m-flag')
-                ->color($published >= 1000 ? 'success' : 'warning'),
+                ->color($published >= 1000 ? 'success' : 'warning')
+                ->url(AdminLinks::filtered($temples, [
+                    'status' => AdminLinks::selected(TempleStatus::Published->value),
+                ])),
 
             Stat::make('Verified or official', number_format($trusted))
                 ->description($this->sharePhrase($trusted, $total).' of records are source-backed')
                 ->descriptionIcon('heroicon-m-shield-check')
-                ->color($trusted > 0 ? 'success' : 'gray'),
+                ->color($trusted > 0 ? 'success' : 'gray')
+                ->url(AdminLinks::filtered($temples, [
+                    'verification_status' => AdminLinks::selected([
+                        VerificationStatus::Verified->value,
+                        VerificationStatus::Official->value,
+                    ]),
+                ])),
 
         ];
     }

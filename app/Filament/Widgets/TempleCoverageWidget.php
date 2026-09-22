@@ -3,8 +3,9 @@
 namespace App\Filament\Widgets;
 
 use App\Enums\TempleStatus;
-use App\Models\Temple;
+use App\Filament\Resources\Temples\TempleResource;
 use App\Models\TempleCategory;
+use App\Support\AdminLinks;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
@@ -71,6 +72,15 @@ class TempleCoverageWidget extends TableWidget
                     ->state(fn (TempleCategory $record): int => max(0, $record->expected_count - $record->recorded_count))
                     ->color(fn (int $state): string => $state === 0 ? 'success' : 'gray'),
             ])
+            // A row is a question — which of the twelve are missing? — so it
+            // opens the temples already filtered to that circuit.
+            ->recordUrl(fn (TempleCategory $record): string => AdminLinks::filtered(
+                TempleResource::getUrl('index'),
+                [
+                    'categories' => AdminLinks::selected((string) $record->getKey()),
+                    'status' => AdminLinks::selected(TempleStatus::Published->value),
+                ],
+            ))
             ->paginated([5, 10, 25])
             ->defaultPaginationPageOption(5)
             ->emptyStateHeading('No circuits configured');

@@ -2,6 +2,7 @@
     $days = $this->getDays();
     $lead = $days->first();
     $accent = $lead?->accentColor() ?? config('brand.colors.saffron.hex');
+    $leadUrl = $this->dayUrl($lead);
 @endphp
 
 <x-filament-widgets::widget>
@@ -16,7 +17,13 @@
                 <p class="temple-today__eyebrow">{{ $this->getDayName() }} · {{ $this->getFormattedDate() }}</p>
 
                 @if ($lead)
-                    <h2 class="temple-today__title">{{ $lead->title }}</h2>
+                    <h2 class="temple-today__title">
+                        @if ($leadUrl)
+                            <a href="{{ $leadUrl }}" class="temple-today__link">{{ $lead->title }}</a>
+                        @else
+                            {{ $lead->title }}
+                        @endif
+                    </h2>
                     @if ($lead->subtitle)
                         <p class="temple-today__subtitle">{{ $lead->subtitle }}</p>
                     @endif
@@ -27,7 +34,12 @@
                 @else
                     <h2 class="temple-today__title">No deity set for today</h2>
                     <p class="temple-today__subtitle">
-                        Add one under Daily Devotion so devotees see something on the app home screen.
+                        @if ($leadUrl)
+                            <a href="{{ $leadUrl }}" class="temple-today__link">Add one under Daily Devotion</a>
+                            so devotees see something on the app home screen.
+                        @else
+                            Add one under Daily Devotion so devotees see something on the app home screen.
+                        @endif
                     </p>
                 @endif
             </div>
@@ -35,12 +47,17 @@
             @if ($days->isNotEmpty())
                 <div class="temple-today__deities">
                     @foreach ($days as $day)
-                        <div class="temple-today__deity">
+                        @php($dayUrl = $this->dayUrl($day))
+                        {{-- Each deity is a record; the tile is the way into it. --}}
+                        <{{ $dayUrl ? 'a' : 'div' }}
+                            @if ($dayUrl) href="{{ $dayUrl }}" @endif
+                            class="temple-today__deity @if ($dayUrl) temple-today__deity--link @endif"
+                        >
                             <span class="temple-today__deity-name">{{ $day->deity?->name }}</span>
                             <span class="temple-today__deity-count">
                                 {{ $day->media->count() }} {{ Str::plural('item', $day->media->count()) }}
                             </span>
-                        </div>
+                        </{{ $dayUrl ? 'a' : 'div' }}>
                     @endforeach
                 </div>
             @endif

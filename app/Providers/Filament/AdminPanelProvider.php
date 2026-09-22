@@ -9,11 +9,12 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Navigation\NavigationGroup;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
+use App\Filament\Pages\Auth\Profile;
+use App\Support\InitialsAvatarProvider;
 use App\Support\TempleTheme;
 use Filament\PanelProvider;
 use Filament\View\PanelsRenderHook;
 use Filament\Support\Colors\Color;
-use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -32,6 +33,14 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            // A real account page, reached from the user menu. isSimple:
+            // false keeps the panel's navigation around it, so it reads as
+            // part of the admin rather than a sign-in screen.
+            ->profile(Profile::class, isSimple: false)
+            // Drawn locally rather than fetched from ui-avatars.com: no
+            // third-party request per page, and nothing to break when that
+            // service is unreachable from the host.
+            ->defaultAvatarProvider(InitialsAvatarProvider::class)
             // Resolved lazily, not at registration time, so the product name can
             // change through the settings screen, config or .env without
             // touching this provider or requiring a deploy.
@@ -61,10 +70,11 @@ class AdminPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
             ])
+            // No AccountWidget: its only function was a sign-out button, which
+            // the user menu already carries, and it took a full-width card at
+            // the top of the dashboard to do it. Account details moved to the
+            // profile page above.
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
-            ->widgets([
-                AccountWidget::class,
-            ])
             // Static stylesheet, not a Vite theme: shared Hostinger has no Node
             // toolchain, so deploying must never require an npm build.
             ->renderHook(

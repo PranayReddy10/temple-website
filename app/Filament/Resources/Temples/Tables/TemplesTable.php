@@ -114,9 +114,14 @@ class TemplesTable
                     ->multiple()
                     ->preload(),
 
+                // The group matters: an ungrouped orWhere escapes every other
+                // active filter, so combining this with a status filter would
+                // quietly return unpublished temples that do have coordinates.
                 Filter::make('missing_coordinates')
                     ->label('Missing coordinates')
-                    ->query(fn (Builder $query): Builder => $query->whereNull('latitude')->orWhereNull('longitude'))
+                    ->query(fn (Builder $query): Builder => $query->where(
+                        fn (Builder $q) => $q->whereNull('latitude')->orWhereNull('longitude')
+                    ))
                     ->toggle(),
 
                 // Section 20 of the plan: stale timings must be flagged for review.
