@@ -145,6 +145,18 @@ when the scoping is removed.
 Shared Hostinger setup, including the `public/` document-root mapping and the
 security traps to avoid, is in **[docs/DEPLOY_HOSTINGER.md](docs/DEPLOY_HOSTINGER.md)**.
 
+After pulling new code:
+
+```bash
+composer install --no-dev --optimize-autoloader
+php artisan app:deploy --force
+```
+
+`app:deploy` runs pending migrations, rebuilds caches, and refuses to run on a
+stale autoloader. `--check` reports what it would do without changing anything.
+Skipping it is what produces `Base table or view not found` on a page that
+worked the day before.
+
 Getting a **403** on a fresh deploy? See
 **[docs/TROUBLESHOOTING_403.md](docs/TROUBLESHOOTING_403.md)** — it is nearly
 always the document root, not Laravel.
