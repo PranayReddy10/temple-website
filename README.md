@@ -181,6 +181,90 @@ password are on **My profile**, reached from the user menu in both panels,
 alongside the role you hold, the panel it signs into and — for a temple
 account — the temples it covers. Sign out is in that same user menu.
 
+## Phase 3 — Passport, Photo Stamp, trips, languages
+
+The backend and admin for the app features. **The Flutter app itself has not
+been started**: `temple-app` holds a README and a roadmap and no code. These
+are the endpoints it will be built against.
+
+**Passport.** A visit is a row; a **stamp** is the existence of a *verified*
+one, derived rather than stored, so revoking a verification revokes the stamp
+instead of leaving an orphan in a collection. A GPS or QR check-in verifies
+itself when it is close enough; a manual one never does, however good its
+coordinates look. Recording a pilgrimage from before the app existed is the
+point of a passport — but a collection that cannot tell evidence from
+assertion is a list anyone can type in, and then "6 of 12 Jyotirlingas" means
+nothing. Staff can verify a visit the device could not, and revoke one that
+turns out to be false.
+
+**Photo Stamp.** The devotee's photo and the generated memory card are kept as
+separate files. The card can always be re-rendered; the photograph cannot.
+Everything waits for a moderator, and **approval is not publication** — the
+devotee's own choice has to agree too, and one scope enforces both so a caller
+that checks only the status cannot leak a private photo.
+
+**Memories** are a devotee's writing about a visit, private by default, and
+private through an edit that omits the field. Staff see that a memory exists
+and when; they do not see what a private one says.
+
+**Yatra planner.** A plain itinerary, not a routing engine: ordering temples by
+road distance needs a maps provider and a connection a devotee planning on a
+train does not have. Recording a visit closes the planned stop for that temple,
+which is what links the planner to the Passport.
+
+**Favourites** (saved temples) came with Phase 2 and now feed the analytics:
+saves are intent, planned stops are commitment, visits are what happened.
+
+**Languages** are rows, not columns. `name_te`, `name_hi`, `name_ta`… means a
+migration per language across every table, and India has more languages than
+that survives. **Twelve are configured, three ship** (`config/locales.php`). A
+missing translation falls back to English rather than to nothing, and an
+unreviewed one is not served at all — a deity's name rendered wrongly in a
+devotee's own language is worse than the English they can recognise. Translate
+a temple under **Languages** on its edit page; the dress code and entry rules
+matter most, because not understanding those means being turned away at the
+gate.
+
+## Devotee analytics
+
+**Devotees → Analytics** in the admin panel.
+
+Sign-ins are recorded as **events**, not just stamped on a column.
+`last_login_at` can only ever hold the latest value: it cannot say how many
+people signed in this week, and that cannot be reconstructed afterwards.
+Failed attempts are kept too — a burst against one account is the first sign
+of a credential-stuffing run and is invisible if only successes are stored.
+
+What the screen answers:
+
+- **Accounts**, and how many joined in the last 30 days.
+- **Active today / this week / this month** — *distinct people who signed in*,
+  never sign-in counts. A devotee who opens the app eight times in a day is
+  one active user, and the number that says eight is the one that gets quoted.
+- **Stickiness**: daily actives as a share of monthly. The hardest number to
+  flatter, because acquiring more users cannot raise it.
+- **Never signed in** — registered and never came back, usually a broken
+  confirmation step rather than people changing their minds.
+- **Sign-ups against active devotees** over 7/30/90 days. Both are people per
+  day, so they share one axis honestly; raw sign-ins would flatten the sign-up
+  line against zero, and giving it a second axis would let the two be scaled
+  into any crossing you like.
+- **Passport and trips**: visits recorded, stamps awarded, **trips being
+  planned** and how many start within 90 days, photos waiting for moderation,
+  memories written.
+- **Languages devotees chose** — what to translate next, from what people
+  actually set rather than from where their temples are.
+- **Temples devotees engage with** — saved, planned and visited side by side.
+  A temple with many saves and no visits is one people want to reach and
+  cannot, which is a different problem from one nobody saves.
+
+Every devotee account has a **profile page** (Devotees → Devotee Accounts →
+view): identity, language, what the account has done, its recent sign-ins
+including failures, and its Passport, trips, photos and memories as tabs. It
+is **read-only** — a devotee's account is theirs, and a staff form that can
+rewrite their name is one that eventually will. The only writes are suspend
+and restore, which keep all their records.
+
 ## Deployment
 
 Shared Hostinger setup, including the `public/` document-root mapping and the

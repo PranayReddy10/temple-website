@@ -47,6 +47,29 @@ php artisan app:deploy --check
 That reports exactly what it would do and changes nothing. Without `--force`
 it lists the pending migrations and asks before running them.
 
+## What the Phase 3 release adds
+
+Six new tables — `login_events`, `devotee_visits`, `visit_photos`,
+`devotee_memories`, `yatras` + `yatra_stops`, and `translations`. They arrive
+through migrations like everything else, so the routine above is unchanged and
+there is still nothing to import.
+
+Two things worth knowing about this one:
+
+- **Sign-in history starts from the deploy.** `login_events` records attempts
+  from the moment the table exists; nothing before it can be reconstructed, so
+  the analytics screen will look sparse for its first week. That is correct,
+  not broken.
+- **`DemoDevoteeSeeder` is not reference data.** It invents devotees, visits,
+  photos and trips so the analytics screen can be looked at on a laptop.
+  `app:deploy` never runs it, and it refuses to run in production. An empty
+  analytics screen is honest; one full of invented pilgrims is a screen
+  someone will eventually quote a number from.
+
+  ```bash
+  php artisan db:seed --class=DemoDevoteeSeeder   # local only
+  ```
+
 ## Reference data vs your data
 
 A release sometimes ships **rows** as well as tables — the weekday-to-deity

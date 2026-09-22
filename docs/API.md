@@ -121,3 +121,118 @@ Validation failures return **422** with Laravel's standard shape:
 
 Unknown or unpublished temples return **404**. Exceeding the rate limit returns
 **429** with a `Retry-After` header.
+
+
+---
+
+## Languages
+
+Every endpoint answers in one language, chosen in this order: `?lang=` (or
+`?locale=`), then the signed-in devotee's stored preference, then
+`Accept-Language`, then English. An unrecognised value falls back rather than
+erroring.
+
+The response carries `Content-Language` and `Vary: Accept-Language` — without
+the latter, a cache in front of the API serves the Telugu response to the next
+devotee who asked for Tamil. Each payload also repeats the language it was
+served in, because a client that cannot tell has no way to decide whether to
+render its own fallback.
+
+`Accept-Language` is parsed for its highest-quality supported tag, not the
+first one: a device sending `ta;q=0.5, en;q=1.0` gets English.
+
+```
+GET /api/v1/languages
+GET /api/v1/temples?lang=te
+GET /api/v1/temples/{slug}       Accept-Language: hi-IN,en;q=0.8
+```
+
+A field with no translation falls back to its English value, so a partly
+translated temple renders as a usable card rather than half-blank. **Only
+reviewed translations are served.**
+
+## Devotee endpoints
+
+All of these need `Authorization: Bearer <token>` on the `devotee` guard, and
+all are scoped to the signed-in devotee in the query — never by an id supplied
+by the caller. Asking for something that is not yours returns **404, not 403**:
+confirming that an id exists says something about another devotee's pilgrimage.
+
+Optional headers, recorded against each sign-in for the analytics screen:
+`X-Platform` (e.g. `android`), `X-App-Version`.
+
+### Passport
+
+```
+GET    /api/v1/me/passport                    stamps, counts, circuit progress
+GET    /api/v1/me/visits
+POST   /api/v1/temples/{slug}/visits
+DELETE /api/v1/me/visits/{id}
+```
+
+`POST` body: `method` (`manual` | `gps` | `qr`), `visited_on` (not in the
+future), `visited_at` (`HH:MM`), `latitude`, `longitude`, `note`, `is_public`.
+
+A `gps` check-in must carry coordinates, and latitude and longitude must
+arrive together. A `gps` or `qr` check-in within the configured radius
+(`check_in_radius_metres`, default 500m) is **verified** and counts as a
+stamp; `manual` never is, whatever coordinates it sends.
+
+Recording a visit also closes the matching stop on any of the devotee's
+upcoming trips.
+
+`circuits` in the passport response gives `collected`, `recorded` (how many of
+that circuit are in the database) and `total` (how many exist), so the app can
+say "6 of 8 recorded, 12 in all" rather than sending someone hunting for
+temples it cannot show them.
+
+### Photo Stamp
+
+```
+GET    /api/v1/me/photos
+POST   /api/v1/temples/{slug}/photos      multipart; 20/min
+DELETE /api/v1/me/photos/{id}
+```
+
+Fields: `photo` (required image), `stamp` (the generated card, optional),
+`visit_id`, `caption`, `is_public`. Both files are kept separately.
+
+Every upload starts as `pending`. The response returns the moderation status
+and any `moderation_note`, because silence reads as failure and a devotee who
+sees nothing happen will upload it again. `is_visible_to_others` is true only
+when the photo is approved **and** the devotee chose to share it.
+
+### Memories
+
+```
+GET    /api/v1/me/memories
+POST   /api/v1/me/memories
+PATCH  /api/v1/me/memories/{id}
+DELETE /api/v1/me/memories/{id}
+```
+
+Fields: `title`, `body`, `happened_on` (not in the future), `temple_id`,
+`devotee_visit_id` (must be the devotee's own), `is_private`.
+
+`is_private` defaults to true, and a `PATCH` that omits it leaves the current
+value alone — someone fixing a typo is not consenting to publish their prayers.
+
+### Yatra planner
+
+```
+GET    /api/v1/me/yatras
+POST   /api/v1/me/yatras
+GET    /api/v1/me/yatras/{id}
+PATCH  /api/v1/me/yatras/{id}
+DELETE /api/v1/me/yatras/{id}
+PUT    /api/v1/me/yatras/{id}/temples/{slug}     add or move a stop
+DELETE /api/v1/me/yatras/{id}/temples/{slug}
+```
+
+Fields: `title`, `description`, `status` (`planning` | `confirmed` |
+`in_progress` | `completed` | `abandoned`), `starts_on`, `ends_on` (not before
+the start), `party_size`, `is_public`.
+
+Adding a stop takes `day_number`, `planned_on` and `note`. It is idempotent —
+a retried request on a flaky connection must not fail on the unique index —
+and a new stop is appended to the end of its day rather than colliding at zero.

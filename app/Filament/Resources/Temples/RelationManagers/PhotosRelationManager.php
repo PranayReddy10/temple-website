@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Temples\RelationManagers;
 
 use App\Enums\PhotoCategory;
+use App\Filament\Support\MediaColumn;
 use App\Models\TemplePhoto;
 use App\Support\FormState;
 use Filament\Actions\BulkActionGroup;
@@ -18,7 +19,6 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -94,10 +94,14 @@ class PhotosRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('caption')
             ->columns([
-                ImageColumn::make('thumbnail')
-                    ->label('Preview')
-                    ->state(fn (TemplePhoto $record): ?string => $record->thumbnailUrl())
-                    ->height(56),
+                // Smallest available: a list of full-size temple photographs
+                // is megabytes of download to render 56px thumbnails.
+                MediaColumn::make(
+                    'thumbnail',
+                    fn (TemplePhoto $record): ?string => $record->thumbnail_path
+                        ?? $record->medium_path
+                        ?? $record->path,
+                )->label('Preview')->height(56),
 
                 TextColumn::make('caption')
                     ->placeholder('—')

@@ -151,6 +151,14 @@ class Temple extends Model
         return $this->hasMany(VisitPhoto::class);
     }
 
+    /** Devotees who saved this temple: the intent signal, before any visit. */
+    public function savedByDevotees(): BelongsToMany
+    {
+        return $this->belongsToMany(Devotee::class, 'devotee_saved_temples')
+            ->withPivot('note')
+            ->withTimestamps();
+    }
+
     public function yatraStops(): HasMany
     {
         return $this->hasMany(YatraStop::class);
