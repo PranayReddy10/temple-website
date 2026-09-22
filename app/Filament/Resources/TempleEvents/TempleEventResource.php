@@ -6,6 +6,7 @@ use App\Enums\EventStatus;
 use App\Enums\EventType;
 use App\Filament\Resources\TempleEvents\Pages\EditTempleEvent;
 use App\Filament\Resources\TempleEvents\Pages\ListTempleEvents;
+use App\Filament\Support\MediaColumn;
 use App\Models\TempleEvent;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -20,7 +21,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -98,10 +98,11 @@ class TempleEventResource extends Resource
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query->with('temple'))
             ->columns([
-                ImageColumn::make('image')
-                    ->label('')
-                    ->state(fn (TempleEvent $record): ?string => $record->imageUrl())
-                    ->height(40),
+                MediaColumn::make(
+                    'image',
+                    fn (TempleEvent $record): ?string => $record->image_path,
+                    fn (TempleEvent $record): string => $record->image_disk ?? config('filesystems.media'),
+                )->label('')->height(40),
 
                 TextColumn::make('title')->searchable()->sortable()->weight('medium')->wrap(),
 

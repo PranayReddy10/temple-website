@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TempleStatus;
+use App\Models\Concerns\HasTranslations;
 use Carbon\CarbonInterface;
 use App\Enums\VerificationStatus;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,7 +17,28 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Temple extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasTranslations, SoftDeletes;
+
+    /**
+     * Fields a devotee may read in their own language.
+     *
+     * Names and prose only. A slug is a URL, coordinates are numbers and a
+     * source URL is an address — translating any of them produces a record
+     * that is broken rather than localised, so they are simply not on the
+     * list and the trait refuses anything that is not.
+     *
+     * @var array<int, string>
+     */
+    protected array $translatable = [
+        'name',
+        'short_description',
+        'history',
+        'significance',
+        'dress_code',
+        'entry_rules',
+        'queue_information',
+        'photography_policy',
+    ];
 
     protected $fillable = [
         'name', 'slug', 'deity_id',
@@ -117,6 +139,29 @@ class Temple extends Model
             ->withPivot(['role', 'approved_at', 'requested_at'])
             ->wherePivotNotNull('approved_at')
             ->withTimestamps();
+    }
+
+    public function visits(): HasMany
+    {
+        return $this->hasMany(DevoteeVisit::class);
+    }
+
+    public function visitPhotos(): HasMany
+    {
+        return $this->hasMany(VisitPhoto::class);
+    }
+
+    /** Devotees who saved this temple: the intent signal, before any visit. */
+    public function savedByDevotees(): BelongsToMany
+    {
+        return $this->belongsToMany(Devotee::class, 'devotee_saved_temples')
+            ->withPivot('note')
+            ->withTimestamps();
+    }
+
+    public function yatraStops(): HasMany
+    {
+        return $this->hasMany(YatraStop::class);
     }
 
     public function claims(): HasMany

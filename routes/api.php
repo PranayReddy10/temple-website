@@ -6,9 +6,14 @@ use App\Http\Controllers\Api\V1\DevoteeProfileController;
 use App\Http\Controllers\Api\V1\DevotionalDayController;
 use App\Http\Controllers\Api\V1\EventController;
 use App\Http\Controllers\Api\V1\FacilityController;
+use App\Http\Controllers\Api\V1\LocaleController;
+use App\Http\Controllers\Api\V1\MemoryController;
+use App\Http\Controllers\Api\V1\PassportController;
 use App\Http\Controllers\Api\V1\StateController;
 use App\Http\Controllers\Api\V1\TempleCategoryController;
 use App\Http\Controllers\Api\V1\TempleController;
+use App\Http\Controllers\Api\V1\VisitPhotoController;
+use App\Http\Controllers\Api\V1\YatraController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -37,6 +42,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::get('categories', [TempleCategoryController::class, 'index'])->name('categories.index');
     Route::get('states', [StateController::class, 'index'])->name('states.index');
     Route::get('facilities', [FacilityController::class, 'index'])->name('facilities.index');
+
+    // Which languages the app may offer, and which it ships with. Served so
+    // adding Kannada does not require shipping a new build to enable it.
+    Route::get('languages', [LocaleController::class, 'index'])->name('languages.index');
 
     Route::get('events', [EventController::class, 'index'])->name('events.index');
 
@@ -82,5 +91,56 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('me/saved-temples', [DevoteeProfileController::class, 'savedTemples'])->name('me.saved.index');
         Route::put('me/saved-temples/{temple:slug}', [DevoteeProfileController::class, 'saveTemple'])->name('me.saved.store');
         Route::delete('me/saved-temples/{temple:slug}', [DevoteeProfileController::class, 'forgetTemple'])->name('me.saved.destroy');
+
+        /*
+        |----------------------------------------------------------------------
+        | Passport
+        |----------------------------------------------------------------------
+        |
+        | A visit is recorded against a temple, so it is created under the
+        | temple's own URL. Everything read back is scoped to the signed-in
+        | devotee in the controller queries, never by a caller-supplied id.
+        |
+        */
+        Route::get('me/passport', [PassportController::class, 'show'])->name('me.passport');
+        Route::get('me/visits', [PassportController::class, 'index'])->name('me.visits.index');
+        Route::post('temples/{temple:slug}/visits', [PassportController::class, 'store'])
+            ->name('me.visits.store');
+        Route::delete('me/visits/{visit}', [PassportController::class, 'destroy'])->name('me.visits.destroy');
+
+        // Photo Stamp. Uploads are throttled harder than the rest: each one
+        // costs storage and a moderator's attention, not just a query.
+        Route::get('me/photos', [VisitPhotoController::class, 'index'])->name('me.photos.index');
+        Route::post('temples/{temple:slug}/photos', [VisitPhotoController::class, 'store'])
+            ->middleware('throttle:20,1')
+            ->name('me.photos.store');
+        Route::delete('me/photos/{photo}', [VisitPhotoController::class, 'destroy'])->name('me.photos.destroy');
+
+        // Memories: the devotee's own writing. Private by default.
+        Route::get('me/memories', [MemoryController::class, 'index'])->name('me.memories.index');
+        Route::post('me/memories', [MemoryController::class, 'store'])->name('me.memories.store');
+        Route::patch('me/memories/{memory}', [MemoryController::class, 'update'])->name('me.memories.update');
+        Route::delete('me/memories/{memory}', [MemoryController::class, 'destroy'])->name('me.memories.destroy');
+
+        // Yatra planner.
+        Route::get('me/yatras', [YatraController::class, 'index'])->name('me.yatras.index');
+        Route::post('me/yatras', [YatraController::class, 'store'])->name('me.yatras.store');
+        Route::get('me/yatras/{yatra}', [YatraController::class, 'show'])->name('me.yatras.show');
+        Route::patch('me/yatras/{yatra}', [YatraController::class, 'update'])->name('me.yatras.update');
+        Route::delete('me/yatras/{yatra}', [YatraController::class, 'destroy'])->name('me.yatras.destroy');
+        /*
+         * withoutScopedBindings, because a temple is not a child of a trip.
+         * A nested parameter with a custom key makes Laravel scope the second
+         * binding to the first — it would look for $yatra->temples() and fail
+         * — but here the trip and the temple are two independent records that
+         * this request is about to associate. Ownership of the trip is still
+         * checked in the controller.
+         */
+        Route::put('me/yatras/{yatra}/temples/{temple:slug}', [YatraController::class, 'addStop'])
+            ->withoutScopedBindings()
+            ->name('me.yatras.stops.store');
+        Route::delete('me/yatras/{yatra}/temples/{temple:slug}', [YatraController::class, 'removeStop'])
+            ->withoutScopedBindings()
+            ->name('me.yatras.stops.destroy');
     });
 });

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Temples\RelationManagers;
 
+use App\Filament\Support\MediaColumn;
 use App\Models\TemplePuja;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
@@ -18,7 +19,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -135,11 +135,11 @@ class PujasRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('name')
             ->columns([
-                ImageColumn::make('image')
-                    ->label('')
-                    ->state(fn (TemplePuja $record): ?string => $record->imageUrl())
-                    ->height(40)
-                    ->circular(),
+                MediaColumn::make(
+                    'image',
+                    fn (TemplePuja $record): ?string => $record->image_path,
+                    fn (TemplePuja $record): string => $record->image_disk ?? config('filesystems.media'),
+                )->label('')->height(40)->circular(),
 
                 TextColumn::make('name')->searchable()->weight('medium')->wrap(),
 

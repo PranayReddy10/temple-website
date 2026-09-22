@@ -19,8 +19,11 @@ class TempleSummaryResource extends JsonResource
         return [
             'id' => $this->id,
             'slug' => $this->slug,
-            'name' => $this->name,
-            'short_description' => $this->short_description,
+            // Served in the request's language where a reviewed translation
+            // exists, and in English where it does not — a half-translated
+            // temple must still render as a usable card.
+            'name' => $this->localised('name'),
+            'short_description' => $this->localised('short_description'),
 
             'deity' => $this->whenLoaded('deity', fn () => [
                 'slug' => $this->deity->slug,
@@ -52,6 +55,23 @@ class TempleSummaryResource extends JsonResource
                 'primaryPhoto',
                 fn () => $this->primaryPhoto ? new PhotoResource($this->primaryPhoto) : null,
             ),
+
+            // What the client actually got, which is not always what it asked
+            // for. A client that cannot tell has no way to decide whether to
+            // render its own fallback.
+            'language' => app()->getLocale(),
         ];
+    }
+
+    /**
+     * Only reviewed translations reach devotees.
+     *
+     * An unreviewed row may be a bulk import or a machine translation, and a
+     * deity's name rendered wrongly in someone's own language is worse than
+     * the English they can at least recognise.
+     */
+    protected function localised(string $field): mixed
+    {
+        return $this->resource->translate($field, app()->getLocale(), reviewedOnly: true);
     }
 }

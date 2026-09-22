@@ -52,10 +52,27 @@ return [
             'report' => false,
         ],
 
+        /*
+         * Served from this same host, so the URL is root-relative.
+         *
+         * Laravel's default builds it from APP_URL, which is http://localhost
+         * until someone remembers to change it — and on a shared host behind
+         * Cloudflare nobody remembers until every photo in the admin panel is
+         * a broken image pointing at the visitor's own machine. It is also
+         * the wrong scheme the moment the site is served over https with
+         * APP_URL still http, which browsers block as mixed content.
+         *
+         * '/storage' needs none of that: it resolves against whatever domain
+         * and scheme the page was actually served from. The same reasoning as
+         * App\Support\TempleTheme, which had exactly this bug.
+         *
+         * Spaces keeps an absolute URL below, because that really is another
+         * host.
+         */
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            'url' => '/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

@@ -62,6 +62,7 @@ class AdminPanelProvider extends PanelProvider
             ->navigationGroups([
                 NavigationGroup::make('Temples'),
                 NavigationGroup::make('Daily Devotion'),
+                NavigationGroup::make('Devotees'),
                 NavigationGroup::make('Master Data'),
                 NavigationGroup::make('Administration'),
             ])

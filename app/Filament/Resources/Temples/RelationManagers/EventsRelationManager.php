@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Temples\RelationManagers;
 
 use App\Enums\EventStatus;
 use App\Enums\EventType;
+use App\Filament\Support\MediaColumn;
 use App\Models\TempleEvent;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -22,7 +23,6 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
-use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -118,10 +118,11 @@ class EventsRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('title')
             ->columns([
-                ImageColumn::make('image')
-                    ->label('')
-                    ->state(fn (TempleEvent $record): ?string => $record->imageUrl())
-                    ->height(40),
+                MediaColumn::make(
+                    'image',
+                    fn (TempleEvent $record): ?string => $record->image_path,
+                    fn (TempleEvent $record): string => $record->image_disk ?? config('filesystems.media'),
+                )->label('')->height(40),
 
                 TextColumn::make('title')->searchable()->weight('medium')->wrap(),
 

@@ -11,6 +11,7 @@ use App\Filament\Resources\Temples\RelationManagers\EventsRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\PhotosRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\PujasRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\TimingsRelationManager;
+use App\Filament\Resources\Temples\RelationManagers\TranslationsRelationManager;
 use App\Filament\Resources\Temples\Schemas\TempleForm;
 use App\Filament\Resources\Temples\Tables\TemplesTable;
 use App\Models\Temple;
@@ -86,6 +87,7 @@ class TempleResource extends Resource
             PujasRelationManager::class,
             ClosuresRelationManager::class,
             EventsRelationManager::class,
+            TranslationsRelationManager::class,
             ClaimsRelationManager::class,
         ];
     }

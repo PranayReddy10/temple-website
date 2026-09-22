@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\RegisterDevoteeRequest;
 use App\Http\Resources\V1\DevoteeResource;
 use App\Models\Devotee;
+use App\Support\LoginRecorder;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -43,21 +46,38 @@ class DevoteeAuthController extends Controller
 
         // One message for both "no such account" and "wrong password", so the
         // endpoint cannot be used to discover which numbers are registered.
+        // The recorded reason is more specific than the response, because the
+        // admin looking at a burst of failures needs to tell "one account
+        // under attack" from "someone guessing phone numbers".
         if ($devotee === null
             || blank($devotee->password)
             || ! Hash::check($validated['password'], $devotee->password)) {
+            LoginRecorder::failure(
+                'devotee',
+                $validated['identifier'],
+                $devotee === null ? 'unknown_account' : 'bad_password',
+                $request,
+            );
+
             throw ValidationException::withMessages([
                 'identifier' => 'These credentials do not match our records.',
             ]);
         }
 
         if (! $devotee->is_active) {
+            LoginRecorder::failure('devotee', $validated['identifier'], 'inactive_account', $request);
+
             throw ValidationException::withMessages([
                 'identifier' => 'This account is no longer active.',
             ]);
         }
 
         $devotee->forceFill(['last_seen_at' => now()])->saveQuietly();
+
+        // Raised explicitly: a token-based sign-in never goes through a
+        // guard's attempt(), so nothing else would fire it, and the recorder
+        // listens for it. One listener covers both panels and the app.
+        Event::dispatch(new Login('devotee', $devotee, false));
 
         return response()->json([
             'data' => [

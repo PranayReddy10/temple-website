@@ -13,6 +13,7 @@ use App\Filament\Resources\Temples\RelationManagers\EventsRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\PhotosRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\PujasRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\TimingsRelationManager;
+use App\Filament\Resources\Temples\RelationManagers\TranslationsRelationManager;
 use App\Models\Deity;
 use App\Models\DevotionalDay;
 use App\Models\DevotionalMedia;
@@ -129,6 +130,16 @@ class RelationManagerRenderTest extends TestCase
         ]);
 
         $this->assertManagerRenders(EventsRelationManager::class, $temple, EditTemple::class, $event);
+    }
+
+    public function test_the_translations_manager_renders(): void
+    {
+        $this->signIn();
+        $temple = $this->temple();
+
+        $translation = $temple->setTranslation('name', 'te', 'ఆలయం');
+
+        $this->assertManagerRenders(TranslationsRelationManager::class, $temple, EditTemple::class, $translation);
     }
 
     public function test_the_devotional_media_manager_renders(): void

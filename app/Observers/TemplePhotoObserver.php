@@ -4,7 +4,7 @@ namespace App\Observers;
 
 use App\Models\TemplePhoto;
 use App\Services\TemplePhotoProcessor;
-use Illuminate\Support\Facades\Auth;
+use App\Support\ActingStaff;
 use Illuminate\Support\Facades\Storage;
 
 class TemplePhotoObserver
@@ -14,7 +14,7 @@ class TemplePhotoObserver
     public function creating(TemplePhoto $photo): void
     {
         $photo->disk ??= config('filesystems.media');
-        $photo->uploaded_by ??= Auth::id();
+        $photo->uploaded_by ??= ActingStaff::id();
     }
 
     public function created(TemplePhoto $photo): void
