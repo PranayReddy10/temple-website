@@ -9,7 +9,9 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Navigation\NavigationGroup;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
+use App\Support\TempleTheme;
 use Filament\PanelProvider;
+use Filament\View\PanelsRenderHook;
 use Filament\Support\Colors\Color;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -63,9 +65,11 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 AccountWidget::class,
             ])
+            // Static stylesheet, not a Vite theme: shared Hostinger has no Node
+            // toolchain, so deploying must never require an npm build.
             ->renderHook(
-                \Filament\View\PanelsRenderHook::HEAD_END,
-                fn (): string => '<link rel="stylesheet" href="'.asset('css/temple-admin.css').'">',
+                PanelsRenderHook::HEAD_END,
+                fn (): string => TempleTheme::stylesheetTag(),
             )
             ->middleware([
                 EncryptCookies::class,

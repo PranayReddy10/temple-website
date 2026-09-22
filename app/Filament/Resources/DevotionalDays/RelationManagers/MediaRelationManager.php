@@ -4,6 +4,7 @@ namespace App\Filament\Resources\DevotionalDays\RelationManagers;
 
 use App\Enums\DevotionalMediaType;
 use App\Models\DevotionalMedia;
+use App\Support\FormState;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -91,7 +92,7 @@ class MediaRelationManager extends RelationManager
                             ->label('Duration (seconds)')
                             ->numeric()
                             ->minValue(1)
-                            ->visible(fn (Get $get): bool => DevotionalMediaType::tryFrom((string) $get('type'))?->isTimed() ?? false),
+                            ->visible(fn (Get $get): bool => FormState::enum(DevotionalMediaType::class, $get('type'))?->isTimed() ?? false),
                     ]),
 
                 Section::make('Rights')
@@ -112,7 +113,7 @@ class MediaRelationManager extends RelationManager
                             ->label('Licence')
                             ->maxLength(255)
                             ->placeholder('e.g. CC BY-SA 4.0, or licensed from the label')
-                            ->required(fn (Get $get): bool => DevotionalMediaType::tryFrom((string) $get('type'))?->requiresLicense() ?? false),
+                            ->required(fn (Get $get): bool => FormState::enum(DevotionalMediaType::class, $get('type'))?->requiresLicense() ?? false),
 
                         TextInput::make('license_url')
                             ->label('Licence URL')
