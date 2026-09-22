@@ -41,6 +41,15 @@ Admin panel: <http://localhost:8000/admin>
 The seeder creates a super admin and **prints its password once**. Set
 `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `.env` first if you'd rather choose it.
 
+Locked out, or working from a database someone else set up?
+
+```bash
+php artisan admin:create
+```
+
+It lists the accounts that exist, then creates one or resets an existing
+password to something you choose.
+
 ```bash
 php artisan test
 ```

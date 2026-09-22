@@ -162,6 +162,39 @@ origin's own address is public, list the proxy IPs instead — a trusted
 forwarded header lets anyone who can reach the origin directly spoof their IP
 and the scheme.
 
+### "These credentials do not match our records"
+
+You reached the login page but cannot get in. Two causes, both common.
+
+**You imported a .sql dump someone else generated.** The dump stores a password
+*hash*, not the password. The plaintext was printed once to the console of
+whoever generated the file and cannot be recovered from it. Importing the file
+gives you an account you cannot sign in to.
+
+**You ran `db:mysql-dump --with-admin` yourself and tried the password it
+printed.** That command writes a *file*; it does not touch the database. The
+password it printed belongs to the new file, not to the account already in your
+database.
+
+Either way, set a password you know:
+
+```bash
+php artisan admin:create
+```
+
+It lists the accounts that actually exist, then prompts for an email and a
+password without echoing it. On an existing account it resets the password and
+reactivates it; otherwise it creates one. Non-interactively:
+
+```bash
+php artisan admin:create you@example.com --password='a-long-password'
+```
+
+> Also check the email. A wrong address and a wrong password produce the same
+> message, and the seeded account is `admin@example.com` unless `ADMIN_EMAIL`
+> said otherwise. The table printed by `admin:create` shows what is really
+> there.
+
 ### Then check it works
 
 ```
