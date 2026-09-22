@@ -100,6 +100,25 @@ category and state, and orders proximity results by real distance.
 Shared Hostinger setup, including the `public/` document-root mapping and the
 security traps to avoid, is in **[docs/DEPLOY_HOSTINGER.md](docs/DEPLOY_HOSTINGER.md)**.
 
+Getting a **403** on a fresh deploy? See
+**[docs/TROUBLESHOOTING_403.md](docs/TROUBLESHOOTING_403.md)** — it is nearly
+always the document root, not Laravel.
+
+### Importing without SSH
+
+Tables come from migrations (`php artisan migrate`), so there is no `.sql` file
+in the repository. If your hosting plan has no SSH and phpMyAdmin is the only
+way in, generate an importable dump locally:
+
+```bash
+php artisan db:mysql-dump --with-admin
+```
+
+It renders MySQL DDL from the project's own migration files, includes the
+reference and sample data, and records the migration history so a later
+`php artisan migrate` does not try to recreate the tables. Verified by importing
+into MariaDB 10.11, the engine shared hosts commonly run.
+
 ## Branding
 
 The product name is not final. It is read from `config/brand.php` via `.env`:

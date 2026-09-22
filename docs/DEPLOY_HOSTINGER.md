@@ -114,6 +114,29 @@ To choose the password yourself, set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in
 Re-running the seeder never overwrites an existing admin account, so it is safe
 to run again after adding new states or deities.
 
+### No SSH? Import the SQL instead
+
+Laravel builds its tables from migrations, so the project has no `.sql` file
+checked in and normally needs none. If your plan has no SSH access and
+phpMyAdmin is the only way in, generate one **locally** and import it:
+
+```bash
+php artisan db:mysql-dump --with-admin
+# writes database/dumps/temple-passport.sql and prints an admin password once
+```
+
+Then in hPanel → *phpMyAdmin*, select the (empty) database, open **Import**,
+choose the file and run it. It creates all 22 tables, loads the reference data
+(states, districts, deities, circuits, facilities) and the sample temples, and
+records the migration history so a later `php artisan migrate` does not try to
+recreate what is already there.
+
+The file contains a working admin password hash. Delete it after importing, and
+do not commit it — `database/dumps/` is gitignored for that reason.
+
+Regenerate it whenever migrations change; it is produced from the migration
+files themselves, so it cannot drift from them.
+
 ## 7. Media storage on DigitalOcean Spaces
 
 Temple photos do **not** belong on the web host. A shared Hostinger plan has a
@@ -213,6 +236,7 @@ notifications later in the roadmap.
 | 500 with a blank page | Read `storage/logs/laravel.log`. Almost always a missing `APP_KEY` or wrong DB credentials. |
 | "No application encryption key" | `php artisan key:generate` |
 | Directory listing, or the raw project tree | Document root is not pointing at `public/`. See step 5. |
+| **403 Forbidden** | Almost always the document root or a symlink. Full diagnostic: [TROUBLESHOOTING_403.md](TROUBLESHOOTING_403.md). |
 | `.env` downloads in a browser | The app is inside the web root. Stop, move it out, then **rotate the DB password and `APP_KEY`** — treat them as leaked. |
 | Config change has no effect | `php artisan config:clear && php artisan config:cache` |
 | `SQLSTATE[HY000] [1045]` | Wrong DB username or password, or the user was never granted access to the database. |

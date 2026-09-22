@@ -17,6 +17,10 @@ return [
 
     'support_email' => env('BRAND_SUPPORT_EMAIL', 'support@example.com'),
 
+    // Email for the first admin account, used by the seeder and by
+    // `php artisan db:mysql-dump --with-admin`.
+    'admin_email' => env('ADMIN_EMAIL', 'admin@example.com'),
+
     /*
      * Temple palette. Saffron is the devotional anchor, kumkum red the accent
      * and temple gold the highlight. Filament needs these as RGB triplets so it
