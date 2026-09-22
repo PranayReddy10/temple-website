@@ -122,16 +122,18 @@ Not new features; the seams between the ones already built.
 | **A clickable dashboard** | Every tile opens the records it counted, filtered the same way; a tile the role may not open is unlinked rather than a 403. Deity panel and circuit rows link through too | ✅ **Done** |
 | **My profile** | A real account page in both panels — name, email, password, plus the role, the panel it signs into and the temples it covers. The dashboard's sign-out card is gone; sign out stays in the user menu | ✅ **Done** |
 
-### Phase 3 — Flutter app
+### Phase 3 — Flutter app  ✅ **Phase 1 of the app shipped**
+
+The client lives in [`temple-app`](https://github.com/PranayReddy10/temple-app). It runs against `/api/v1` and falls back to the bundled seed records when offline.
 
 | # | Slice | Scope | Status |
 | --- | --- | --- | --- |
-| 10 | **App shell** | Temple design system in light and dark, 5-tab navigation (Home, Explore, Passport, Yatra, Profile), API client | ⬜ |
-| 11 | **Explorer + temple profile** | Search by name/deity/city/state, nearby, filters, full temple profile screen | ⬜ |
-| 12 | **Passport** | Visited/unvisited state, manual check-in, digital stamps, collections | ⬜ |
-| 13 | **Photo Stamp** | Upload visit photo, generate temple-themed memory card, save original and stamp separately, share | ⬜ |
-| 14 | **Favourites + basic Yatra planner** | Saved temples, multi-temple itinerary by days and route | ⬜ |
-| 15 | **Languages: EN / TE / HI** | Localisation across app, admin and temple portal; alternate temple names and spellings | ⬜ |
+| 10 | **App shell** | Temple design system in light and dark, tinted per weekday deity, temple-door transitions, 5-tab navigation, API client with offline fallback | ✅ **Done** — in `temple-app` |
+| 11 | **Explorer + temple profile** | Search by name/deity/city/state, nearby, filters, lamp map, day pages, full temple profile screen | ✅ **Done** — in `temple-app` |
+| 12 | **Passport** | Visited/unvisited state, manual check-in, ink stamps, circuit collections, achievements | ✅ **Done** — in `temple-app` |
+| 13 | **Photo Stamp** | Attach visit photo, compose temple-themed memory card with the stamp, original kept untouched, share | ✅ **Done** — in `temple-app` |
+| 14 | **Favourites + basic Yatra planner** | Saved temples synced to `/me/saved-temples`, itinerary by days, reorder, Yatra mode, route in Maps | ✅ **Done** — in `temple-app` |
+| 15 | **Languages: EN / TE / HI** | App interface strings in three languages with bundled Indic fonts. Admin and temple portal localisation, and alternate spellings in search, remain backend work | 🟡 App side done |
 
 ### Later phases
 
