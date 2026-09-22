@@ -30,7 +30,8 @@ class DumpMysqlCommand extends Command
     protected $signature = 'db:mysql-dump
         {--output=database/dumps/temple-passport.sql : Where to write the file}
         {--schema-only : Skip all data, emit tables only}
-        {--with-admin : Include an admin account with a generated password}
+        {--with-admin : Include an admin account in the dump}
+        {--admin-password= : Password for that account. Strongly preferred over the generated one when the file is for someone else}
         {--server-version=8.0.36 : Server version reported to the schema grammar}';
 
     protected $description = 'Export the schema and seed data as a MySQL .sql file for phpMyAdmin import';
@@ -92,8 +93,18 @@ class DumpMysqlCommand extends Command
             $this->newLine();
             $this->warn('Admin account included in the dump:');
             $this->line('  Email:    '.config('brand.admin_email', 'admin@example.com'));
-            $this->line('  Password: '.$adminPassword);
-            $this->warn('  Shown once. Sign in and change it immediately after import.');
+
+            if ($this->option('admin-password')) {
+                $this->line('  Password: (the one you supplied)');
+            } else {
+                $this->line('  Password: '.$adminPassword);
+                $this->newLine();
+                $this->warn('  This password is printed here and NOWHERE ELSE. The .sql file');
+                $this->warn('  contains only its hash, so anyone who merely imports the file');
+                $this->warn('  cannot sign in. If this dump is for someone else, either pass');
+                $this->warn('  --admin-password, or tell them to run `php artisan admin:create`');
+                $this->warn('  after importing.');
+            }
         }
 
         return self::SUCCESS;
@@ -277,7 +288,14 @@ SQL;
     /** @return array{0: string, 1: string} */
     protected function adminSql(): array
     {
-        $password = Str::password(16);
+        /*
+         * A generated password is printed to this console and nowhere else, so
+         * whoever merely imports the file cannot sign in with it — the row
+         * carries only the hash. Pass --admin-password when the dump is for
+         * someone else, or have them run `php artisan admin:create` after the
+         * import, which is the supported route.
+         */
+        $password = (string) ($this->option('admin-password') ?: Str::password(16));
         $hash = Hash::make($password);
         $email = config('brand.admin_email', 'admin@example.com');
         $now = now()->toDateTimeString();
@@ -285,9 +303,14 @@ SQL;
         $sql = "\n-- ---------------------------------------------------------------\n"
             ."-- Admin account\n"
             ."--\n"
-            ."-- The password was generated when this file was written and printed\n"
-            ."-- to the console once. Change it immediately after signing in, then\n"
-            ."-- delete this file — it contains a working credential hash.\n"
+            ."-- This row stores only a password HASH. The plaintext was printed to\n"
+            ."-- the console of whoever generated this file and is not recoverable\n"
+            ."-- from here. If you did not generate it yourself, you cannot sign in\n"
+            ."-- with it — run `php artisan admin:create` after importing to set a\n"
+            ."-- password you know.\n"
+            ."--\n"
+            ."-- Change the password after signing in, then delete this file: a hash\n"
+            ."-- is still a working credential for anyone who can replay it.\n"
             ."-- ---------------------------------------------------------------\n\n"
             ."INSERT INTO `users` (`name`, `email`, `password`, `role`, `is_active`, `created_at`, `updated_at`) VALUES\n"
             .'  ('.$this->quote('Super Admin').', '.$this->quote($email).', '.$this->quote($hash).', '
