@@ -223,10 +223,28 @@ cd ~/app
 php artisan down
 git pull origin main
 composer install --no-dev --optimize-autoloader
-php artisan migrate --force
-php artisan config:cache && php artisan route:cache && php artisan view:cache
+php artisan app:deploy --force
 php artisan up
 ```
+
+`app:deploy` runs the pending migrations and rebuilds the caches, and checks
+the two things that fail silently and confusingly:
+
+- **A pending migration.** It shows up as `Base table or view not found` on a
+  page that worked yesterday. New code expects tables the database does not
+  have yet.
+- **A stale autoloader.** `git pull` does not regenerate it, so a newly added
+  helper is missing and pages die with `undefined function` even though the
+  file is plainly in the repository. This is why `composer install` runs
+  before `app:deploy`, and the command refuses to continue if it was skipped.
+
+Use `php artisan app:deploy --check` to see what would happen without changing
+anything. Without `--force` it lists the pending migrations and asks first.
+
+> **`Table '...temple_user' doesn't exist`** or any other missing table means
+> exactly this: the code was deployed but the migrations were not run.
+> `php artisan app:deploy --force` fixes it, and existing data is untouched —
+> migrations only add the new tables and columns.
 
 ## Scheduled tasks
 
@@ -247,6 +265,8 @@ notifications later in the roadmap.
 | Symptom | Cause and fix |
 | --- | --- |
 | 500 with a blank page | Read `storage/logs/laravel.log`. Almost always a missing `APP_KEY` or wrong DB credentials. |
+| `Base table or view not found` | Pending migrations. Run `php artisan app:deploy --force`. |
+| `Call to undefined function setting()` | Stale autoloader. Run `composer install --no-dev --optimize-autoloader`. |
 | "These credentials do not match our records" | The dump stores a hash, not a password. Run `php artisan admin:create` to set one you know. |
 | "No application encryption key" | `php artisan key:generate`, then `php artisan config:clear`. No SSH? See [TROUBLESHOOTING_403.md](TROUBLESHOOTING_403.md). |
 | Admin panel loads over https but assets or login fail | Behind Cloudflare without `TRUSTED_PROXIES=*`, so Laravel emits http:// URLs. |
