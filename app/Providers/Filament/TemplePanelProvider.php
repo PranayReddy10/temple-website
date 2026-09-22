@@ -8,6 +8,8 @@ use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
+use App\Filament\Pages\Auth\Profile;
+use App\Support\InitialsAvatarProvider;
 use App\Support\TempleTheme;
 use Filament\PanelProvider;
 use Filament\View\PanelsRenderHook;
@@ -38,6 +40,11 @@ class TemplePanelProvider extends PanelProvider
             ->id('temple')
             ->path('temple')
             ->login()
+            // The same profile page as the admin panel; it adapts to show the
+            // temples this account has been approved for.
+            ->profile(Profile::class, isSimple: false)
+            // Local initials avatar, as in the admin panel.
+            ->defaultAvatarProvider(InitialsAvatarProvider::class)
             ->brandName(fn (): string => setting('brand_name', 'brand.name').' — Temple Portal')
             // Kumkum-led rather than saffron, so it is obvious at a glance
             // which panel you are looking at.

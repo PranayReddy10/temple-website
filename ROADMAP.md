@@ -110,6 +110,18 @@ leaves the system in a working state. **Nothing is built all at once.**
 | 8 | **Devotee accounts** | Signup, login, profile, saved temples. Separate `devotees` table and Sanctum token auth, exposed through `/api/v1/auth` and `/api/v1/me` | ✅ **Done** |
 | 9 | **Daily devotional content** | Weekday-to-deity content: Monday Shiva, Tuesday Hanuman, and so on. Curated photos, videos and songs surfaced on the app home screen each day, with a per-day accent colour and the deity's temples | ✅ **Done** |
 
+### Phase 2.1 — Making it usable  ✅ **Complete**
+
+Not new features; the seams between the ones already built.
+
+| Slice | Scope | Status |
+| --- | --- | --- |
+| **Granting temple access** | The Temple Admin account can be created from the grant form itself, so a first-time super admin is no longer shown a required dropdown with nothing in it and no way forward | ✅ **Done** |
+| **Temple Trust Access in the side menu** | The same grants, and the pending ones badged, as a queue in **Administration** rather than only inside a temple record. Same form and actions from either direction | ✅ **Done** |
+| **Events & Programs in the side menu** | Submissions from every temple in one review queue, so approving one does not start with guessing which temple sent it | ✅ **Done** |
+| **A clickable dashboard** | Every tile opens the records it counted, filtered the same way; a tile the role may not open is unlinked rather than a 403. Deity panel and circuit rows link through too | ✅ **Done** |
+| **My profile** | A real account page in both panels — name, email, password, plus the role, the panel it signs into and the temples it covers. The dashboard's sign-out card is gone; sign out stays in the user menu | ✅ **Done** |
+
 ### Phase 3 — Flutter app
 
 | # | Slice | Scope | Status |
@@ -146,6 +158,15 @@ navigation links.
 Temple-edited fields stay separated from editorial ones. A temple correcting
 its own darshan timings should not be able to overwrite a sourced history
 section, and changes they make are recorded so staff can review them.
+
+Granting that access is itself a staff workflow, and it has two natural
+starting points: the temple you are looking at, and the queue of claims
+waiting on you. Both exist, and both drive the same form — a grant reached
+from the side menu and one reached from inside a temple must not be able to
+behave differently. The account the seat is given to must hold the Temple
+Admin role, since that role is what the portal's sign-in gate checks, so the
+form creates the account itself rather than sending you elsewhere to make one
+and come back.
 
 ### Slice 7 — Events and programs
 

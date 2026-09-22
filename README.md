@@ -131,14 +131,55 @@ know: contact details, timings, photos, sevas, closures and visitor rules.
 Name, deity and classification stay with editorial staff, as do trust level and
 publishing.
 
-Access is granted per temple from the admin panel, under **Temple authority
-access** on the temple's edit page. A claim grants nothing until a super admin
-approves it, and revoking takes effect immediately.
+### Granting a temple its access
+
+A super admin grants it from either direction, and both lead to the same form:
+
+- **Administration → Temple Trust Access** in the side menu — every temple's
+  access in one list, with the pending ones badged. This is where approvals
+  are worked as a queue.
+- **Temple authority access** on a temple's own edit page, when the temple is
+  what you are already looking at.
+
+The account being granted access must hold the **Temple Admin** role, because
+that role is what the portal's sign-in gate checks; a seat given to an editor
+would grant nothing. If nobody is listed in the **Account** dropdown, that is
+because no such account exists yet — use the **+** button beside the field to
+create one without leaving the form. (`php artisan admin:create
+office@example.com --role=temple_admin` does the same from the command line.)
+
+A claim grants nothing until a super admin approves it. Creating one as staff
+approves it in the same act, with your name recorded as the approver; revoking
+takes effect immediately and keeps the record.
 
 The boundary is enforced in the resource queries, not by hiding navigation:
 a temple admin requesting another temple's URL gets a 404, and the role cannot
 reach `/admin` at all. Fifteen tests cover it, and they were confirmed to fail
 when the scoping is removed.
+
+## The dashboard, and getting around
+
+Every tile on the dashboard is a link into the records it counted, filtered
+the same way — "Temples to review · 2" opens those two, not the whole list.
+A tile the signed-in role may not open is left unlinked rather than sending
+them to a 403. The day's deity panel links to the record that produced it,
+and each pilgrimage circuit row opens the temples recorded for that circuit.
+
+The side menu carries the two queues that used to be reachable only from
+inside a temple record:
+
+- **Temples → Events & Programs** — every temple's festivals and programs,
+  with what a temple has submitted for review badged, so it can be approved
+  or sent back without first guessing which temple it came from.
+- **Administration → Temple Trust Access** — see above.
+
+Both still exist inside a temple's own edit page, and share the same form and
+actions, so the same decision behaves the same way from either direction.
+
+There is no account card on the dashboard. Your own name, sign-in email and
+password are on **My profile**, reached from the user menu in both panels,
+alongside the role you hold, the panel it signs into and — for a temple
+account — the temples it covers. Sign out is in that same user menu.
 
 ## Deployment
 

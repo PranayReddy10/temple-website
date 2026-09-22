@@ -118,7 +118,7 @@ class User extends Authenticatable implements FilamentUser
 
     public function isTempleAdmin(): bool
     {
-        return $this->role === UserRole::TempleAdmin;
+        return $this->role?->isTempleAdmin() ?? false;
     }
 
     public function isSuperAdmin(): bool

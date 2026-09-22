@@ -42,6 +42,12 @@ enum UserRole: string implements HasLabel
         return $this === self::SuperAdmin;
     }
 
+    /** The one role that represents a temple rather than the product team. */
+    public function isTempleAdmin(): bool
+    {
+        return $this === self::TempleAdmin;
+    }
+
     /** Staff roles work in the editorial admin panel. */
     public function isStaff(): bool
     {
