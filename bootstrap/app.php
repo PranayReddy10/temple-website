@@ -17,6 +17,24 @@ return Application::configure(basePath: dirname(__DIR__))
         // standing between it and abuse is a rate limit. 60/minute per IP is
         // generous for an app browsing temples and cheap to raise later.
         $middleware->throttleApi('60,1');
+
+        /*
+         * Behind Cloudflare or any TLS-terminating proxy, the origin sees a
+         * plain HTTP request carrying X-Forwarded-Proto: https. Untrusted,
+         * Laravel believes the scheme is http and generates http:// links and
+         * redirects, which breaks the admin panel behind an https domain.
+         *
+         * Off by default: trusting a forwarded header lets anyone who can reach
+         * the origin directly spoof the client IP and scheme. Only enable it
+         * when the app really does sit behind a proxy. Behind Cloudflare, where
+         * the origin address is not publicly advertised, TRUSTED_PROXIES=*
+         * is the usual setting.
+         */
+        if ($proxies = env('TRUSTED_PROXIES')) {
+            $middleware->trustProxies(
+                at: $proxies === '*' ? '*' : array_map('trim', explode(',', $proxies)),
+            );
+        }
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

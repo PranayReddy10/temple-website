@@ -98,23 +98,84 @@ not land where you think it did, this is why.
 
 ## Once past the 403
 
-A **500** next is progress: the web server is now running Laravel, and the
-error is in the application. Read the real reason:
+A **500** next is progress: the request now reaches Laravel and the error is in
+the application. Work through the three below in order.
+
+### 1. "No application encryption key has been specified"
+
+`APP_KEY` is empty in `.env`. Laravel uses it for session and cookie
+encryption and refuses to serve anything without it.
+
+**With SSH:**
+
+```bash
+cd ~/app
+php artisan key:generate
+php artisan config:clear
+```
+
+**Without SSH**, generate one yourself — never paste a key from a public
+website, as that key would encrypt every session cookie you issue. Upload this
+file as `public/genkey.php`, open it once in a browser, copy the line, then
+**delete the file**:
+
+```php
+<?php
+echo 'APP_KEY=base64:'.base64_encode(random_bytes(32));
+```
+
+Paste the result over the empty `APP_KEY=` line in `.env` using hPanel's File
+Manager, then delete `public/genkey.php`. Anything left in `public/` is
+reachable by anyone.
+
+If you cached config earlier, the cache wins over `.env` — delete
+`bootstrap/cache/config.php` through File Manager to clear it without SSH.
+
+### 2. Turn debug off
+
+If the 500 showed you a styled error page with stack traces, file paths and
+request headers, `APP_DEBUG` is still `true`. That page is visible to every
+visitor who triggers an error and can expose configuration values. In `.env`:
+
+```dotenv
+APP_ENV=production
+APP_DEBUG=false
+```
+
+Errors then log to `storage/logs/laravel.log` instead of the browser.
+
+### 3. Behind Cloudflare? Trust the proxy
+
+Cloudflare terminates TLS and forwards plain HTTP to the origin with
+`X-Forwarded-Proto: https`. Untrusted, Laravel concludes the request is HTTP
+and builds `http://` URLs on an `https://` site — broken assets, failed admin
+logins, sometimes a redirect loop.
+
+You are behind Cloudflare if responses carry a `cf-ray` header. Then set:
+
+```dotenv
+TRUSTED_PROXIES=*
+```
+
+`*` is appropriate when the origin is only reached through Cloudflare. If the
+origin's own address is public, list the proxy IPs instead — a trusted
+forwarded header lets anyone who can reach the origin directly spoof their IP
+and the scheme.
+
+### Then check it works
+
+```
+https://your-domain/up           # health, no database needed
+https://your-domain/api/v1/temples
+https://your-domain/admin
+```
+
+`/up` returning 200 while `/admin` fails means the framework is healthy and the
+problem is the database or the app itself:
 
 ```bash
 tail -50 ~/app/storage/logs/laravel.log
 ```
-
-Common first-run causes: missing `APP_KEY` (`php artisan key:generate`),
-wrong database credentials, or `storage/` not writable.
-
-Verify the app is alive with the health endpoint, which needs no database:
-
-```
-https://your-domain/up
-```
-
-Then the admin panel at `/admin` and the API at `/api/v1/temples`.
 
 ---
 

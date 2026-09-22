@@ -72,6 +72,10 @@ DB_USERNAME=u123456789_admin
 DB_PASSWORD=the-password-you-set
 
 BRAND_NAME="Temple Passport"
+
+# Set this if the domain is proxied through Cloudflare, otherwise Laravel
+# builds http:// URLs on an https:// site.
+TRUSTED_PROXIES=*
 ```
 
 `APP_DEBUG=false` is not optional in production. With it on, any error page
@@ -234,7 +238,8 @@ notifications later in the roadmap.
 | Symptom | Cause and fix |
 | --- | --- |
 | 500 with a blank page | Read `storage/logs/laravel.log`. Almost always a missing `APP_KEY` or wrong DB credentials. |
-| "No application encryption key" | `php artisan key:generate` |
+| "No application encryption key" | `php artisan key:generate`, then `php artisan config:clear`. No SSH? See [TROUBLESHOOTING_403.md](TROUBLESHOOTING_403.md). |
+| Admin panel loads over https but assets or login fail | Behind Cloudflare without `TRUSTED_PROXIES=*`, so Laravel emits http:// URLs. |
 | Directory listing, or the raw project tree | Document root is not pointing at `public/`. See step 5. |
 | **403 Forbidden** | Almost always the document root or a symlink. Full diagnostic: [TROUBLESHOOTING_403.md](TROUBLESHOOTING_403.md). |
 | `.env` downloads in a browser | The app is inside the web root. Stop, move it out, then **rotate the DB password and `APP_KEY`** — treat them as leaked. |
