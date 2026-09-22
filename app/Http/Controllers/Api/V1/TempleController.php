@@ -21,7 +21,13 @@ class TempleController extends Controller
             // Published-only is applied here, not exposed as a filter. A draft
             // temple must be unreachable through this endpoint by any input.
             ->published()
-            ->with(['deity', 'state', 'district', 'primaryPhoto']);
+            // Scoped to the one language being served: loading every
+            // translation of every temple to render one of them is the same
+            // N+1 the eager load is here to avoid, only bigger.
+            ->with([
+                'deity', 'state', 'district', 'primaryPhoto',
+                'translations' => fn ($q) => $q->forLocale(app()->getLocale()),
+            ]);
 
         $this->applyFilters($query, $request);
         $this->applySort($query, $request);
@@ -50,6 +56,7 @@ class TempleController extends Controller
             'closures' => fn ($q) => $q->upcoming(),
             'events' => fn ($q) => $q->published()->upcoming(),
             'facilities',
+            'translations' => fn ($q) => $q->forLocale(app()->getLocale()),
         ]);
 
         return new TempleDetailResource($temple);

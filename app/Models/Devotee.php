@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -61,6 +63,64 @@ class Devotee extends Authenticatable
         return $this->belongsToMany(Temple::class, 'devotee_saved_temples')
             ->withPivot('note')
             ->withTimestamps();
+    }
+
+    // --- Passport, trips and writing ---
+
+    public function visits(): HasMany
+    {
+        return $this->hasMany(DevoteeVisit::class)->latest('visited_on');
+    }
+
+    public function photos(): HasMany
+    {
+        return $this->hasMany(VisitPhoto::class)->latest();
+    }
+
+    public function memories(): HasMany
+    {
+        return $this->hasMany(DevoteeMemory::class)->latest('created_at');
+    }
+
+    public function yatras(): HasMany
+    {
+        return $this->hasMany(Yatra::class)->latest();
+    }
+
+    public function loginEvents(): MorphMany
+    {
+        return $this->morphMany(LoginEvent::class, 'authenticatable')->latest('occurred_at');
+    }
+
+    // --- Passport figures ---
+
+    /**
+     * Temples this devotee has a verified visit to.
+     *
+     * The stamp count, and the only definition of it. Distinct because
+     * returning to a temple is a second visit, not a second stamp.
+     */
+    public function stampCount(): int
+    {
+        return $this->visits()->verified()->distinct()->count('temple_id');
+    }
+
+    public function templesVisitedCount(): int
+    {
+        return $this->visits()->distinct()->count('temple_id');
+    }
+
+    public function hasVisited(Temple|int $temple): bool
+    {
+        $id = $temple instanceof Temple ? $temple->getKey() : $temple;
+
+        return $this->visits()->where('temple_id', $id)->exists();
+    }
+
+    /** Sign-ins are what "active" is measured from, not record edits. */
+    public function lastLoginAt(): ?\Carbon\CarbonInterface
+    {
+        return $this->loginEvents()->succeeded()->value('occurred_at');
     }
 
     public function avatarUrl(): ?string

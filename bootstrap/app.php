@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\SetApiLocale;
 use App\Support\TrustedProxies;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -18,6 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // standing between it and abuse is a rate limit. 60/minute per IP is
         // generous for an app browsing temples and cheap to raise later.
         $middleware->throttleApi('60,1');
+
+        // Every API response is in some language, so the decision belongs to
+        // the whole group rather than to the endpoints that remembered.
+        $middleware->api(append: [SetApiLocale::class]);
 
         /*
          * Behind Cloudflare or any TLS-terminating proxy, the origin sees a

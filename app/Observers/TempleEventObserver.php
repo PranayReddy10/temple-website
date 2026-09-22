@@ -4,7 +4,7 @@ namespace App\Observers;
 
 use App\Enums\EventStatus;
 use App\Models\TempleEvent;
-use Illuminate\Support\Facades\Auth;
+use App\Support\ActingStaff;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -20,7 +20,10 @@ class TempleEventObserver
     public function creating(TempleEvent $event): void
     {
         $event->image_disk ??= config('filesystems.media');
-        $event->created_by ??= Auth::id();
+        // A users.id, so it comes from the staff guard by name. Auth::id()
+        // during an API request is a devotee's id, which belongs to a
+        // different table entirely.
+        $event->created_by ??= ActingStaff::id();
     }
 
     public function saving(TempleEvent $event): void
@@ -43,11 +46,15 @@ class TempleEventObserver
             return;
         }
 
-        $user = Auth::user();
-
-        // No signed-in user means a seeder, an import or a console command,
+        // Nobody signed in means a seeder, an import or a console command,
         // which are trusted the same way they are for temples.
-        if ($user === null || $user->role?->isStaff()) {
+        if (! ActingStaff::someoneIsSignedIn()) {
+            return;
+        }
+
+        // Editorial staff publish directly. A temple admin does not, and
+        // neither does anything else that happens to be authenticated.
+        if (ActingStaff::user()?->role?->isStaff() ?? false) {
             return;
         }
 
