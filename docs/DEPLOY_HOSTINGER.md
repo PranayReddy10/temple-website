@@ -227,8 +227,11 @@ php artisan app:deploy --force
 php artisan up
 ```
 
-`app:deploy` runs the pending migrations and rebuilds the caches, and checks
-the two things that fail silently and confusingly:
+The routine is written up on its own in **[UPDATING.md](UPDATING.md)**.
+
+`app:deploy` runs the pending migrations, seeds reference data a release
+introduced, rebuilds the caches, and checks the two things that fail silently
+and confusingly:
 
 - **A pending migration.** It shows up as `Base table or view not found` on a
   page that worked yesterday. New code expects tables the database does not

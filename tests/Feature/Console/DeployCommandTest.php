@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Console;
 
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -10,6 +11,22 @@ use Tests\TestCase;
 class DeployCommandTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * These tests are about what a deploy does to a POPULATED database, so
+     * they seed explicitly in setUp.
+     *
+     * The $seed property is not enough: RefreshDatabase migrates once per test
+     * run and seeds only on that first migration, so whichever class happens
+     * to run first decides whether this one sees any data. Seeding here runs
+     * inside each test's transaction and does not depend on ordering.
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(DatabaseSeeder::class);
+    }
 
     /**
      * Puts the database in the state a half-finished deploy leaves behind:
@@ -74,6 +91,58 @@ class DeployCommandTest extends TestCase
             ->assertFailed();
 
         $this->assertFalse(Schema::hasTable('temple_user'));
+    }
+
+    public function test_it_seeds_reference_data_a_release_introduced(): void
+    {
+        DB::table('devotional_days')->delete();
+
+        $this->artisan('app:deploy', ['--force' => true])->assertSuccessful();
+
+        // A release ships the table through a migration and the rows through a
+        // seeder. Migrating alone would leave daily devotion silently empty.
+        $this->assertGreaterThan(0, DB::table('devotional_days')->count());
+    }
+
+    public function test_it_reports_missing_reference_data_in_check_mode(): void
+    {
+        DB::table('devotional_days')->delete();
+
+        $this->artisan('app:deploy', ['--check' => true])
+            ->expectsOutputToContain('weekday-to-deity mapping')
+            ->assertSuccessful();
+
+        $this->assertSame(0, DB::table('devotional_days')->count());
+    }
+
+    public function test_it_never_overwrites_reference_data_an_editor_changed(): void
+    {
+        $day = DB::table('devotional_days')->first();
+        DB::table('devotional_days')->where('id', $day->id)->update([
+            'mantra_transliteration' => 'Editor customised',
+            'accent_color' => '#123456',
+        ]);
+
+        $this->artisan('app:deploy', ['--force' => true])->assertSuccessful();
+
+        // The seeders use updateOrCreate, so re-running a populated table would
+        // quietly revert a customised mantra or colour to the shipped default.
+        $after = DB::table('devotional_days')->where('id', $day->id)->first();
+        $this->assertSame('Editor customised', $after->mantra_transliteration);
+        $this->assertSame('#123456', $after->accent_color);
+    }
+
+    public function test_it_does_not_reseed_sample_temples(): void
+    {
+        $before = DB::table('temples')->count();
+        DB::table('temples')->delete();
+
+        $this->artisan('app:deploy', ['--force' => true])->assertSuccessful();
+
+        // Sample data is excluded on purpose: re-running it in production
+        // would reset the verification level of records an editor has checked.
+        $this->assertGreaterThan(0, $before);
+        $this->assertSame(0, DB::table('temples')->count());
     }
 
     public function test_it_leaves_existing_data_alone(): void

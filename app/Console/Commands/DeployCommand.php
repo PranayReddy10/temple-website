@@ -2,7 +2,14 @@
 
 namespace App\Console\Commands;
 
+use Database\Seeders\DeitySeeder;
+use Database\Seeders\DevotionalDaySeeder;
+use Database\Seeders\FacilitySeeder;
+use Database\Seeders\StateSeeder;
+use Database\Seeders\TempleCategorySeeder;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Migrations\Migrator;
 use Illuminate\Support\Facades\File;
 use Throwable;
@@ -23,6 +30,31 @@ class DeployCommand extends Command
         {--check : Report what would happen and change nothing}';
 
     protected $description = 'Run pending migrations and rebuild caches after pulling new code';
+
+    /**
+     * Reference data a release can introduce, keyed by the table that holds it.
+     *
+     * These are structural: the app is wrong without them, in a way that is
+     * not obvious. A release that adds the weekday-to-deity mapping ships the
+     * tables through a migration but the rows through a seeder, so migrating
+     * alone leaves the daily devotion feature silently empty.
+     *
+     * Seeded ONLY when the table is empty. Every one of these seeders uses
+     * updateOrCreate, so re-running a populated table would quietly revert an
+     * editor's changes — a customised mantra or accent colour would go back to
+     * the shipped default. Empty means there is nothing to overwrite.
+     *
+     * Sample data (temples, their details) is deliberately absent: re-running
+     * it in production would reset the verification level of records an editor
+     * has checked.
+     */
+    protected const REFERENCE_DATA = [
+        'states' => [StateSeeder::class, 'states and union territories'],
+        'deities' => [DeitySeeder::class, 'deities'],
+        'temple_categories' => [TempleCategorySeeder::class, 'pilgrimage circuits and temple types'],
+        'facilities' => [FacilitySeeder::class, 'facilities'],
+        'devotional_days' => [DevotionalDaySeeder::class, 'weekday-to-deity mapping'],
+    ];
 
     public function handle(Migrator $migrator): int
     {
@@ -58,6 +90,15 @@ class DeployCommand extends Command
             }
         }
 
+        $missing = $this->missingReferenceData();
+
+        if ($missing !== []) {
+            $this->components->warn('Reference data missing from '.count($missing).' table(s):');
+            foreach ($missing as $table => [, $label]) {
+                $this->line("    {$table} — {$label}");
+            }
+        }
+
         if ($this->option('check')) {
             $this->line('');
             $this->components->info('Check only. Nothing was changed.');
@@ -75,6 +116,7 @@ class DeployCommand extends Command
             $this->call('migrate', ['--force' => true]);
         }
 
+        $this->seedMissingReferenceData();
         $this->rebuildCaches();
         $this->ensureStorageLink();
 
@@ -116,6 +158,45 @@ class DeployCommand extends Command
                 ->all();
         } catch (Throwable) {
             return null;
+        }
+    }
+
+    /**
+     * Reference tables that exist but hold nothing.
+     *
+     * @return array<string, array{0: class-string, 1: string}>
+     */
+    protected function missingReferenceData(): array
+    {
+        $missing = [];
+
+        foreach (self::REFERENCE_DATA as $table => $definition) {
+            try {
+                if (Schema::hasTable($table) && DB::table($table)->count() === 0) {
+                    $missing[$table] = $definition;
+                }
+            } catch (Throwable) {
+                // A table that cannot be read is the migration step's problem,
+                // not this one's.
+            }
+        }
+
+        return $missing;
+    }
+
+    protected function seedMissingReferenceData(): void
+    {
+        // Recomputed after migrating: a table created moments ago is empty by
+        // definition and belongs in this pass.
+        $missing = $this->missingReferenceData();
+
+        if ($missing === []) {
+            return;
+        }
+
+        foreach ($missing as $table => [$seeder, $label]) {
+            $this->callSilently('db:seed', ['--class' => $seeder, '--force' => true]);
+            $this->components->info("Seeded {$label}.");
         }
     }
 

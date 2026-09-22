@@ -145,17 +145,22 @@ when the scoping is removed.
 Shared Hostinger setup, including the `public/` document-root mapping and the
 security traps to avoid, is in **[docs/DEPLOY_HOSTINGER.md](docs/DEPLOY_HOSTINGER.md)**.
 
-After pulling new code:
+After pulling new code — the same four lines every time, documented in
+**[docs/UPDATING.md](docs/UPDATING.md)**:
 
 ```bash
+php artisan down
+git pull origin <branch>
 composer install --no-dev --optimize-autoloader
 php artisan app:deploy --force
+php artisan up
 ```
 
-`app:deploy` runs pending migrations, rebuilds caches, and refuses to run on a
-stale autoloader. `--check` reports what it would do without changing anything.
-Skipping it is what produces `Base table or view not found` on a page that
-worked the day before.
+**There is no .sql file to import.** Tables come from migrations, and
+`app:deploy` applies the pending ones, seeds reference data a release
+introduced (only into empty tables, so editor changes survive), rebuilds the
+caches and refuses to run on a stale autoloader. `--check` reports what it
+would do without changing anything.
 
 Getting a **403** on a fresh deploy? See
 **[docs/TROUBLESHOOTING_403.md](docs/TROUBLESHOOTING_403.md)** — it is nearly
