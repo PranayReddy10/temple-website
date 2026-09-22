@@ -87,12 +87,30 @@ class EnumTest extends TestCase
     {
         $this->assertTrue(UserRole::SuperAdmin->canPublish());
         $this->assertFalse(UserRole::Editor->canPublish());
+        // A temple admin submits for review; staff decide what goes live.
+        $this->assertFalse(UserRole::TempleAdmin->canPublish());
+    }
+
+    public function test_each_role_belongs_to_exactly_one_panel(): void
+    {
+        $this->assertSame('admin', UserRole::SuperAdmin->panelId());
+        $this->assertSame('admin', UserRole::Editor->panelId());
+        // The separation that keeps a temple admin out of the editorial panel.
+        $this->assertSame('temple', UserRole::TempleAdmin->panelId());
+    }
+
+    public function test_a_temple_admin_is_not_staff(): void
+    {
+        $this->assertTrue(UserRole::SuperAdmin->isStaff());
+        $this->assertTrue(UserRole::Editor->isStaff());
+        $this->assertFalse(UserRole::TempleAdmin->isStaff());
     }
 
     public function test_only_a_super_admin_may_manage_users(): void
     {
         $this->assertTrue(UserRole::SuperAdmin->canManageUsers());
         $this->assertFalse(UserRole::Editor->canManageUsers());
+        $this->assertFalse(UserRole::TempleAdmin->canManageUsers());
     }
 
     public function test_every_role_has_a_label_and_description(): void
@@ -121,7 +139,7 @@ class EnumTest extends TestCase
         );
 
         $this->assertSame(
-            ['super_admin', 'editor'],
+            ['super_admin', 'editor', 'temple_admin'],
             array_column(UserRole::cases(), 'value'),
         );
     }

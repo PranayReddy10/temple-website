@@ -104,6 +104,21 @@ class Temple extends Model
             ->orderBy('sort_order');
     }
 
+    /** Approved temple authorities for this temple. */
+    public function administrators(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class)
+            ->using(TempleUser::class)
+            ->withPivot(['role', 'approved_at', 'requested_at'])
+            ->wherePivotNotNull('approved_at')
+            ->withTimestamps();
+    }
+
+    public function claims(): HasMany
+    {
+        return $this->hasMany(TempleUser::class);
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
