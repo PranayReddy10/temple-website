@@ -79,6 +79,25 @@ class AdminPanelTest extends TestCase
             ->assertOk();
     }
 
+    public function test_a_user_with_no_stored_active_flag_is_denied_not_crashed(): void
+    {
+        $user = User::factory()->create(['role' => UserRole::SuperAdmin]);
+
+        // is_active comes from a database default, so it is null on the
+        // in-memory instance. Returning that from a bool-typed method threw a
+        // TypeError and produced a 500 where a 403 belongs.
+        $user->setAttribute('is_active', null);
+
+        $this->assertFalse($user->canAccessPanel(app(\Filament\Panel::class)));
+    }
+
+    public function test_a_new_user_is_active_by_default(): void
+    {
+        $user = new User(['name' => 'Fresh', 'email' => 'fresh@example.com']);
+
+        $this->assertTrue($user->is_active);
+    }
+
     public function test_only_a_super_admin_may_manage_users(): void
     {
         $this->actingAs($this->admin())->get('/admin/users')->assertOk();

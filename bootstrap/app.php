@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\TrustedProxies;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -30,10 +31,8 @@ return Application::configure(basePath: dirname(__DIR__))
          * the origin address is not publicly advertised, TRUSTED_PROXIES=*
          * is the usual setting.
          */
-        if ($proxies = env('TRUSTED_PROXIES')) {
-            $middleware->trustProxies(
-                at: $proxies === '*' ? '*' : array_map('trim', explode(',', $proxies)),
-            );
+        if ($proxies = TrustedProxies::from(env('TRUSTED_PROXIES'))) {
+            $middleware->trustProxies(at: $proxies);
         }
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\TemplePuja;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Keeps the fee and booking fields internally consistent.
@@ -15,6 +16,20 @@ use App\Models\TemplePuja;
  */
 class TemplePujaObserver
 {
+    public function creating(TemplePuja $puja): void
+    {
+        $puja->image_disk ??= config('filesystems.media');
+    }
+
+    /** Deleting the row deletes its image, so object storage stays tidy. */
+    public function deleted(TemplePuja $puja): void
+    {
+        if (filled($puja->image_path)) {
+            Storage::disk($puja->image_disk ?? config('filesystems.media'))
+                ->delete($puja->image_path);
+        }
+    }
+
     public function saving(TemplePuja $puja): void
     {
         // "Official booking" is a claim about a URL. With no URL there is no

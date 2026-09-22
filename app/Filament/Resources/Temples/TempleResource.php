@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Temples;
 use App\Filament\Resources\Temples\Pages\CreateTemple;
 use App\Filament\Resources\Temples\Pages\EditTemple;
 use App\Filament\Resources\Temples\Pages\ListTemples;
+use App\Filament\Resources\Temples\RelationManagers\ClaimsRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\ClosuresRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\PhotosRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\PujasRelationManager;
@@ -83,6 +84,7 @@ class TempleResource extends Resource
             TimingsRelationManager::class,
             PujasRelationManager::class,
             ClosuresRelationManager::class,
+            ClaimsRelationManager::class,
         ];
     }
 

@@ -61,7 +61,7 @@ Three audiences, three entry points. Only the first exists today.
 | Audience | Entry point | Auth | Stored in | Status |
 | --- | --- | --- | --- | --- |
 | Staff — super admin, editors | `/admin` | Session | `users` | ✅ Built |
-| Temple authority — trust, temple office | `/temple` | Session | `users`, scoped by `temple_user` | ⬜ Slice 6 |
+| Temple authority — trust, temple office | `/temple` | Session | `users`, scoped by `temple_user` | ✅ Built |
 | Devotees — app and web | Flutter app | Sanctum token | `devotees` (separate table) | ⬜ Slice 8 |
 
 Devotees get their own table on purpose: they are expected in the millions
@@ -122,6 +122,23 @@ than no claim.
 **The public API** is documented in [docs/API.md](docs/API.md). It serves only
 published temples, supports search across alternate names, filters by deity,
 category and state, and orders proximity results by real distance.
+
+## Temple portal
+
+Temple teams sign in at `/temple` with the **Temple Admin** role. They see only
+temples their claim has been approved for, and manage what only they really
+know: contact details, timings, photos, sevas, closures and visitor rules.
+Name, deity and classification stay with editorial staff, as do trust level and
+publishing.
+
+Access is granted per temple from the admin panel, under **Temple authority
+access** on the temple's edit page. A claim grants nothing until a super admin
+approves it, and revoking takes effect immediately.
+
+The boundary is enforced in the resource queries, not by hiding navigation:
+a temple admin requesting another temple's URL gets a 404, and the role cannot
+reach `/admin` at all. Fifteen tests cover it, and they were confirmed to fail
+when the scoping is removed.
 
 ## Deployment
 

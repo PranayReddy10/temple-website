@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Http;
 
-use Illuminate\Http\Request;
+use App\Support\TrustedProxies;
 use Tests\TestCase;
 
 /**
@@ -12,57 +12,43 @@ use Tests\TestCase;
  */
 class TrustedProxyTest extends TestCase
 {
-    protected ?string $proxies = null;
-
-    protected function setUp(): void
+    public function test_an_unset_value_trusts_nothing(): void
     {
-        // Symfony stores trusted proxies in a static, which survives between
-        // tests in the same process. Without this reset, whichever variant ran
-        // first would decide the answer for the other.
-        Request::setTrustedProxies([], Request::HEADER_X_FORWARDED_FOR);
-
-        // bootstrap/app.php reads env() while the application is being built,
-        // so the value has to exist before the app is created in parent::setUp().
-        if ($this->proxies === null) {
-            unset($_SERVER['TRUSTED_PROXIES'], $_ENV['TRUSTED_PROXIES']);
-        } else {
-            $_SERVER['TRUSTED_PROXIES'] = $this->proxies;
-            $_ENV['TRUSTED_PROXIES'] = $this->proxies;
-        }
-
-        parent::setUp();
+        // The safe default, and what .env.example ships.
+        $this->assertNull(TrustedProxies::from(null));
+        $this->assertNull(TrustedProxies::from(''));
+        $this->assertNull(TrustedProxies::from('   '));
     }
 
-    protected function tearDown(): void
+    public function test_it_can_be_switched_off_explicitly(): void
     {
-        unset($_SERVER['TRUSTED_PROXIES'], $_ENV['TRUSTED_PROXIES']);
-        Request::setTrustedProxies([], Request::HEADER_X_FORWARDED_FOR);
-
-        parent::tearDown();
+        $this->assertNull(TrustedProxies::from('false'));
+        $this->assertNull(TrustedProxies::from('0'));
     }
 
-    protected function forwardedRequest(): Request
+    public function test_a_star_trusts_any_proxy(): void
     {
-        return Request::create('http://temple.example/admin', 'GET', [], [], [], [
-            'HTTP_X_FORWARDED_PROTO' => 'https',
-            'HTTP_X_FORWARDED_FOR' => '203.0.113.7',
-            'REMOTE_ADDR' => '10.0.0.1',
-        ]);
+        // Appropriate behind Cloudflare, where the origin address is not
+        // publicly advertised.
+        $this->assertSame('*', TrustedProxies::from('*'));
     }
 
-    public function test_forwarded_headers_are_ignored_when_no_proxy_is_trusted(): void
+    public function test_a_list_of_addresses_is_split_and_trimmed(): void
     {
-        $this->assertNull(env('TRUSTED_PROXIES'));
-
-        $request = $this->forwardedRequest();
-
-        // Default posture: an attacker reaching the origin directly must not be
-        // able to spoof scheme or client IP.
-        $this->assertFalse($request->isSecure());
-        $this->assertSame('10.0.0.1', $request->ip());
+        $this->assertSame(
+            ['10.0.0.1', '10.0.0.2'],
+            TrustedProxies::from(' 10.0.0.1 , 10.0.0.2 '),
+        );
     }
 
-    public function test_the_app_boots_without_the_variable_set(): void
+    public function test_a_list_of_only_separators_trusts_nothing(): void
+    {
+        // ",,," must not become a list of empty strings, which Symfony would
+        // treat as proxies and effectively trust the request as-is.
+        $this->assertNull(TrustedProxies::from(',,,'));
+    }
+
+    public function test_the_application_boots_with_the_default_configuration(): void
     {
         $this->get('/up')->assertOk();
     }

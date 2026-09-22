@@ -14,6 +14,7 @@ class PujaResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'description' => $this->description,
+            'image_url' => $this->imageUrl(),
             'includes' => $this->includes,
             'eligibility' => $this->eligibility,
             'starts_at' => $this->starts_at ? substr((string) $this->starts_at, 0, 5) : null,
