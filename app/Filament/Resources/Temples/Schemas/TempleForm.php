@@ -15,6 +15,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use App\Support\FormState;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
@@ -51,7 +52,7 @@ class TempleForm
                     ->afterStateUpdated(function (Get $get, Set $set, ?string $state): void {
                         // Keep the slug in step while drafting, but never
                         // silently rewrite the URL of a published temple.
-                        if (self::statusOf($get('status')) !== TempleStatus::Published) {
+                        if (FormState::enum(TempleStatus::class, $get('status')) !== TempleStatus::Published) {
                             $set('slug', Str::slug((string) $state));
                         }
                     }),
@@ -298,7 +299,7 @@ class TempleForm
                     ->required()
                     ->native(false)
                     ->live()
-                    ->helperText(fn (Get $get): string => self::verificationOf($get('verification_status'))?->description() ?? ''),
+                    ->helperText(fn (Get $get): string => FormState::enum(VerificationStatus::class, $get('verification_status'))?->description() ?? ''),
 
                 DatePicker::make('last_verified_at')
                     ->label('Last verified on')
@@ -311,13 +312,13 @@ class TempleForm
                     ->placeholder('e.g. TTD official website, ASI listing')
                     // Claiming "verified" or "official" without naming a source
                     // is exactly the sloppiness the plan warns against.
-                    ->required(fn (Get $get): bool => self::verificationOf($get('verification_status'))?->requiresSource() ?? false),
+                    ->required(fn (Get $get): bool => FormState::enum(VerificationStatus::class, $get('verification_status'))?->requiresSource() ?? false),
 
                 TextInput::make('source_url')
                     ->label('Source URL')
                     ->url()
                     ->maxLength(255)
-                    ->required(fn (Get $get): bool => self::verificationOf($get('verification_status'))?->requiresSource() ?? false),
+                    ->required(fn (Get $get): bool => FormState::enum(VerificationStatus::class, $get('verification_status'))?->requiresSource() ?? false),
             ]);
     }
 
@@ -348,25 +349,6 @@ class TempleForm
             ]);
     }
 
-
-    /**
-     * Form state carries an enum instance when it comes from a default or a
-     * cast model attribute, and a plain string when it comes from user input.
-     * These normalise both shapes so the closures above work either way.
-     */
-    protected static function verificationOf(mixed $state): ?VerificationStatus
-    {
-        return $state instanceof VerificationStatus
-            ? $state
-            : VerificationStatus::tryFrom((string) $state);
-    }
-
-    protected static function statusOf(mixed $state): ?TempleStatus
-    {
-        return $state instanceof TempleStatus
-            ? $state
-            : TempleStatus::tryFrom((string) $state);
-    }
 
     /** @return array<string, string> */
     protected static function locales(): array

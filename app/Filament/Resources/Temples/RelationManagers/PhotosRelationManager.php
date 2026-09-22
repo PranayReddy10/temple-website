@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Temples\RelationManagers;
 
 use App\Enums\PhotoCategory;
 use App\Models\TemplePhoto;
+use App\Support\FormState;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -52,7 +53,7 @@ class PhotosRelationManager extends RelationManager
                     ->required()
                     ->native(false)
                     ->live()
-                    ->helperText(fn (Get $get): string => PhotoCategory::tryFrom((string) $get('category'))?->needsPermissionCheck()
+                    ->helperText(fn (Get $get): string => FormState::enum(PhotoCategory::class, $get('category'))?->needsPermissionCheck()
                         ? 'Many temples prohibit photography in the sanctum. Confirm this photo was permitted before publishing.'
                         : ''),
 
