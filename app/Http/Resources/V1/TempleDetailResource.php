@@ -80,6 +80,7 @@ class TempleDetailResource extends JsonResource
             'pujas' => PujaResource::collection($this->whenLoaded('pujas')),
             'photos' => PhotoResource::collection($this->whenLoaded('photos')),
             'closures' => ClosureResource::collection($this->whenLoaded('closures')),
+            'events' => EventResource::collection($this->whenLoaded('events')),
 
             'facilities' => $this->whenLoaded('facilities', fn () => $this->facilities
                 ->map(fn ($f) => [

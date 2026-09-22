@@ -62,7 +62,7 @@ Three audiences, three entry points. Only the first exists today.
 | --- | --- | --- | --- | --- |
 | Staff — super admin, editors | `/admin` | Session | `users` | ✅ Built |
 | Temple authority — trust, temple office | `/temple` | Session | `users`, scoped by `temple_user` | ✅ Built |
-| Devotees — app and web | Flutter app | Sanctum token | `devotees` (separate table) | ⬜ Slice 8 |
+| Devotees — app and web | Flutter app | Sanctum token | `devotees` (separate table) | ✅ Built |
 
 Devotees get their own table on purpose: they are expected in the millions
 against a few hundred staff, they will sign in by OTP or a social provider
