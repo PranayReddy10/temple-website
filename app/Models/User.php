@@ -19,6 +19,19 @@ class User extends Authenticatable implements FilamentUser
 
     protected $hidden = ['password', 'remember_token'];
 
+    /**
+     * Defaults held on the model, not only in the database.
+     *
+     * A database default is not applied to the in-memory instance, so a freshly
+     * created user had a null is_active. canAccessPanel() declares a bool
+     * return, so that null became a TypeError and a 500 where a clean 403
+     * belonged.
+     */
+    protected $attributes = [
+        'role' => UserRole::Editor->value,
+        'is_active' => true,
+    ];
+
     protected function casts(): array
     {
         return [
@@ -36,7 +49,10 @@ class User extends Authenticatable implements FilamentUser
      */
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->is_active;
+        // Cast rather than returned directly: a row written by an import or
+        // raw SQL that omitted the column would otherwise throw a TypeError,
+        // turning "no access" into a 500.
+        return (bool) $this->is_active;
     }
 
     public function isSuperAdmin(): bool
@@ -46,11 +62,11 @@ class User extends Authenticatable implements FilamentUser
 
     public function canPublish(): bool
     {
-        return $this->role->canPublish();
+        return $this->role?->canPublish() ?? false;
     }
 
     public function canManageUsers(): bool
     {
-        return $this->role->canManageUsers();
+        return $this->role?->canManageUsers() ?? false;
     }
 }

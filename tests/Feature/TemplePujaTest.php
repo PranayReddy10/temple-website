@@ -82,6 +82,59 @@ class TemplePujaTest extends TestCase
         $this->assertSame('Official booking', $puja->bookingLabel());
     }
 
+    public function test_an_uploaded_image_resolves_to_a_url(): void
+    {
+        config(['filesystems.media' => 'puja-media']);
+        $disk = \Illuminate\Support\Facades\Storage::fake('puja-media');
+
+        $temple = Temple::create(['name' => 'Image Temple']);
+        $path = \Illuminate\Http\UploadedFile::fake()->image('seva.jpg')->store('pujas/'.$temple->id, 'puja-media');
+
+        $puja = TemplePuja::create([
+            'temple_id' => $temple->id,
+            'name' => 'Abhishekam',
+            'image_path' => $path,
+        ]);
+
+        $this->assertNotNull($puja->imageUrl());
+        $this->assertStringContainsString('pujas/'.$temple->id, (string) $puja->imageUrl());
+    }
+
+    public function test_a_puja_without_an_image_has_no_url(): void
+    {
+        $this->assertNull($this->puja()->imageUrl());
+    }
+
+    public function test_deleting_a_puja_deletes_its_image(): void
+    {
+        config(['filesystems.media' => 'puja-media']);
+        \Illuminate\Support\Facades\Storage::fake('puja-media');
+
+        $temple = Temple::create(['name' => 'Cleanup Puja Temple']);
+        $path = \Illuminate\Http\UploadedFile::fake()->image('seva.jpg')->store('pujas/'.$temple->id, 'puja-media');
+
+        $puja = TemplePuja::create([
+            'temple_id' => $temple->id,
+            'name' => 'Archana',
+            'image_path' => $path,
+        ]);
+
+        $puja->delete();
+
+        // Orphaned objects in Spaces cost money and cannot be traced back.
+        \Illuminate\Support\Facades\Storage::disk('puja-media')->assertMissing($path);
+    }
+
+    public function test_the_image_disk_is_recorded_on_the_row(): void
+    {
+        config(['filesystems.media' => 'puja-media']);
+
+        $puja = $this->puja(['image_path' => 'pujas/1/x.jpg']);
+
+        // So an image uploaded before a move to Spaces keeps resolving after.
+        $this->assertSame('puja-media', $puja->fresh()->image_disk);
+    }
+
     public function test_duration_is_rendered_in_hours_and_minutes(): void
     {
         $this->assertSame('45 min', $this->puja(['duration_minutes' => 45])->durationLabel());

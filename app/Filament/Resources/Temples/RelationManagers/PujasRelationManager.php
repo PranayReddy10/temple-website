@@ -8,6 +8,7 @@ use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TimePicker;
@@ -17,6 +18,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -42,6 +44,17 @@ class PujasRelationManager extends RelationManager
                             ->columnSpanFull(),
 
                         Textarea::make('description')->rows(3)->columnSpanFull(),
+
+                        FileUpload::make('image_path')
+                            ->label('Image')
+                            ->image()
+                            ->disk(fn (): string => config('filesystems.media'))
+                            ->directory(fn (): string => 'pujas/'.$this->getOwnerRecord()->getKey())
+                            ->visibility('public')
+                            ->maxSize(4096)
+                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                            ->helperText('Optional. Shown beside the seva in the app.')
+                            ->columnSpanFull(),
                         Textarea::make('includes')
                             ->label('What is included')
                             ->rows(2)
@@ -122,6 +135,12 @@ class PujasRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('name')
             ->columns([
+                ImageColumn::make('image')
+                    ->label('')
+                    ->state(fn (TemplePuja $record): ?string => $record->imageUrl())
+                    ->height(40)
+                    ->circular(),
+
                 TextColumn::make('name')->searchable()->weight('medium')->wrap(),
 
                 TextColumn::make('when')

@@ -6,13 +6,15 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class TemplePuja extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'temple_id', 'name', 'description', 'includes', 'eligibility',
+        'temple_id', 'name', 'description', 'image_disk', 'image_path',
+        'includes', 'eligibility',
         'starts_at', 'duration_minutes', 'schedule_note',
         'fee_amount', 'fee_currency', 'is_free',
         'booking_url', 'booking_is_official', 'booking_note',
@@ -49,6 +51,21 @@ class TemplePuja extends Model
     public function temple(): BelongsTo
     {
         return $this->belongsTo(Temple::class);
+    }
+
+    /**
+     * Resolves against the disk recorded on the row, not the currently
+     * configured media disk, so images uploaded before a move to Spaces keep
+     * working afterwards.
+     */
+    public function imageUrl(): ?string
+    {
+        if (blank($this->image_path)) {
+            return null;
+        }
+
+        return Storage::disk($this->image_disk ?? config('filesystems.media'))
+            ->url($this->image_path);
     }
 
     public function scopePublished(Builder $query): Builder

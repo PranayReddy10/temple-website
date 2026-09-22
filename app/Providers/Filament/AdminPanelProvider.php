@@ -31,8 +31,9 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             // Resolved lazily, not at registration time, so the product name can
-            // change through config or .env without touching this provider.
-            ->brandName(fn (): string => config('brand.name'))
+            // change through the settings screen, config or .env without
+            // touching this provider or requiring a deploy.
+            ->brandName(fn (): string => setting('brand_name', 'brand.name'))
             ->favicon(asset('favicon.ico'))
             // Saffron primary with kumkum and gold accents: the devotional
             // palette shared with the public site and the Flutter app.
