@@ -1,0 +1,38 @@
+# Deny web access to the application root.
+#
+# This file is a safety net, not the fix. The project root must live OUTSIDE
+# the web root, with only `public/` exposed — see docs/DEPLOY_HOSTINGER.md.
+#
+# When the app is deployed correctly, Apache never reads this file: it only
+# reads .htaccess from the document root downwards, and the document root is
+# `public/`, one level below here. It costs nothing in that case.
+#
+# When the app has been placed inside a web root by mistake — for example at
+# public_html/temple/ — this is what stands between the internet and .env,
+# which holds the database password and APP_KEY in plain text. PHP files in
+# that position are executed rather than shown, but .env, composer.lock,
+# storage/logs/laravel.log and the whole of vendor/ are served as plain text.
+#
+# If removing this file makes the site work, the site is being served from the
+# project root and is exposed. Fix the document root instead.
+
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
+
+# Last resort if AllowOverride blocks the directives above: never serve the
+# files that leak secrets, whatever else happens.
+<FilesMatch "^(\.env.*|\.git.*|composer\.(json|lock)|package\.json|phpunit\.xml|artisan)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
