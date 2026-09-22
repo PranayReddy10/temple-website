@@ -24,6 +24,9 @@ use Illuminate\Support\Str;
  * Editors are expected to work through these, confirm each field against a
  * primary source, attach that source and only then raise the trust level. The
  * "Needs re-verification" filter in the temples table lists exactly this queue.
+ *
+ * Telangana temples, including Yadadri and Bhadrachalam, live in
+ * TelanganaTempleSeeder, which can also be imported into a live database.
  */
 class TempleSeeder extends Seeder
 {
@@ -235,22 +238,6 @@ class TempleSeeder extends Seeder
                 'categories' => [],
                 'aliases' => ['Guruvayoor Temple' => 'en', 'ഗുരുവായൂർ ക്ഷേത്രം' => 'ml'],
                 'summary' => 'Krishna temple in Thrissur district, often called the Dwarka of the south.',
-            ],
-            [
-                'name' => 'Yadadri Lakshmi Narasimha Temple', 'deity' => 'narasimha',
-                'state' => 'TG', 'district' => 'Yadadri Bhuvanagiri', 'city' => 'Yadagirigutta',
-                'lat' => 17.6017, 'lng' => 78.9500, 'status' => $r,
-                'categories' => ['hill-temple'],
-                'aliases' => ['Yadagirigutta Temple' => 'en', 'యాదాద్రి' => 'te'],
-                'summary' => 'Hill temple to Lakshmi Narasimha, rebuilt in Krishna Shila stone.',
-            ],
-            [
-                'name' => 'Bhadrachalam Sita Ramachandraswamy Temple', 'deity' => 'rama',
-                'state' => 'TG', 'district' => 'Bhadradri Kothagudem', 'city' => 'Bhadrachalam',
-                'lat' => 17.6688, 'lng' => 80.8897, 'status' => $d,
-                'categories' => ['river-ghat-temple'],
-                'aliases' => ['Bhadrachalam Temple' => 'en', 'భద్రాచలం' => 'te'],
-                'summary' => 'Rama temple on the Godavari, known for Sri Rama Navami celebrations.',
             ],
             [
                 'name' => 'Kailasa Temple, Ellora', 'deity' => 'shiva',

@@ -85,7 +85,8 @@ class TempleController extends Controller
             ->when($request->boolean('verified'), fn (Builder $q) => $q->whereIn('verification_status', [
                 VerificationStatus::Verified->value,
                 VerificationStatus::Official->value,
-            ]));
+            ]))
+            ->when($request->boolean('featured'), fn (Builder $q) => $q->featured());
 
         if ($request->hasCoordinates()) {
             $lat = (float) $request->input('lat');
@@ -112,6 +113,8 @@ class TempleController extends Controller
         match ($sort) {
             '-name' => $query->orderBy('name', 'desc'),
             'recent' => $query->orderByDesc('published_at'),
+            // Famous temples first, then alphabetical within each group.
+            'featured' => $query->orderByDesc('is_featured')->orderBy('name'),
             default => $query->orderBy('name'),
         };
     }

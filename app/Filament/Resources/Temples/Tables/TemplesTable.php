@@ -55,6 +55,16 @@ class TemplesTable
                     ->badge()
                     ->sortable(),
 
+                IconColumn::make('is_featured')
+                    ->label('Famous')
+                    ->boolean()
+                    ->trueIcon('heroicon-s-star')
+                    ->falseIcon('heroicon-o-star')
+                    ->trueColor('warning')
+                    ->falseColor('gray')
+                    ->sortable()
+                    ->toggleable(),
+
                 TextColumn::make('verification_status')
                     ->label('Trust')
                     ->badge()
@@ -97,6 +107,11 @@ class TemplesTable
                     ->label('Trust level')
                     ->options(VerificationStatus::class)
                     ->multiple(),
+
+                Filter::make('featured')
+                    ->label('Famous temples')
+                    ->query(fn (Builder $query): Builder => $query->where('is_featured', true))
+                    ->toggle(),
 
                 SelectFilter::make('state')
                     ->relationship('state', 'name')

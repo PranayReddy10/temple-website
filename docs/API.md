@@ -36,9 +36,10 @@ Paginated list.
 | `state` | slug | e.g. `telangana` |
 | `district` | slug | |
 | `verified` | boolean | Restricts to `verified` and `official` records only |
+| `featured` | boolean | Restricts to temples editors marked as famous |
 | `lat`, `lng` | float | **Both required together.** Supplying one without the other is a 422 |
 | `radius` | float | Kilometres, default 50, max 2000 |
-| `sort` | string | `name`, `-name`, `recent`, `distance` |
+| `sort` | string | `name`, `-name`, `recent`, `distance`, `featured` (famous first, then by name) |
 | `per_page` | int | Default 20, max 50 |
 
 When `lat`/`lng` are present, each result gains `distance_km` and results are
@@ -102,6 +103,9 @@ and it is only ever true when an editor has explicitly confirmed it.
 ### Trust levels travel with every record
 
 `trust.level` is one of `unverified`, `community`, `verified`, `official`.
+
+`is_featured` (on list and detail) marks a famous temple. It is a curation
+choice, not a trust claim: a featured temple can still be community level.
 These must stay visually distinct in the app — that is the whole point of
 carrying them to the device. `trust.is_stale` marks a record not re-checked
 within a year.

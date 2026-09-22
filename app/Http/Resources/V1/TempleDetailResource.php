@@ -72,6 +72,10 @@ class TempleDetailResource extends JsonResource
              * community information to stay visibly distinct, and that is only
              * possible if the level reaches the device.
              */
+            // An editorial "famous temple" mark. Not a trust claim: read
+            // `trust` for how far the record can be relied on.
+            'is_featured' => (bool) $this->is_featured,
+
             'trust' => [
                 'level' => $this->verification_status?->value,
                 'label' => $this->verification_status?->getLabel(),

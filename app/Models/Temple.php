@@ -48,13 +48,14 @@ class Temple extends Model
         'entry_rules', 'queue_information',
         'official_website', 'contact_phone', 'contact_email',
         'verification_status', 'source_name', 'source_url', 'last_verified_at',
-        'status', 'published_at', 'created_by', 'updated_by',
+        'status', 'is_featured', 'published_at', 'created_by', 'updated_by',
     ];
 
     protected function casts(): array
     {
         return [
             'status' => TempleStatus::class,
+            'is_featured' => 'boolean',
             'verification_status' => VerificationStatus::class,
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
@@ -185,6 +186,12 @@ class Temple extends Model
     public function scopePublished(Builder $query): Builder
     {
         return $query->where('status', TempleStatus::Published);
+    }
+
+    /** Temples editors have marked as famous. */
+    public function scopeFeatured(Builder $query): Builder
+    {
+        return $query->where('is_featured', true);
     }
 
     /**

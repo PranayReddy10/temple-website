@@ -27,7 +27,8 @@ class TempleIndexRequest extends FormRequest
             'radius' => ['nullable', 'numeric', 'min:1', 'max:2000'],
 
             'verified' => ['nullable', 'boolean'],
-            'sort' => ['nullable', 'string', 'in:name,-name,recent,distance'],
+            'featured' => ['nullable', 'boolean'],
+            'sort' => ['nullable', 'string', 'in:name,-name,recent,distance,featured'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
             'page' => ['nullable', 'integer', 'min:1'],
         ];
