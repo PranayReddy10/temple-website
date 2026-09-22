@@ -3,7 +3,11 @@
 namespace App\Providers;
 
 use App\Models\Temple;
+use App\Models\TemplePhoto;
+use App\Models\TemplePuja;
 use App\Observers\TempleObserver;
+use App\Observers\TemplePhotoObserver;
+use App\Observers\TemplePujaObserver;
 use Filament\Support\Assets\Css;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Auth\Events\Login;
@@ -26,6 +30,8 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         Temple::observe(TempleObserver::class);
+        TemplePhoto::observe(TemplePhotoObserver::class);
+        TemplePuja::observe(TemplePujaObserver::class);
 
         Event::listen(Login::class, function (Login $event): void {
             $event->user->forceFill(['last_login_at' => now()])->saveQuietly();

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TempleStatus;
+use Carbon\CarbonInterface;
 use App\Enums\VerificationStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Temple extends Model
@@ -20,6 +22,8 @@ class Temple extends Model
         'name', 'slug', 'deity_id',
         'state_id', 'district_id', 'city', 'address', 'pincode', 'latitude', 'longitude',
         'short_description', 'history', 'significance', 'architecture_style', 'built_period',
+        'dress_code', 'photography_policy', 'mobile_policy', 'footwear_policy',
+        'entry_rules', 'queue_information',
         'official_website', 'contact_phone', 'contact_email',
         'verification_status', 'source_name', 'source_url', 'last_verified_at',
         'status', 'published_at', 'created_by', 'updated_by',
@@ -65,6 +69,39 @@ class Temple extends Model
     public function aliases(): HasMany
     {
         return $this->hasMany(TempleAlias::class);
+    }
+
+    public function photos(): HasMany
+    {
+        return $this->hasMany(TemplePhoto::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function primaryPhoto(): HasOne
+    {
+        return $this->hasOne(TemplePhoto::class)->where('is_primary', true);
+    }
+
+    public function timings(): HasMany
+    {
+        return $this->hasMany(TempleTiming::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function closures(): HasMany
+    {
+        return $this->hasMany(TempleClosure::class)->orderBy('starts_on');
+    }
+
+    public function pujas(): HasMany
+    {
+        return $this->hasMany(TemplePuja::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function facilities(): BelongsToMany
+    {
+        return $this->belongsToMany(Facility::class)
+            ->withPivot(['is_verified', 'note'])
+            ->withTimestamps()
+            ->orderBy('sort_order');
     }
 
     public function creator(): BelongsTo
@@ -127,11 +164,56 @@ class Temple extends Model
             ->whereBetween('longitude', [$lng - $lngDelta, $lng + $lngDelta]);
     }
 
+    /**
+     * Adds a `distance_km` column measured from the given point and orders by it.
+     *
+     * Uses the asin form of the haversine formula rather than the more common
+     * acos form. The acos form feeds a value that floating-point error can push
+     * just above 1.0 into acos(), which returns NaN — so searching "near" a
+     * temple whose coordinates match exactly would drop that temple from its own
+     * results. The asin form is stable at zero distance.
+     *
+     * Deliberately plain trigonometry rather than MySQL's ST_Distance_Sphere:
+     * it runs identically on MySQL and SQLite, so the test suite exercises the
+     * same maths production does. Accuracy is equivalent at these distances.
+     *
+     * Always combined with withinBoundingBox(), which narrows candidates using
+     * the (latitude, longitude) index before any of this runs. Without that
+     * prefilter this expression would force a full table scan.
+     */
+    public function scopeWithDistanceFrom(Builder $query, float $lat, float $lng): Builder
+    {
+        $haversine = '2 * 6371 * asin(sqrt('
+            .'sin((radians(temples.latitude) - radians(?)) / 2) * sin((radians(temples.latitude) - radians(?)) / 2)'
+            .' + cos(radians(?)) * cos(radians(temples.latitude))'
+            .' * sin((radians(temples.longitude) - radians(?)) / 2) * sin((radians(temples.longitude) - radians(?)) / 2)'
+            .'))';
+
+        return $query
+            ->addSelect(['*'])
+            ->selectRaw("{$haversine} as distance_km", [$lat, $lat, $lat, $lng, $lng])
+            ->whereNotNull('temples.latitude')
+            ->whereNotNull('temples.longitude')
+            ->orderBy('distance_km');
+    }
+
     // --- Helpers ---
 
     public function hasCoordinates(): bool
     {
         return $this->latitude !== null && $this->longitude !== null;
+    }
+
+    /**
+     * Whether a published closure covers the given date. Devotees travel a
+     * long way, so a closure must win over the regular timings.
+     */
+    public function isClosedOn(?CarbonInterface $date = null): bool
+    {
+        $date = $date ?? now();
+
+        return $this->closures
+            ->contains(fn (TempleClosure $closure): bool => $closure->is_full_day && $closure->coversDate($date));
     }
 
     /**

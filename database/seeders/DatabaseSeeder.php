@@ -13,8 +13,10 @@ class DatabaseSeeder extends Seeder
             StateSeeder::class,
             DeitySeeder::class,
             TempleCategorySeeder::class,
+            FacilitySeeder::class,
             AdminUserSeeder::class,
             TempleSeeder::class,
+            TempleDetailSeeder::class,
         ]);
     }
 }

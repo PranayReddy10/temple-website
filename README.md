@@ -45,7 +45,12 @@ The seeder creates a super admin and **prints its password once**. Set
 php artisan test
 ```
 
-## What slice 1 delivers
+## What Phase 1 delivers so far
+
+Slices 1 to 4 are complete. Slice 5 (the Flutter app shell) is next and lives
+in `temple-app`.
+
+## Slice 1 — admin auth and temple CRUD
 
 - Admin sign-in, with **super admin** and **editor** roles.
 - **Temples**: searchable, filterable, paginated list; sectioned create/edit
@@ -63,6 +68,32 @@ php artisan test
   source-backed records, temples missing coordinates.
 - 22 starter temples, seeded honestly as *community* level with no source — they
   are there to be verified, not to pad a count.
+
+## Slices 2–4 — media, pujas and the public API
+
+**Photos** are stored in DigitalOcean Spaces and served from its CDN. Uploads
+generate a 1200px medium and a 400px thumbnail (WebP where available). Each row
+records its own disk, so photos survive a later storage migration; deleting a
+photo deletes its files, so object storage does not fill with orphans.
+
+**Timings** cover general hours, darshan and aarti, per-day or every day, plus
+**closures** with date ranges — a full-day closure and merely changed hours are
+different things to someone who has travelled.
+
+**Pujas** carry time, duration, eligibility, published fee and booking route.
+Two invariants are enforced in the model layer, not just the form:
+
+- An unknown price reports as **"No published price"**, never as free.
+- A booking link is only labelled **official** when an editor has explicitly
+  confirmed it. A URL that looks official is not.
+
+**Facilities** separate accessibility from general amenities, and each is
+flagged verified or not — an unconfirmed claim of wheelchair access is worse
+than no claim.
+
+**The public API** is documented in [docs/API.md](docs/API.md). It serves only
+published temples, supports search across alternate names, filters by deity,
+category and state, and orders proximity results by real distance.
 
 ## Deployment
 

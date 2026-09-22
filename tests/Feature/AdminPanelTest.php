@@ -68,6 +68,17 @@ class AdminPanelTest extends TestCase
         }
     }
 
+    public function test_the_temple_edit_page_renders_with_its_relation_managers(): void
+    {
+        $this->seed([StateSeeder::class, DeitySeeder::class, TempleCategorySeeder::class]);
+        $temple = \App\Models\Temple::create(['name' => 'Relation Temple']);
+
+        // Photos, timings, pujas and closures all hang off this page.
+        $this->actingAs($this->admin())
+            ->get("/admin/temples/{$temple->id}/edit")
+            ->assertOk();
+    }
+
     public function test_only_a_super_admin_may_manage_users(): void
     {
         $this->actingAs($this->admin())->get('/admin/users')->assertOk();
