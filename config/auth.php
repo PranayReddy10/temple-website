@@ -38,6 +38,17 @@ return [
     */
 
     'guards' => [
+
+        /*
+         * App users authenticate with Sanctum tokens against their own
+         * provider. Sharing the 'web' guard would mean one table, which is
+         * exactly what the devotees migration avoids.
+         */
+        'devotee' => [
+            'driver' => 'sanctum',
+            'provider' => 'devotees',
+        ],
+
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
@@ -62,6 +73,12 @@ return [
     */
 
     'providers' => [
+
+        'devotees' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Devotee::class,
+        ],
+
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', User::class),

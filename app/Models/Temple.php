@@ -91,6 +91,11 @@ class Temple extends Model
         return $this->hasMany(TempleClosure::class)->orderBy('starts_on');
     }
 
+    public function events(): HasMany
+    {
+        return $this->hasMany(TempleEvent::class)->orderBy('starts_on');
+    }
+
     public function pujas(): HasMany
     {
         return $this->hasMany(TemplePuja::class)->orderBy('sort_order')->orderBy('id');

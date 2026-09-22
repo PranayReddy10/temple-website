@@ -98,16 +98,17 @@ leaves the system in a working state. **Nothing is built all at once.**
 | 3 | **Puja / Seva + facilities** | Published pujas with time, duration, eligibility, fee and official booking route; visitor rules; facilities including accessibility | ✅ **Done** |
 | 4 | **Public REST API v1** | Read endpoints for the app: search, filter, nearby with real distance ordering, temple detail, deity/category/state/facility listings | ✅ **Done** |
 | — | Admin dark / light theme | Temple palette in both schemes, with a Light / Dark / System switcher in the user menu | ✅ **Done** — shipped with slice 1 |
+| — | Admin dashboard & temple styling | Today's deity panel with its mantra, a work queue of what needs a person, pilgrimage-circuit completeness, and gopuram-derived styling across both schemes | ✅ **Done** |
 
-### Phase 2 — The other two logins
+### Phase 2 — The other two logins  ✅ **Complete**
 
 | # | Slice | Scope | Status |
 | --- | --- | --- | --- |
 | 5 | **Admin settings + puja images** | Settings screen for brand name, tagline, contact, default language, feature flags and maintenance mode; image upload on each puja/seva | ✅ **Done** |
 | 6 | **Temple authority portal** | Separate `/temple` panel. Claim-and-verify flow, `temple_user` scoping, temple team manages its own timings, photos, pujas and contact details. Nothing outside their own temples is reachable | ✅ **Done** |
-| 7 | **Temple events & programs** | Festivals, programs, special pujas and announcements published by the temple, with image, date range and recurrence. Verified temples publish directly; unverified go to a review queue | ⬜ |
-| 8 | **Devotee accounts** | Signup, login, profile, saved temples. Separate `devotees` table and Sanctum token auth, exposed through `/api/v1/auth` and `/api/v1/me` | ⬜ |
-| 9 | **Daily devotional content** | Weekday-to-deity content: Monday Shiva, Tuesday Hanuman, and so on. Curated photos, videos and songs surfaced on the app home screen each day | ⬜ |
+| 7 | **Temple events & programs** | Festivals, programs, special pujas and announcements published by the temple, with image, date range and recurrence. Verified temples publish directly; unverified go to a review queue | ✅ **Done** |
+| 8 | **Devotee accounts** | Signup, login, profile, saved temples. Separate `devotees` table and Sanctum token auth, exposed through `/api/v1/auth` and `/api/v1/me` | ✅ **Done** |
+| 9 | **Daily devotional content** | Weekday-to-deity content: Monday Shiva, Tuesday Hanuman, and so on. Curated photos, videos and songs surfaced on the app home screen each day, with a per-day accent colour and the deity's temples | ✅ **Done** |
 
 ### Phase 3 — Flutter app
 

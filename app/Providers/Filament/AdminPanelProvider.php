@@ -50,6 +50,7 @@ class AdminPanelProvider extends PanelProvider
             // the more useful of the two.
             ->navigationGroups([
                 NavigationGroup::make('Temples'),
+                NavigationGroup::make('Daily Devotion'),
                 NavigationGroup::make('Master Data'),
                 NavigationGroup::make('Administration'),
             ])
@@ -62,6 +63,10 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 AccountWidget::class,
             ])
+            ->renderHook(
+                \Filament\View\PanelsRenderHook::HEAD_END,
+                fn (): string => '<link rel="stylesheet" href="'.asset('css/temple-admin.css').'">',
+            )
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

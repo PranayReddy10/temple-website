@@ -4,7 +4,13 @@
  * Plain CSS on purpose: shared Hostinger plans have no Node toolchain, so the
  * admin panel must never need an npm build to deploy. Filament's own compiled
  * stylesheet ships in the package; this file layers the temple identity on top
- * using Filament's CSS custom properties and a few scoped overrides.
+ * using Filament's own class names and a few scoped overrides.
+ *
+ * The visual language is drawn from temple building rather than applied as
+ * decoration: the saffron and kumkum of cloth and tilak, the gold of kalasha
+ * and trim, sandal for plastered walls, and the stepped silhouette of a
+ * gopuram in the section headers. Everything is defined once as a token so
+ * light and dark stay in step.
  */
 
 :root {
@@ -13,24 +19,40 @@
     --temple-gold: #c9a227;
     --temple-sandal: #f5ebdc;
     --temple-deep: #3e2723;
+    --temple-stone: #d8cbb8;
+
+    --temple-surface: #fffdf9;
+    --temple-ink: #3e2723;
+    --temple-muted: rgba(62, 39, 35, 0.62);
+    --temple-rule: rgba(201, 162, 39, 0.35);
+    --temple-wash-a: rgba(224, 122, 31, 0.12);
+    --temple-wash-b: rgba(155, 27, 48, 0.10);
 }
 
-/* --- Sign-in screen: warm sandal wash instead of flat grey --- */
+.dark {
+    --temple-surface: #1a1412;
+    --temple-ink: #f5ebdc;
+    --temple-muted: rgba(245, 235, 220, 0.62);
+    --temple-rule: rgba(201, 162, 39, 0.28);
+    --temple-wash-a: rgba(224, 122, 31, 0.10);
+    --temple-wash-b: rgba(155, 27, 48, 0.09);
+}
+
+/* --- Sign-in: a warm sandal wash instead of flat grey --- */
+
 .fi-simple-layout {
-    background-image:
-        radial-gradient(circle at 18% 12%, rgba(224, 122, 31, 0.16), transparent 42%),
-        radial-gradient(circle at 82% 88%, rgba(155, 27, 48, 0.14), transparent 45%);
     background-color: var(--temple-sandal);
+    background-image:
+        radial-gradient(circle at 18% 12%, var(--temple-wash-a), transparent 42%),
+        radial-gradient(circle at 82% 88%, var(--temple-wash-b), transparent 45%);
 }
 
 .dark .fi-simple-layout {
-    background-image:
-        radial-gradient(circle at 18% 12%, rgba(224, 122, 31, 0.12), transparent 42%),
-        radial-gradient(circle at 82% 88%, rgba(155, 27, 48, 0.12), transparent 45%);
     background-color: var(--temple-deep);
 }
 
 /* --- Brand mark carries the saffron-to-kumkum gradient --- */
+
 .fi-logo {
     background: linear-gradient(95deg, var(--temple-saffron), var(--temple-kumkum));
     -webkit-background-clip: text;
@@ -41,6 +63,7 @@
 }
 
 /* --- A thin gold rule under the topbar, echoing temple trim --- */
+
 .fi-topbar nav {
     border-bottom: 2px solid transparent;
     border-image: linear-gradient(
@@ -52,20 +75,173 @@
         1;
 }
 
-/* --- Verification badges must stay visually distinct (plan, section 20) --- */
+/* --- Sidebar: warm paper rather than cold white --- */
+
+.fi-sidebar,
+.fi-topbar > nav {
+    background-color: var(--temple-surface);
+}
+
+.fi-sidebar-nav-groups .fi-sidebar-group-label {
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.68rem;
+    color: var(--temple-muted);
+}
+
+/* The active item gets a saffron edge, like a marked threshold. */
+.fi-sidebar-item-active .fi-sidebar-item-button {
+    box-shadow: inset 3px 0 0 0 var(--temple-saffron);
+}
+
+/* --- Section headings read as temple signage --- */
+
+.fi-section-header-heading {
+    letter-spacing: -0.01em;
+}
+
+/*
+ * A stepped gold motif before each section heading, echoing the receding
+ * tiers of a gopuram. Drawn with gradients rather than an image so it costs
+ * no request and stays crisp at any zoom.
+ */
+.fi-section-header::before {
+    content: "";
+    display: block;
+    width: 34px;
+    height: 4px;
+    margin-bottom: 0.6rem;
+    border-radius: 1px;
+    background:
+        linear-gradient(90deg, var(--temple-saffron) 0 10px, transparent 10px 12px,
+            var(--temple-gold) 12px 22px, transparent 22px 24px,
+            var(--temple-kumkum) 24px 34px);
+}
+
+/* --- Badges stay distinct: trust levels must never blur together --- */
+
 .fi-badge {
     font-weight: 600;
     letter-spacing: 0.01em;
 }
 
-/* --- Section headings in forms read as temple signage --- */
-.fi-section-header-heading {
-    letter-spacing: -0.01em;
+/* --- Tables: warmer header, softer rules --- */
+
+.fi-ta-header-cell {
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    color: var(--temple-muted);
+}
+
+/* --- Today's deity panel on the dashboard --- */
+
+.temple-today {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.75rem;
+    border: 1px solid var(--temple-rule);
+    background-color: var(--temple-surface);
+    background-image:
+        radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--day-accent) 16%, transparent), transparent 55%);
+}
+
+.temple-today__rule {
+    height: 4px;
+    background: linear-gradient(
+        90deg,
+        var(--day-accent),
+        var(--temple-gold) 55%,
+        var(--day-accent)
+    );
+}
+
+.temple-today__body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem 1.4rem;
+}
+
+.temple-today__meta {
+    min-width: 0;
+}
+
+.temple-today__eyebrow {
+    margin: 0 0 0.35rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--temple-muted);
+}
+
+.temple-today__title {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: var(--temple-ink);
+}
+
+.temple-today__subtitle {
+    margin: 0.3rem 0 0;
+    color: var(--temple-muted);
+}
+
+.temple-today__mantra {
+    margin: 0.85rem 0 0;
+    font-size: 1.05rem;
+    color: var(--day-accent);
+    font-weight: 600;
+}
+
+.temple-today__translit {
+    margin: 0.15rem 0 0;
+    font-size: 0.85rem;
+    font-style: italic;
+    color: var(--temple-muted);
+}
+
+.temple-today__deities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.temple-today__deity {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0.5rem 0.85rem;
+    border-radius: 0.55rem;
+    border: 1px solid var(--temple-rule);
+    background-color: color-mix(in srgb, var(--day-accent) 8%, transparent);
+}
+
+.temple-today__deity-name {
+    font-weight: 600;
+    color: var(--temple-ink);
+}
+
+.temple-today__deity-count {
+    font-size: 0.75rem;
+    color: var(--temple-muted);
+}
+
+/* Phone width: the meta block and deity chips stack rather than squeeze. */
+@media (max-width: 640px) {
+    .temple-today__body {
+        flex-direction: column;
+        padding: 1rem 1.1rem 1.2rem;
+    }
 }
 
 /* Respect users who ask for reduced motion. */
 @media (prefers-reduced-motion: reduce) {
-    .fi-simple-layout {
+    .fi-simple-layout,
+    .temple-today {
         background-image: none;
     }
 }
