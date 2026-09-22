@@ -9,8 +9,11 @@ use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 /**
- * The plan's MVP target is 1,000 high-quality temple profiles, so the dashboard
- * leads with data quality rather than vanity counts.
+ * What the database holds.
+ *
+ * Deliberately separate from TempleWorkQueueWidget, which covers what needs
+ * a person. Showing a count in both places made the dashboard read as though
+ * there were two different numbers for the same thing.
  */
 class TempleDatabaseOverview extends StatsOverviewWidget
 {
@@ -25,7 +28,6 @@ class TempleDatabaseOverview extends StatsOverviewWidget
             ->pluck('aggregate', 'status');
 
         $published = (int) ($byStatus[TempleStatus::Published->value] ?? 0);
-        $inReview = (int) ($byStatus[TempleStatus::InReview->value] ?? 0);
         $draft = (int) ($byStatus[TempleStatus::Draft->value] ?? 0);
         $total = (int) $byStatus->sum();
 
@@ -34,10 +36,6 @@ class TempleDatabaseOverview extends StatsOverviewWidget
                 VerificationStatus::Verified->value,
                 VerificationStatus::Official->value,
             ])
-            ->count();
-
-        $needsAttention = Temple::query()
-            ->where(fn ($q) => $q->whereNull('latitude')->orWhereNull('longitude'))
             ->count();
 
         return [
@@ -51,20 +49,11 @@ class TempleDatabaseOverview extends StatsOverviewWidget
                 ->descriptionIcon('heroicon-m-flag')
                 ->color($published >= 1000 ? 'success' : 'warning'),
 
-            Stat::make('Waiting for review', number_format($inReview))
-                ->description($inReview > 0 ? 'Needs a super admin' : 'Queue is clear')
-                ->descriptionIcon('heroicon-m-clock')
-                ->color($inReview > 0 ? 'warning' : 'success'),
-
             Stat::make('Verified or official', number_format($trusted))
                 ->description($this->sharePhrase($trusted, $total).' of records are source-backed')
                 ->descriptionIcon('heroicon-m-shield-check')
                 ->color($trusted > 0 ? 'success' : 'gray'),
 
-            Stat::make('Missing coordinates', number_format($needsAttention))
-                ->description($needsAttention > 0 ? 'These will not appear on the map' : 'Every temple is mappable')
-                ->descriptionIcon('heroicon-m-map-pin')
-                ->color($needsAttention > 0 ? 'danger' : 'success'),
         ];
     }
 

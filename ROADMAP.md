@@ -98,6 +98,7 @@ leaves the system in a working state. **Nothing is built all at once.**
 | 3 | **Puja / Seva + facilities** | Published pujas with time, duration, eligibility, fee and official booking route; visitor rules; facilities including accessibility | ✅ **Done** |
 | 4 | **Public REST API v1** | Read endpoints for the app: search, filter, nearby with real distance ordering, temple detail, deity/category/state/facility listings | ✅ **Done** |
 | — | Admin dark / light theme | Temple palette in both schemes, with a Light / Dark / System switcher in the user menu | ✅ **Done** — shipped with slice 1 |
+| — | Admin dashboard & temple styling | Today's deity panel with its mantra, a work queue of what needs a person, pilgrimage-circuit completeness, and gopuram-derived styling across both schemes | ✅ **Done** |
 
 ### Phase 2 — The other two logins  ✅ **Complete**
 
