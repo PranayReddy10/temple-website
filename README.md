@@ -183,9 +183,12 @@ account — the temples it covers. Sign out is in that same user menu.
 
 ## Phase 3 — Passport, Photo Stamp, trips, languages
 
-The backend and admin for the app features. **The Flutter app itself has not
-been started**: `temple-app` holds a README and a roadmap and no code. These
-are the endpoints it will be built against.
+The backend and admin for the app features. The Flutter client is in
+[`temple-app`](https://github.com/PranayReddy10/temple-app) and was built in
+parallel with this, so several of its screens work against the device rather
+than these endpoints — see the sync column in
+[ROADMAP.md](ROADMAP.md#phase-3--passport-trips-and-languages) for which are
+still to be wired up.
 
 **Passport.** A visit is a row; a **stamp** is the existence of a *verified*
 one, derived rather than stored, so revoking a verification revokes the stamp

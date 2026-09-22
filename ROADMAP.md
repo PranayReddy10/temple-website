@@ -122,34 +122,30 @@ Not new features; the seams between the ones already built.
 | **A clickable dashboard** | Every tile opens the records it counted, filtered the same way; a tile the role may not open is unlinked rather than a 403. Deity panel and circuit rows link through too | ✅ **Done** |
 | **My profile** | A real account page in both panels — name, email, password, plus the role, the panel it signs into and the temples it covers. The dashboard's sign-out card is gone; sign out stays in the user menu | ✅ **Done** |
 
-### Phase 3 — Passport, trips and languages
+### Phase 3 — Passport, trips and languages  ✅ **Both halves shipped**
 
-Each slice has a **backend half** (schema, API, admin) and a **Flutter half**.
-The backend half is done; **no Flutter code exists yet** — `temple-app` holds
-a README and this roadmap and nothing else.
+Every slice has a **backend half** (schema, API, admin) in `temple-website`
+and a **Flutter half** in [`temple-app`](https://github.com/PranayReddy10/temple-app).
+They were built in parallel, so a few of the app's features work locally
+against endpoints that now exist and it has yet to sync to — the last column
+says which.
 
-| # | Slice | Scope | Backend | Flutter |
-| --- | --- | --- | --- | --- |
-| 10 | **App shell** | Temple design system in light and dark, 5-tab navigation (Home, Explore, Passport, Yatra, Profile), API client | — | ⬜ |
-| 11 | **Explorer + temple profile** | Search by name/deity/city/state, nearby, filters, full temple profile screen | ✅ | ⬜ |
-| 12 | **Passport** | Visited/unvisited state, check-in, digital stamps, circuit collections | ✅ | ⬜ |
-| 13 | **Photo Stamp** | Upload visit photo, generate temple-themed memory card, original and stamp kept separately, moderation | ✅ | ⬜ |
-| 14 | **Favourites + basic Yatra planner** | Saved temples, multi-temple itinerary by days and order | ✅ | ⬜ |
-| 15 | **Languages: EN / TE / HI** | Twelve configured, three shipping; translated temple fields with English fallback, reviewed-only serving | ✅ | ⬜ |
-| 16 | **User memories** | A devotee's own writing about a visit, private by default | ✅ | ⬜ |
-| 17 | **Devotee analytics** | Sign-in events for both guards, active-user windows, trips being planned, per-account profile | ✅ | n/a |
-### Phase 3 — Flutter app  ✅ **Phase 1 of the app shipped**
+| # | Slice | Scope | Backend | App | Synced |
+| --- | --- | --- | --- | --- | --- |
+| 10 | **App shell** | Temple design system in light and dark, tinted per weekday deity, temple-door transitions, 5-tab navigation, API client with offline fallback | n/a | ✅ | n/a |
+| 11 | **Explorer + temple profile** | Search by name/deity/city/state, nearby, filters, lamp map, day pages, full temple profile | ✅ | ✅ | ✅ `GET /temples`, `/days` |
+| 12 | **Passport** | Visits, check-in, stamps, circuit collections, achievements | ✅ | ✅ | ⬜ app keeps visits on the device; `/me/visits` and `/me/passport` are waiting |
+| 13 | **Photo Stamp** | Visit photo, temple-themed memory card, original kept untouched, moderation | ✅ | ✅ | ⬜ card composed on the device; `/temples/{slug}/photos` is waiting |
+| 14 | **Favourites + Yatra planner** | Saved temples, itinerary by days, reorder, Yatra mode, route in Maps | ✅ | ✅ | 🟡 favourites sync to `/me/saved-temples`; trips are local, `/me/yatras` is waiting |
+| 15 | **Languages: EN / TE / HI** | Twelve configured, three shipping; app interface strings with bundled Indic fonts; translated temple fields with English fallback, reviewed-only serving | ✅ | ✅ | 🟡 app strings are bundled; `?lang=` on the API and `GET /languages` are waiting |
+| 16 | **User memories** | A devotee's own writing about a visit, private by default | ✅ | ⬜ | ⬜ `/me/memories` |
+| 17 | **Devotee analytics** | Sign-in events for both guards, active-user windows, trips being planned, per-account profile | ✅ | n/a | n/a |
 
-The client lives in [`temple-app`](https://github.com/PranayReddy10/temple-app). It runs against `/api/v1` and falls back to the bundled seed records when offline.
-
-| # | Slice | Scope | Status |
-| --- | --- | --- | --- |
-| 10 | **App shell** | Temple design system in light and dark, tinted per weekday deity, temple-door transitions, 5-tab navigation, API client with offline fallback | ✅ **Done** — in `temple-app` |
-| 11 | **Explorer + temple profile** | Search by name/deity/city/state, nearby, filters, lamp map, day pages, full temple profile screen | ✅ **Done** — in `temple-app` |
-| 12 | **Passport** | Visited/unvisited state, manual check-in, ink stamps, circuit collections, achievements | ✅ **Done** — in `temple-app` |
-| 13 | **Photo Stamp** | Attach visit photo, compose temple-themed memory card with the stamp, original kept untouched, share | ✅ **Done** — in `temple-app` |
-| 14 | **Favourites + basic Yatra planner** | Saved temples synced to `/me/saved-temples`, itinerary by days, reorder, Yatra mode, route in Maps | ✅ **Done** — in `temple-app` |
-| 15 | **Languages: EN / TE / HI** | App interface strings in three languages with bundled Indic fonts. Admin and temple portal localisation, and alternate spellings in search, remain backend work | 🟡 App side done |
+The app works with **no backend at all**: when the API is unreachable it falls
+back to the bundled sample records and says so on screen. That is what made
+building both halves at once possible, and it is also why the sync column
+above is the remaining work rather than a defect — a device that was offline
+at the temple gate still has to be able to record the visit.
 
 ### Later phases
 
