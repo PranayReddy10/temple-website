@@ -40,15 +40,10 @@ class TempleDetailResource extends JsonResource
 
             /*
              * The verse for this place: its own where it has one, its
-             * deity's otherwise. Never blank where the deity has one, so the
-             * app does not render a heading with nothing under it.
+             * deity's otherwise — and now with a recording to play, where
+             * one exists.
              */
-            'mantra' => [
-                'text' => $this->mantraText(),
-                'transliteration' => $this->localised('mantra_transliteration')
-                    ?: $this->mantraTransliteration(),
-                'is_temple_specific' => filled($this->mantra),
-            ],
+            'mantra' => MantraResource::forOwner($this->resource),
 
             // This temple's songs first, then its deity's.
             'devotional_media' => DevotionalMediaResource::collection($this->allMedia()),

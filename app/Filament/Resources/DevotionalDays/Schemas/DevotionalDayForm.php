@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\DevotionalDays\Schemas;
 
+use App\Filament\Schemas\MantraFields;
 use App\Models\DevotionalDay;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Select;
@@ -54,20 +55,10 @@ class DevotionalDayForm
                     ]),
 
                 Section::make('Mantra')
+                    ->description('Only where this day\'s tradition differs from the deity\'s own mantra, which is filled in on the deity record and used here automatically.')
                     ->icon('heroicon-o-speaker-wave')
-                    ->columns(2)
-                    ->schema([
-                        TextInput::make('mantra')
-                            ->label('Mantra')
-                            ->maxLength(255)
-                            ->placeholder('ॐ नमः शिवाय'),
-
-                        TextInput::make('mantra_transliteration')
-                            ->label('Transliteration')
-                            ->maxLength(255)
-                            ->placeholder('Om Namah Shivaya')
-                            ->helperText('For devotees who do not read Devanagari.'),
-                    ]),
+                    ->columns(1)
+                    ->schema(MantraFields::components(DevotionalDay::class, withMeaning: false)),
 
                 Section::make('Appearance and order')
                     ->icon('heroicon-o-swatch')

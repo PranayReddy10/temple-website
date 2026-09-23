@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Deities\Schemas;
 
+use App\Filament\Schemas\MantraFields;
+use App\Models\Deity;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
@@ -74,24 +76,9 @@ class DeityForm
                     ]),
 
                 Section::make('Mantra')
-                    ->description('The mantra belongs here rather than on each weekday — a day carries its own only where a tradition differs, and otherwise falls back to this one.')
+                    ->description('The mantra belongs here rather than on each weekday — a day carries its own only where a tradition differs, and otherwise falls back to this one. A temple with no mantra of its own falls back here too.')
                     ->columns(1)
-                    ->schema([
-                        Textarea::make('mantra')
-                            ->label('Mantra (in script)')
-                            ->rows(2)
-                            ->helperText('In Devanagari or the appropriate script, e.g. ॐ नमः शिवाय.'),
-
-                        Textarea::make('mantra_transliteration')
-                            ->label('Transliteration')
-                            ->rows(2)
-                            ->helperText('Roman script, so a devotee who does not read the original can still chant it: Om Namah Shivaya.'),
-
-                        Textarea::make('mantra_meaning')
-                            ->label('Meaning')
-                            ->rows(2)
-                            ->helperText('A short plain-language sense of it. Optional.'),
-                    ]),
+                    ->schema(MantraFields::components(Deity::class)),
 
                 Section::make('Appearance and order')
                     ->columns(2)

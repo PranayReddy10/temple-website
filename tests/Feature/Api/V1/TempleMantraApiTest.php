@@ -44,7 +44,9 @@ class TempleMantraApiTest extends TestCase
         $this->assertSame('ॐ नमो नारायणाय', $response->json('data.mantra.text'));
         $this->assertSame('Om Namo Narayanaya', $response->json('data.mantra.transliteration'));
         // The app renders the two differently, so it has to be told which.
-        $this->assertFalse($response->json('data.mantra.is_temple_specific'));
+        // "the mantra of this temple" and "the mantra of its deity" are not
+        // the same claim about the place a devotee is standing in.
+        $this->assertFalse($response->json('data.mantra.is_own'));
     }
 
     public function test_a_temple_with_its_own_mantra_serves_that(): void
@@ -60,7 +62,7 @@ class TempleMantraApiTest extends TestCase
         $response = $this->getJson("/api/v1/temples/{$temple->slug}")->assertOk();
 
         $this->assertSame('कौसल्या सुप्रजा राम', $response->json('data.mantra.text'));
-        $this->assertTrue($response->json('data.mantra.is_temple_specific'));
+        $this->assertTrue($response->json('data.mantra.is_own'));
     }
 
     public function test_a_temple_serves_its_own_songs_before_its_deity_s(): void
