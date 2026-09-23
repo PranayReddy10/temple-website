@@ -140,8 +140,89 @@ class PassportApiTest extends TestCase
         $this->signIn();
 
         $this->postJson("/api/v1/temples/{$temple->slug}/visits", [
-            'visited_on' => now()->addDay()->toDateString(),
+            // Two days on: tomorrow in UTC is already today somewhere.
+            'visited_on' => now()->addDays(2)->toDateString(),
         ])->assertStatus(422)->assertJsonValidationErrors('visited_on');
+    }
+
+    /** 02:00 in India is still yesterday in UTC; the visit is not "in the future". */
+    public function test_an_early_morning_visit_in_india_is_accepted(): void
+    {
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-09-24 02:00', 'Asia/Kolkata'));
+        $temple = $this->temple();
+        $this->signIn();
+
+        $this->postJson("/api/v1/temples/{$temple->slug}/visits", [
+            'visited_on' => '2026-09-24',
+        ])->assertCreated();
+    }
+
+    // --- Temple QR codes ---
+
+    public function test_a_signed_temple_code_verifies_a_qr_check_in_even_away_from_the_gps_point(): void
+    {
+        $temple = $this->temple();
+        $this->signIn();
+
+        $response = $this->postJson("/api/v1/temples/{$temple->slug}/visits", [
+            'method' => 'qr',
+            'qr_code' => \App\Support\TempleQr::url($temple),
+        ])->assertCreated();
+
+        $this->assertTrue($response->json('data.is_verified'));
+    }
+
+    public function test_a_forged_or_borrowed_code_does_not_verify(): void
+    {
+        $temple = $this->temple();
+        $other = $this->temple(['name' => 'Another Temple']);
+        $this->signIn();
+
+        $forged = str_replace('?s=', '?s=x', \App\Support\TempleQr::url($temple));
+        $this->postJson("/api/v1/temples/{$temple->slug}/visits", ['method' => 'qr', 'qr_code' => $forged])
+            ->assertCreated()->assertJsonPath('data.is_verified', false);
+
+        // Another temple's genuine code is not this temple's.
+        $this->postJson("/api/v1/temples/{$temple->slug}/visits", ['method' => 'qr', 'qr_code' => \App\Support\TempleQr::url($other)])
+            ->assertCreated()->assertJsonPath('data.is_verified', false);
+    }
+
+    public function test_the_app_can_ask_whether_a_code_is_genuine(): void
+    {
+        $temple = $this->temple();
+
+        $this->postJson('/api/v1/qr/verify', ['code' => \App\Support\TempleQr::url($temple)])
+            ->assertOk()
+            ->assertJsonPath('data.valid', true)
+            ->assertJsonPath('data.temple.slug', $temple->slug);
+
+        $this->postJson('/api/v1/qr/verify', ['code' => "templepassport://checkin/{$temple->slug}"])
+            ->assertOk()
+            ->assertJsonPath('data.valid', false);
+
+        $this->postJson('/api/v1/qr/verify', ['code' => 'https://example.com/menu'])
+            ->assertOk()
+            ->assertJsonPath('data.valid', false)
+            ->assertJsonPath('data.temple', null);
+    }
+
+    public function test_a_phone_camera_opening_the_code_sees_whether_it_is_genuine(): void
+    {
+        $temple = $this->temple();
+        $url = \App\Support\TempleQr::url($temple);
+
+        $this->get(parse_url($url, PHP_URL_PATH).'?'.parse_url($url, PHP_URL_QUERY))
+            ->assertOk()
+            ->assertSee('Genuine check-in code');
+
+        $this->get("/temples/{$temple->slug}/checkin?s=nope")
+            ->assertOk()
+            ->assertSee('Not a genuine code');
+    }
+
+    public function test_the_code_renders_as_an_svg(): void
+    {
+        $this->assertStringContainsString('<svg', \App\Support\TempleQr::svg($this->temple()));
     }
 
     public function test_a_draft_temple_cannot_be_checked_into(): void

@@ -160,6 +160,26 @@ class DevotionalDayTest extends TestCase
         Carbon::setTestNow();
     }
 
+    /**
+     * 01:00 on Monday in India is still Sunday in UTC. The day follows the
+     * devotional calendar, not the server clock.
+     */
+    public function test_the_day_turns_at_midnight_in_india_not_in_utc(): void
+    {
+        $this->shivaMonday();
+        Carbon::setTestNow(Carbon::parse('2026-09-20 19:30:00', 'UTC'));  // 01:00 Monday IST
+
+        $this->getJson('/api/v1/today')
+            ->assertOk()
+            ->assertJsonPath('data.date', '2026-09-21')
+            ->assertJsonPath('data.weekday_name', 'Monday')
+            ->assertJsonPath('data.days.0.deity.name', 'Shiva');
+
+        $this->assertSame(1, DevotionalDay::active()->forDate()->first()?->weekday);
+
+        Carbon::setTestNow();
+    }
+
     public function test_today_includes_temples_of_the_days_deity(): void
     {
         $day = $this->shivaMonday();

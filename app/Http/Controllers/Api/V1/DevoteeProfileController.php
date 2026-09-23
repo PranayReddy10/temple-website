@@ -32,6 +32,7 @@ class DevoteeProfileController extends Controller
             'locale' => ['sometimes', 'string', Rule::in(array_keys(Locales::supported()))],
             'home_state_id' => ['sometimes', 'nullable', 'integer', 'exists:states,id'],
             'date_of_birth' => ['sometimes', 'nullable', 'date', 'before:today'],
+            'gender' => ['sometimes', 'nullable', Rule::enum(\App\Enums\Gender::class)],
         ]);
 
         // Changing an identifier invalidates the verification of that

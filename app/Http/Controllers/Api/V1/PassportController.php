@@ -10,6 +10,8 @@ use App\Http\Resources\V1\PassportResource;
 use App\Http\Resources\V1\VisitResource;
 use App\Models\DevoteeVisit;
 use App\Models\Temple;
+use App\Support\DevotionalClock;
+use App\Support\TempleQr;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -59,7 +61,7 @@ class PassportController extends Controller
         $visit = new DevoteeVisit([
             'temple_id' => $temple->getKey(),
             'method' => $method,
-            'visited_on' => $request->date('visited_on')?->toDateString() ?? now()->toDateString(),
+            'visited_on' => $request->date('visited_on')?->toDateString() ?? DevotionalClock::now()->toDateString(),
             'visited_at' => $request->input('visited_at'),
             'latitude' => $request->input('latitude'),
             'longitude' => $request->input('longitude'),
@@ -74,7 +76,16 @@ class PassportController extends Controller
         $visit->setRelation('temple', $temple);
         $visit->distance_metres = $visit->distanceFromTemple();
 
-        if ($method->isSelfVerifying() && $visit->isWithinCheckInRadius()) {
+        if ($method === CheckInMethod::Qr && $request->filled('qr_code')) {
+            // A signed code for this temple is proof of presence on its own:
+            // it hangs at the gate, whatever the phone's GPS says indoors.
+            $check = TempleQr::verify($request->input('qr_code'));
+
+            if ($check['valid'] && $check['temple']?->is($temple)) {
+                $visit->is_verified = true;
+                $visit->verified_at = now();
+            }
+        } elseif ($method->isSelfVerifying() && $visit->isWithinCheckInRadius()) {
             $visit->is_verified = true;
             $visit->verified_at = now();
         }

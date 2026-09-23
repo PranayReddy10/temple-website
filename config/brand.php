@@ -15,6 +15,10 @@ return [
     // Temporary domain until the real one is registered.
     'url' => env('BRAND_URL', env('APP_URL', 'http://localhost')),
 
+    // The calendar the devotional day follows. The server clock stays UTC;
+    // "today's deity" is decided in this zone. See App\Support\DevotionalClock.
+    'timezone' => env('DEVOTIONAL_TIMEZONE', 'Asia/Kolkata'),
+
     'support_email' => env('BRAND_SUPPORT_EMAIL', 'support@example.com'),
 
     // Email for the first admin account, used by the seeder and by

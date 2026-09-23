@@ -32,7 +32,7 @@ class Devotee extends Authenticatable
 
     protected $fillable = [
         'name', 'email', 'phone', 'password',
-        'avatar_path', 'avatar_disk', 'locale', 'home_state_id', 'date_of_birth',
+        'avatar_path', 'avatar_disk', 'locale', 'home_state_id', 'date_of_birth', 'gender',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -49,6 +49,7 @@ class Devotee extends Authenticatable
             'phone_verified_at' => 'datetime',
             'last_seen_at' => 'datetime',
             'date_of_birth' => 'date',
+            'gender' => \App\Enums\Gender::class,
             'password' => 'hashed',
             'is_active' => 'boolean',
         ];

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\MediaFileController;
 use App\Http\Controllers\PwaController;
+use App\Http\Controllers\TempleCheckinController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -45,6 +46,13 @@ Route::get('/offline', [PwaController::class, 'offline'])->name('pwa.offline');
 Route::get('/manifest/{panel}.webmanifest', [PwaController::class, 'manifest'])
     ->where('panel', '[a-z-]+')
     ->name('pwa.manifest');
+
+/*
+| A temple's check-in code, opened by a phone camera rather than the app.
+*/
+Route::get('/temples/{slug}/checkin', TempleCheckinController::class)
+    ->where('slug', '[a-z0-9-]+')
+    ->name('temples.checkin');
 
 Route::get('/storage/{path}', MediaFileController::class)
     ->where('path', '.*')

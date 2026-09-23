@@ -91,7 +91,7 @@ class DevotionalDay extends Model
      */
     public function scopeForDate(Builder $query, ?CarbonInterface $date = null): Builder
     {
-        $date = $date ?? now();
+        $date = $date ?? \App\Support\DevotionalClock::now();
 
         return $query->where('weekday', $date->dayOfWeek);
     }
