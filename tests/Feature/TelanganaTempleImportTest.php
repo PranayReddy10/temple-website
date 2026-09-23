@@ -156,4 +156,18 @@ class TelanganaTempleImportTest extends TestCase
             ->expectsOutputToContain('app:deploy')
             ->assertFailed();
     }
+
+    public function test_it_fails_clearly_when_the_migration_has_not_run(): void
+    {
+        \Illuminate\Support\Facades\Schema::table('temples', function ($table) {
+            $table->dropIndex(['status', 'is_featured']);
+            $table->dropColumn('is_featured');
+        });
+
+        $this->artisan('temples:import-telangana')
+            ->expectsOutputToContain('app:deploy --force')
+            ->assertFailed();
+
+        $this->assertSame(0, Temple::count());
+    }
 }

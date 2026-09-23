@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\State;
 use Database\Seeders\TelanganaTempleSeeder;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Loads the Telangana temple set into a live database.
@@ -24,6 +25,15 @@ class ImportTelanganaTemplesCommand extends Command
     {
         if (! State::where('code', 'TG')->exists()) {
             $this->error('Telangana (TG) is not in the states table. Run app:deploy first so reference data is seeded.');
+
+            return self::FAILURE;
+        }
+
+        // The import writes the famous-temple flag. Without its migration the
+        // first temple fails with a raw "Unknown column" SQL error.
+        if (! Schema::hasColumn('temples', 'is_featured')) {
+            $this->error('The temples table has no is_featured column yet: this release\'s migration has not run.');
+            $this->line('Run `php artisan app:deploy --force` first, then run this command again.');
 
             return self::FAILURE;
         }
