@@ -123,19 +123,53 @@ class MediaUrlTest extends TestCase
     /**
      * Spaces is genuinely another host, so its URL must stay absolute — the
      * fix above must not be applied where it would break things.
+     *
+     * Asserted against a URL set here rather than against whatever the
+     * environment happens to hold. It holds nothing in CI and nothing on a
+     * fresh clone, by design — no cloud credentials are needed to run the
+     * project — so a test that only inspected the config would pass without
+     * exercising anything. Setting one and reading the result back does.
      */
-    public function test_the_spaces_disk_keeps_an_absolute_url(): void
+    public function test_the_spaces_disk_serves_absolute_urls(): void
     {
-        $configured = config('filesystems.disks.spaces.url');
+        Config::set('app.url', 'http://localhost');
+        Config::set('filesystems.disks.spaces.url', 'https://cdn.example.test');
+        // The adapter refuses to build without these; nothing here reaches
+        // the network, so they need only be present.
+        Config::set('filesystems.disks.spaces.bucket', 'temple-media');
+        Config::set('filesystems.disks.spaces.key', 'test-key');
+        Config::set('filesystems.disks.spaces.secret', 'test-secret');
 
-        // Unset locally, which is the point: no cloud credentials are needed
-        // to run the project. When it is set it must carry a scheme.
-        if (blank($configured)) {
-            $this->assertNull($configured);
+        // The adapter is resolved once and cached, so it has to be dropped
+        // for the new config to be read.
+        Storage::forgetDisk('spaces');
 
-            return;
+        $this->assertSame(
+            'https://cdn.example.test/temples/x.jpg',
+            Storage::disk('spaces')->url('temples/x.jpg'),
+        );
+    }
+
+    /**
+     * And whatever the environment does hold must never be root-relative.
+     *
+     * The earlier version of this asserted the unset value was null. It is
+     * an empty string under CI's .env.example, which sets the key with no
+     * value, and null on a machine whose .env omits the key entirely —
+     * blank() covers both, assertNull does not. The distinction was never
+     * the point; this is.
+     */
+    public function test_a_configured_spaces_url_is_never_root_relative(): void
+    {
+        $configured = (string) config('filesystems.disks.spaces.url');
+
+        $this->assertFalse(
+            str_starts_with($configured, '/'),
+            'Spaces is a different host, so its URL cannot be root-relative.',
+        );
+
+        if (filled($configured)) {
+            $this->assertStringStartsWith('http', $configured);
         }
-
-        $this->assertStringStartsWith('http', $configured);
     }
 }
