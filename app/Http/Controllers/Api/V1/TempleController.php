@@ -53,6 +53,7 @@ class TempleController extends Controller
             'timings',
             'pujas' => fn ($q) => $q->published(),
             'photos' => fn ($q) => $q->published(),
+            'primaryPhoto',
             'closures' => fn ($q) => $q->upcoming(),
             'events' => fn ($q) => $q->published()->upcoming(),
             'facilities',

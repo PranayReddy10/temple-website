@@ -98,6 +98,13 @@ class TempleDetailResource extends JsonResource
             'timings' => TimingResource::collection($this->whenLoaded('timings')),
             'pujas' => PujaResource::collection($this->whenLoaded('pujas')),
             'photos' => PhotoResource::collection($this->whenLoaded('photos')),
+
+            // The cover on its own as well, so the app's hero never has to
+            // guess which of the gallery rows is the one an editor chose.
+            'primary_photo' => $this->whenLoaded(
+                'primaryPhoto',
+                fn () => $this->primaryPhoto ? new PhotoResource($this->primaryPhoto) : null,
+            ),
             'closures' => ClosureResource::collection($this->whenLoaded('closures')),
             'events' => EventResource::collection($this->whenLoaded('events')),
 
