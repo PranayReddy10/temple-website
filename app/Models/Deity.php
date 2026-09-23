@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\MediaUrl;
 use App\Models\Concerns\HasMantra;
 use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Builder;
@@ -76,8 +77,7 @@ class Deity extends Model
             return null;
         }
 
-        return Storage::disk($this->image_disk ?? config('filesystems.media'))
-            ->url($this->image_path);
+        return MediaUrl::for($this->image_disk, $this->image_path);
     }
 
     /**

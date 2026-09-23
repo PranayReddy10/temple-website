@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\MediaUrl;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -64,8 +65,7 @@ class TemplePuja extends Model
             return null;
         }
 
-        return Storage::disk($this->image_disk ?? config('filesystems.media'))
-            ->url($this->image_path);
+        return MediaUrl::for($this->image_disk, $this->image_path);
     }
 
     public function scopePublished(Builder $query): Builder

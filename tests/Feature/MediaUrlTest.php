@@ -54,7 +54,7 @@ class MediaUrlTest extends TestCase
             'path' => 'temples/1/darshan.jpg',
         ]);
 
-        $this->assertStringStartsWith('/storage/', $photo->url());
+        $this->assertStringStartsWith(url('/storage/'), $photo->url());
     }
 
     public function test_a_visit_photo_resolves_through_the_same_rule(): void
@@ -69,8 +69,8 @@ class MediaUrlTest extends TestCase
             'stamp_path' => 'visit-photos/1/stamps/a.jpg',
         ]);
 
-        $this->assertStringStartsWith('/storage/', $photo->originalUrl());
-        $this->assertStringStartsWith('/storage/', $photo->stampUrl());
+        $this->assertStringStartsWith(url('/storage/'), $photo->originalUrl());
+        $this->assertStringStartsWith(url('/storage/'), $photo->stampUrl());
     }
 
     /**
