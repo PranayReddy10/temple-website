@@ -215,6 +215,19 @@ during the admin upload, which is the right trade on shared hosting: there is no
 long-running queue worker, and the cost falls on an editor rather than a
 devotee. When volume grows, move `TemplePhotoProcessor` into a queued job.
 
+## 7b. Home-screen icons
+
+Nothing to do: the icons and `favicon.ico` are committed. If the brand colours
+in `config/brand.php` change, redraw them with
+
+```bash
+php artisan app:icons
+```
+
+and commit the result. Both panels are installable from **My profile → Use this
+on your phone**; the service worker needs https, which a Hostinger domain has,
+and simply does not register without it.
+
 ## 8. Cache for production
 
 ```bash
@@ -310,6 +323,9 @@ notifications later in the roadmap.
 | Admin panel unstyled | Confirm `public/css/temple-admin.css` deployed and `php artisan storage:link` ran. |
 | Every uploaded image blank at once | Open **Administration → Storage**. It checks the `public/storage` link, whether the host allows symlinks, whether the folder is writable, and fetches a real image over the web to prove it. |
 | An upload appears to do nothing | PHP's own `upload_max_filesize` / `post_max_size`, which shared plans ship at 2 MB. The upload fails before any of this application runs, so nothing reaches the log. The Storage screen shows the server's real limit beside each form's. Raise both in hPanel under PHP Configuration, or in a `.user.ini` at the site root. |
+| "Add to Home Screen" is missing on an iPhone | They are not in Safari. Chrome and Firefox on iOS cannot add to the home screen at all — it is an iOS restriction, not a setting. |
+| The installed panel shows an old page | It cannot: no page is ever cached. If a *stylesheet* looks old, the asset stamp did not move — check `public/css/temple-admin.css` really was redeployed. |
+| Service worker never registers | It needs https (or localhost). On plain http the browser refuses registration by design, and the panel carries on working without it. |
 | Spaces switch is refused | Read what it says — the message names the cause. "Secret does not match the key" means re-copy it (a trailing space is enough); "no bucket by that name in this region" means the region is wrong; "would not let the request out" is the host blocking outbound HTTPS, not your credentials. Uploads carry on going to this server meanwhile. |
 | A mantra plays on Android but not on iPhone | Almost always a server that will not answer a `Range` request. Ours does, through the link and through the fallback alike — but a CDN or proxy in front may not. |
 | PHP syntax errors on deploy | PHP version is below 8.2. Change it in hPanel. |

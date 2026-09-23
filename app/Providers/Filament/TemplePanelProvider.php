@@ -2,17 +2,15 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\Profile;
+use App\Support\InitialsAvatarProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
-use App\Filament\Pages\Auth\Profile;
-use App\Support\InitialsAvatarProvider;
-use App\Support\TempleTheme;
 use Filament\PanelProvider;
-use Filament\View\PanelsRenderHook;
 use Filament\Support\Colors\Color;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -62,12 +60,6 @@ class TemplePanelProvider extends PanelProvider
                 Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Temple/Widgets'), for: 'App\Filament\Temple\Widgets')
-            // Static stylesheet, not a Vite theme: shared Hostinger has no Node
-            // toolchain, so deploying must never require an npm build.
-            ->renderHook(
-                PanelsRenderHook::HEAD_END,
-                fn (): string => TempleTheme::stylesheetTag(),
-            )
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

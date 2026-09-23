@@ -455,3 +455,33 @@
     gap: 0.6rem;
     margin-top: 1.25rem;
 }
+
+/* --- "Use this on your phone": the install steps on the profile page --- */
+
+.temple-install__steps {
+    margin: 0 0 0.85rem;
+    /* Filament's reset strips list markers from every ol; numbered steps are
+       the whole point of this one, so they are put back. */
+    list-style: decimal outside;
+    padding-left: 1.3rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--temple-ink);
+}
+
+.temple-install__steps li {
+    margin-bottom: 0.3rem;
+}
+
+.temple-install__note {
+    margin: 0 0 0.6rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--temple-muted);
+}
+
+.temple-install__installed {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--temple-muted);
+}
