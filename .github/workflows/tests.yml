@@ -3,6 +3,7 @@ name: Tests
 on:
   push:
     branches:
+      - main
       - master
       - '*.x'
   pull_request:
@@ -45,3 +46,80 @@ jobs:
 
       - name: Execute tests
         run: php artisan test
+
+  # Production runs MySQL; the suite above runs SQLite, and that gap is not
+  # academic. A migration shipped that dropped an index before the foreign
+  # key that needed it — fine on SQLite, error 1553 on MySQL, and it failed
+  # half-way through a real deploy with the table already altered.
+  #
+  # The engines disagree about more than that: DDL is transactional on one
+  # and not the other, COUNT(DISTINCT a, b) is MySQL-only, and string
+  # comparison is case-insensitive by default on MySQL and not on SQLite.
+  # One PHP version is enough here — this job is about the database, and the
+  # matrix above already covers the language.
+  mysql:
+    runs-on: ubuntu-latest
+
+    name: MySQL
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: true
+          MYSQL_DATABASE: temple_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.2
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, mysql, pdo_mysql
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Copy environment file
+        run: cp .env.example .env
+
+      - name: Generate app key
+        run: php artisan key:generate
+
+      # Overrides phpunit.xml, which pins the suite to an in-memory SQLite
+      # database. PHPUnit leaves an env var alone when the environment
+      # already sets it, which is what makes this work.
+      - name: Execute tests against MySQL
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: temple_test
+          DB_USERNAME: root
+          DB_PASSWORD: ''
+        run: php artisan test
+
+      # Separately from the suite: the suite builds the schema with
+      # migrate:fresh, which never exercises a migration running against
+      # tables that already hold data. A deploy always does.
+      - name: Migrate a populated database, the way a deploy does
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: temple_test
+          DB_USERNAME: root
+          DB_PASSWORD: ''
+        run: |
+          php artisan migrate:fresh --seed --force
+          php artisan migrate:status

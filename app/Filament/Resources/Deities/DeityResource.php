@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Deities;
 
+use App\Filament\RelationManagers\DevotionalMediaRelationManager;
+use App\Filament\RelationManagers\TranslationsRelationManager;
 use App\Filament\Resources\Deities\Pages\CreateDeity;
 use App\Filament\Resources\Deities\Pages\EditDeity;
 use App\Filament\Resources\Deities\Pages\ListDeities;
@@ -38,7 +40,10 @@ class DeityResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            // A deity's aarti plays wherever that deity is worshipped, so it
+            // belongs here rather than being repeated on every weekday.
+            DevotionalMediaRelationManager::class,
+            TranslationsRelationManager::class,
         ];
     }
 

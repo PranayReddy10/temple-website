@@ -13,7 +13,7 @@ class TempleDetailResource extends JsonResource
         return [
             'id' => $this->id,
             'slug' => $this->slug,
-            'name' => $this->name,
+            'name' => $this->localised('name'),
             'alternate_names' => $this->whenLoaded('aliases', fn () => $this->aliases
                 ->map(fn ($alias) => ['name' => $alias->name, 'locale' => $alias->locale])
                 ->values()),
@@ -38,21 +38,41 @@ class TempleDetailResource extends JsonResource
                 'longitude' => $this->longitude !== null ? (float) $this->longitude : null,
             ],
 
+            /*
+             * The verse for this place: its own where it has one, its
+             * deity's otherwise. Never blank where the deity has one, so the
+             * app does not render a heading with nothing under it.
+             */
+            'mantra' => [
+                'text' => $this->mantraText(),
+                'transliteration' => $this->localised('mantra_transliteration')
+                    ?: $this->mantraTransliteration(),
+                'is_temple_specific' => filled($this->mantra),
+            ],
+
+            // This temple's songs first, then its deity's.
+            'devotional_media' => DevotionalMediaResource::collection($this->allMedia()),
+
             'about' => [
-                'short_description' => $this->short_description,
-                'history' => $this->history,
-                'significance' => $this->significance,
+                'short_description' => $this->localised('short_description'),
+                'history' => $this->localised('history'),
+                'significance' => $this->localised('significance'),
                 'architecture_style' => $this->architecture_style,
                 'built_period' => $this->built_period,
             ],
 
+            /*
+             * Translated first among all of these: a dress code or an entry
+             * rule that a devotee cannot read is the one field where not
+             * understanding it means being turned away at the gate.
+             */
             'visitor_rules' => [
-                'dress_code' => $this->dress_code,
-                'photography' => $this->photography_policy,
+                'dress_code' => $this->localised('dress_code'),
+                'photography' => $this->localised('photography_policy'),
                 'mobile' => $this->mobile_policy,
                 'footwear' => $this->footwear_policy,
-                'entry' => $this->entry_rules,
-                'queue' => $this->queue_information,
+                'entry' => $this->localised('entry_rules'),
+                'queue' => $this->localised('queue_information'),
             ],
 
             'contact' => [
@@ -67,6 +87,10 @@ class TempleDetailResource extends JsonResource
              * community information to stay visibly distinct, and that is only
              * possible if the level reaches the device.
              */
+            // An editorial "famous temple" mark. Not a trust claim: read
+            // `trust` for how far the record can be relied on.
+            'is_featured' => (bool) $this->is_featured,
+
             'trust' => [
                 'level' => $this->verification_status?->value,
                 'label' => $this->verification_status?->getLabel(),
@@ -98,6 +122,14 @@ class TempleDetailResource extends JsonResource
 
             'published_at' => $this->published_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
+
+            'language' => app()->getLocale(),
         ];
+    }
+
+    /** Only reviewed translations reach devotees; see TempleSummaryResource. */
+    protected function localised(string $field): mixed
+    {
+        return $this->resource->translate($field, app()->getLocale(), reviewedOnly: true);
     }
 }

@@ -6,11 +6,13 @@ use App\Enums\TempleStatus;
 use App\Enums\VerificationStatus;
 use App\Models\District;
 use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -26,8 +28,10 @@ class TempleForm
         return $schema
             ->components([
                 self::identitySection(),
+                self::coverImageSection(),
                 self::locationSection(),
                 self::contentSection(),
+                self::mantraSection(),
                 self::rulesSection(),
                 self::facilitiesSection(),
                 self::contactSection(),
@@ -101,6 +105,71 @@ class TempleForm
                     ->addActionLabel('Add another name')
                     ->helperText('A devotee searching "Tirupati" should still find Sri Venkateswara Swamy Temple.')
                     ->columnSpanFull(),
+            ]);
+    }
+
+    /**
+     * The one photo a devotee sees first.
+     *
+     * Temples already have a photo gallery, but it lives in a relation
+     * manager that only exists after the record is saved — so a new temple
+     * could be created, published and listed with no image at all, and the
+     * person creating it had no way to tell. This writes the primary photo
+     * directly, using the same table the gallery does rather than a second
+     * column that could disagree with it.
+     */
+    protected static function coverImageSection(): Section
+    {
+        return Section::make('Cover image')
+            ->description('Shown on search results, the app home screen and this temple\'s own page. More photos go in the gallery below once the temple is saved.')
+            ->icon('heroicon-o-photo')
+            ->columns(2)
+            ->schema([
+                FileUpload::make('cover_image')
+                    ->label('Cover photo')
+                    ->image()
+                    ->imageEditor()
+                    ->disk(fn (): string => config('filesystems.media'))
+                    ->directory('temples/covers')
+                    ->visibility('public')
+                    ->maxSize(12288)
+                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                    ->helperText('Landscape works best: it is cropped to a wide card in the app.')
+                    // Not a column on temples: the page strips these two out
+                    // and writes them to the primary temple_photos row
+                    // instead. See SyncsCoverPhoto.
+                    ->columnSpanFull(),
+
+                TextInput::make('cover_image_credit')
+                    ->label('Credit')
+                    ->maxLength(255)
+                    ->helperText('Who the photograph is by. Required for anything we did not take ourselves.')
+                    ->columnSpanFull(),
+            ]);
+    }
+
+    /**
+     * The verse a devotee sees when they open this temple.
+     *
+     * Blank is the normal case and is fine: the temple falls back to its
+     * deity's mantra rather than rendering a heading with nothing under it.
+     */
+    protected static function mantraSection(): Section
+    {
+        return Section::make('Mantra')
+            ->description('Only where this temple has its own. Tirumala has the Suprabhatam; most temples use their deity\'s mantra, which is filled in on the deity record and used automatically here.')
+            ->icon('heroicon-o-musical-note')
+            ->columns(1)
+            ->collapsed()
+            ->schema([
+                Textarea::make('mantra')
+                    ->label('Mantra (in script)')
+                    ->rows(2),
+
+                Textarea::make('mantra_transliteration')
+                    ->label('Transliteration')
+                    ->rows(2)
+                    ->helperText('Roman script, so a devotee who does not read the original can still chant it.'),
             ]);
     }
 
@@ -346,6 +415,11 @@ class TempleForm
                     ->helperText(fn (): string => Auth::user()?->canPublish()
                         ? 'Only published temples appear in the app.'
                         : 'Set to In Review when ready. A super admin publishes.'),
+
+                Toggle::make('is_featured')
+                    ->label('Famous temple')
+                    ->helperText('Shown first in the app\'s popular temples. A curation choice, not a trust level.')
+                    ->default(false),
             ]);
     }
 

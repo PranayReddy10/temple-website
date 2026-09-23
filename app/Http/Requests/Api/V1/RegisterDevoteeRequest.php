@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Support\Locales;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class RegisterDevoteeRequest extends FormRequest
@@ -21,7 +23,9 @@ class RegisterDevoteeRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255', 'unique:devotees,email'],
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+?[0-9]{7,15}$/', 'unique:devotees,phone'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'locale' => ['nullable', 'string', 'in:en,te,hi,ta,kn'],
+            // Against the configured set rather than a hard-coded three:
+            // adding Kannada should not mean remembering this line.
+            'locale' => ['nullable', 'string', Rule::in(array_keys(Locales::supported()))],
         ];
     }
 

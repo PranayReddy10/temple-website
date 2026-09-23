@@ -97,6 +97,31 @@ settings, temple events and daily devotional content.
 - 22 starter temples, seeded honestly as *community* level with no source — they
   are there to be verified, not to pad a count.
 
+## Telangana temples
+
+`TelanganaTempleSeeder` covers 45 temples across every region of Telangana —
+Yadadri, Bhadrachalam, Vemulawada, Basara, Ramappa, the Thousand Pillar
+Temple, Medaram, Chilkur Balaji and more — with 19 famous temples marked
+**featured**, typical opening hours for the major shrines and their common
+sevas.
+
+It runs with `php artisan migrate --seed`. To load it into a live database,
+where `app:deploy` deliberately never re-runs sample seeders:
+
+```bash
+php artisan temples:import-telangana
+```
+
+It is safe to repeat: verified and deleted temples are skipped, existing
+records only have empty fields filled, and timings and pujas are only added to
+temples that have none. Every record is **community** level, every puja has
+"No published price", and every general timing says it is unconfirmed —
+verify each against the temple before raising its trust level. No photographs
+are imported; upload them with credit and licence through the admin.
+
+The API takes `featured=1` and `sort=featured`; the admin has a **Famous
+temple** toggle, column and filter.
+
 ## Slices 2–4 — media, pujas and the public API
 
 **Photos** are stored in DigitalOcean Spaces and served from its CDN. Uploads
@@ -180,6 +205,168 @@ There is no account card on the dashboard. Your own name, sign-in email and
 password are on **My profile**, reached from the user menu in both panels,
 alongside the role you hold, the panel it signs into and — for a temple
 account — the temples it covers. Sign out is in that same user menu.
+
+## Phase 3 — Passport, Photo Stamp, trips, languages
+
+The backend and admin for the app features. The Flutter client is in
+[`temple-app`](https://github.com/PranayReddy10/temple-app) and was built in
+parallel with this, so several of its screens work against the device rather
+than these endpoints — see the sync column in
+[ROADMAP.md](ROADMAP.md#phase-3--passport-trips-and-languages) for which are
+still to be wired up.
+
+**Passport.** A visit is a row; a **stamp** is the existence of a *verified*
+one, derived rather than stored, so revoking a verification revokes the stamp
+instead of leaving an orphan in a collection. A GPS or QR check-in verifies
+itself when it is close enough; a manual one never does, however good its
+coordinates look. Recording a pilgrimage from before the app existed is the
+point of a passport — but a collection that cannot tell evidence from
+assertion is a list anyone can type in, and then "6 of 12 Jyotirlingas" means
+nothing. Staff can verify a visit the device could not, and revoke one that
+turns out to be false.
+
+**Photo Stamp.** The devotee's photo and the generated memory card are kept as
+separate files. The card can always be re-rendered; the photograph cannot.
+Everything waits for a moderator, and **approval is not publication** — the
+devotee's own choice has to agree too, and one scope enforces both so a caller
+that checks only the status cannot leak a private photo.
+
+**Memories** are a devotee's writing about a visit, private by default, and
+private through an edit that omits the field. Staff see that a memory exists
+and when; they do not see what a private one says.
+
+**Yatra planner.** A plain itinerary, not a routing engine: ordering temples by
+road distance needs a maps provider and a connection a devotee planning on a
+train does not have. Recording a visit closes the planned stop for that temple,
+which is what links the planner to the Passport.
+
+**Favourites** (saved temples) came with Phase 2 and now feed the analytics:
+saves are intent, planned stops are commitment, visits are what happened.
+
+**Languages** are rows, not columns. `name_te`, `name_hi`, `name_ta`… means a
+migration per language across every table, and India has more languages than
+that survives. **Twelve are configured, three ship** (`config/locales.php`). A
+missing translation falls back to English rather than to nothing, and an
+unreviewed one is not served at all — a deity's name rendered wrongly in a
+devotee's own language is worse than the English they can recognise. Translate
+a temple under **Languages** on its edit page; the dress code and entry rules
+matter most, because not understanding those means being turned away at the
+gate.
+
+## Images, mantras and songs
+
+**Deities** carry an image, a mantra (script, transliteration and meaning)
+and an accent colour. The mantra lives on the deity rather than on each
+weekday, because it belongs to the deity: before that, the same Shiva mantra
+had to be typed on every Shiva day and corrected in every one of them. A day
+carries its own only where a tradition differs, and falls back otherwise.
+
+**Temples** have a **cover image** on the form itself, not only in the gallery
+relation manager — which only exists once the record is saved, so a temple
+could be created, published and listed with no image at all. It writes the
+primary `temple_photos` row rather than a second column that could disagree
+with the gallery about which photo leads. Clearing it demotes that photo
+rather than deleting it; the file is not always recoverable.
+
+**Songs, chants and videos** hang off a weekday, a deity *or* a temple — one
+table, because the rights rule is identical in all three cases and three
+copies would be three places for it to drift. Precedence is most specific
+first: a temple's own Suprabhatam before its deity's aarti. A song or video
+still cannot be published without a licence recorded, whichever it belongs to.
+
+In the app, opening a temple gives `mantra` (its own or its deity's, with
+`is_temple_specific` so the two can be rendered differently) and
+`devotional_media` in that order.
+
+## Support and reports
+
+**Support → Support & Reports.** One queue for both, because they are the
+same shape — somebody says something is wrong and waits for an answer — and
+two queues would mean one of them going unread.
+
+Reports are the half that matters. A listing with the wrong timings sends
+devotees to a closed gate and nobody on the team will notice on their own.
+So filing **does not need an account**: a report behind a sign-in wall is a
+report most people will not file. Everyone gets a reference (`TP-XXXXXX`) to
+quote, in an alphabet with no O/0 or I/1 because it gets read over the phone.
+
+- **Inappropriate content is filed urgent automatically** — it is the one
+  category that gets worse every hour it stays up.
+- **Replies and internal notes** live in one chronology, because the order is
+  the story. The reporter's copy comes from a separate relation, so a note
+  cannot leak by something being eager-loaded on the wrong screen. Replies
+  cannot be deleted; only notes can.
+- **Replying sets "waiting for a reply"**, so an answered ticket stops looking
+  identical to an untouched one. The reporter replying reopens it — a
+  resolution they did not accept is not a resolution.
+- The queue sorts **worst first, then oldest**, and opens on what nobody has
+  picked up.
+
+A report points at a record through an allow-list (temple, event, puja,
+photo). Without one, a caller could aim a ticket at any model in the
+application and the admin would render whatever came back.
+
+## Getting around the admin
+
+**Temples** can be grouped **state-wise or deity-wise** from the grouping
+menu — "which Shiva temples do we have" and "what is missing in Telangana"
+are the two questions that come up constantly, and a flat list of two
+thousand rows answers neither. Tabs across the top carry counts: Published,
+Waiting for review, Drafts, and **Needs work** (published but missing
+coordinates, a photo or a description — listings a devotee can already reach
+and be let down by).
+
+Three lists that previously existed only inside a temple are now also in the
+side menu, because each answers a question across all temples:
+
+- **Puja & Sevas** — which sevas have no published price, which booking links
+  have not been confirmed as official.
+- **Temple Photos** — the photo library, with a badge counting the ones with
+  no credit recorded.
+- **Events & Programs** — submissions waiting for review.
+
+Both views share one form and one set of actions, so the same decision cannot
+behave differently depending on where you started.
+
+## Devotee analytics
+
+**Devotees → Analytics** in the admin panel.
+
+Sign-ins are recorded as **events**, not just stamped on a column.
+`last_login_at` can only ever hold the latest value: it cannot say how many
+people signed in this week, and that cannot be reconstructed afterwards.
+Failed attempts are kept too — a burst against one account is the first sign
+of a credential-stuffing run and is invisible if only successes are stored.
+
+What the screen answers:
+
+- **Accounts**, and how many joined in the last 30 days.
+- **Active today / this week / this month** — *distinct people who signed in*,
+  never sign-in counts. A devotee who opens the app eight times in a day is
+  one active user, and the number that says eight is the one that gets quoted.
+- **Stickiness**: daily actives as a share of monthly. The hardest number to
+  flatter, because acquiring more users cannot raise it.
+- **Never signed in** — registered and never came back, usually a broken
+  confirmation step rather than people changing their minds.
+- **Sign-ups against active devotees** over 7/30/90 days. Both are people per
+  day, so they share one axis honestly; raw sign-ins would flatten the sign-up
+  line against zero, and giving it a second axis would let the two be scaled
+  into any crossing you like.
+- **Passport and trips**: visits recorded, stamps awarded, **trips being
+  planned** and how many start within 90 days, photos waiting for moderation,
+  memories written.
+- **Languages devotees chose** — what to translate next, from what people
+  actually set rather than from where their temples are.
+- **Temples devotees engage with** — saved, planned and visited side by side.
+  A temple with many saves and no visits is one people want to reach and
+  cannot, which is a different problem from one nobody saves.
+
+Every devotee account has a **profile page** (Devotees → Devotee Accounts →
+view): identity, language, what the account has done, its recent sign-ins
+including failures, and its Passport, trips, photos and memories as tabs. It
+is **read-only** — a devotee's account is theirs, and a staff form that can
+rewrite their name is one that eventually will. The only writes are suspend
+and restore, which keep all their records.
 
 ## Deployment
 

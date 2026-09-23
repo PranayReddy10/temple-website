@@ -6,9 +6,11 @@ use App\Enums\EventStatus;
 use App\Enums\TempleStatus;
 use App\Filament\Resources\TempleAccess\TempleAccessResource;
 use App\Filament\Resources\TempleEvents\TempleEventResource;
+use App\Filament\Resources\SupportTickets\SupportTicketResource;
 use App\Filament\Resources\Temples\TempleResource;
 use App\Models\Temple;
 use App\Models\TempleEvent;
+use App\Models\SupportTicket;
 use App\Models\TempleUser;
 use App\Support\AdminLinks;
 use Filament\Widgets\StatsOverviewWidget;
@@ -34,6 +36,7 @@ class TempleWorkQueueWidget extends StatsOverviewWidget
         $templesInReview = Temple::query()->where('status', TempleStatus::InReview)->count();
         $eventsInReview = TempleEvent::query()->awaitingReview()->count();
         $pendingClaims = TempleUser::query()->pending()->count();
+        $openTickets = SupportTicket::query()->open()->count();
 
         $stale = Temple::query()
             ->where('status', TempleStatus::Published)
@@ -76,6 +79,27 @@ class TempleWorkQueueWidget extends StatsOverviewWidget
                     ['pending' => AdminLinks::on()],
                 ))),
 
+            /*
+             * Somebody is waiting for an answer.
+             *
+             * Ahead of the data-quality figures below because a person is on
+             * the other end of it: a stale record is a thing to fix when
+             * there is time, an unanswered report is somebody who told us
+             * something was wrong and heard nothing back.
+             */
+            Stat::make('Support & reports open', number_format($openTickets))
+                ->description($this->oldestTicketPhrase($openTickets))
+                ->descriptionIcon('heroicon-m-lifebuoy')
+                ->color(match (true) {
+                    SupportTicket::query()->open()->where('priority', \App\Enums\TicketPriority::Urgent)->exists() => 'danger',
+                    $openTickets > 0 => 'warning',
+                    default => 'success',
+                })
+                ->url($this->urlIfPermitted(
+                    SupportTicketResource::class,
+                    fn (): string => SupportTicketResource::getUrl('index'),
+                )),
+
             Stat::make('Needs re-verification', number_format($stale))
                 ->description('Published, unchecked for over a year')
                 ->descriptionIcon('heroicon-m-shield-exclamation')
@@ -88,6 +112,17 @@ class TempleWorkQueueWidget extends StatsOverviewWidget
                 ->color($missingCoordinates > 0 ? 'danger' : 'success')
                 ->url(AdminLinks::filtered($temples, $publishedOnly + ['missing_coordinates' => AdminLinks::on()])),
         ];
+    }
+
+    protected function oldestTicketPhrase(int $open): string
+    {
+        if ($open === 0) {
+            return 'Nobody is waiting';
+        }
+
+        $oldest = SupportTicket::query()->open()->oldest()->value('created_at');
+
+        return 'Oldest waiting '.($oldest?->diffForHumans(syntax: true) ?? 'no time at all');
     }
 
     /**

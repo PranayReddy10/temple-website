@@ -62,7 +62,9 @@ class AdminPanelProvider extends PanelProvider
             ->navigationGroups([
                 NavigationGroup::make('Temples'),
                 NavigationGroup::make('Daily Devotion'),
+                NavigationGroup::make('Devotees'),
                 NavigationGroup::make('Master Data'),
+                NavigationGroup::make('Support'),
                 NavigationGroup::make('Administration'),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')

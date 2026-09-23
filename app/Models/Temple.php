@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TempleStatus;
+use App\Models\Concerns\HasTranslations;
 use Carbon\CarbonInterface;
 use App\Enums\VerificationStatus;
 use Illuminate\Database\Eloquent\Builder;
@@ -12,27 +13,52 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Temple extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasTranslations, SoftDeletes;
+
+    /**
+     * Fields a devotee may read in their own language.
+     *
+     * Names and prose only. A slug is a URL, coordinates are numbers and a
+     * source URL is an address — translating any of them produces a record
+     * that is broken rather than localised, so they are simply not on the
+     * list and the trait refuses anything that is not.
+     *
+     * @var array<int, string>
+     */
+    protected array $translatable = [
+        'name',
+        'short_description',
+        'history',
+        'significance',
+        'mantra_transliteration',
+        'dress_code',
+        'entry_rules',
+        'queue_information',
+        'photography_policy',
+    ];
 
     protected $fillable = [
         'name', 'slug', 'deity_id',
         'state_id', 'district_id', 'city', 'address', 'pincode', 'latitude', 'longitude',
-        'short_description', 'history', 'significance', 'architecture_style', 'built_period',
+        'short_description', 'history', 'significance', 'mantra', 'mantra_transliteration',
+        'architecture_style', 'built_period',
         'dress_code', 'photography_policy', 'mobile_policy', 'footwear_policy',
         'entry_rules', 'queue_information',
         'official_website', 'contact_phone', 'contact_email',
         'verification_status', 'source_name', 'source_url', 'last_verified_at',
-        'status', 'published_at', 'created_by', 'updated_by',
+        'status', 'is_featured', 'published_at', 'created_by', 'updated_by',
     ];
 
     protected function casts(): array
     {
         return [
             'status' => TempleStatus::class,
+            'is_featured' => 'boolean',
             'verification_status' => VerificationStatus::class,
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
@@ -119,6 +145,43 @@ class Temple extends Model
             ->withTimestamps();
     }
 
+    /**
+     * This temple's own songs and chants.
+     *
+     * Tirumala's Suprabhatam is sung at Tirumala. A devotee standing there
+     * should hear that rather than the general Vishnu aarti, so a temple
+     * carries its own media and falls back to the deity's when it has none.
+     */
+    public function media(): MorphMany
+    {
+        return $this->morphMany(DevotionalMedia::class, 'mediable')
+            ->orderBy('sort_order')
+            ->orderBy('id');
+    }
+
+    public function visits(): HasMany
+    {
+        return $this->hasMany(DevoteeVisit::class);
+    }
+
+    public function visitPhotos(): HasMany
+    {
+        return $this->hasMany(VisitPhoto::class);
+    }
+
+    /** Devotees who saved this temple: the intent signal, before any visit. */
+    public function savedByDevotees(): BelongsToMany
+    {
+        return $this->belongsToMany(Devotee::class, 'devotee_saved_temples')
+            ->withPivot('note')
+            ->withTimestamps();
+    }
+
+    public function yatraStops(): HasMany
+    {
+        return $this->hasMany(YatraStop::class);
+    }
+
     public function claims(): HasMany
     {
         return $this->hasMany(TempleUser::class);
@@ -140,6 +203,12 @@ class Temple extends Model
     public function scopePublished(Builder $query): Builder
     {
         return $query->where('status', TempleStatus::Published);
+    }
+
+    /** Temples editors have marked as famous. */
+    public function scopeFeatured(Builder $query): Builder
+    {
+        return $query->where('is_featured', true);
     }
 
     /**
@@ -218,6 +287,43 @@ class Temple extends Model
     }
 
     // --- Helpers ---
+
+    /**
+     * The mantra a devotee should see here: this temple's own, or its
+     * deity's.
+     *
+     * Never blank where the deity has one, because a screen that shows a
+     * heading and nothing under it reads as broken rather than as a temple
+     * without its own verse.
+     */
+    public function mantraText(): ?string
+    {
+        return filled($this->mantra) ? $this->mantra : $this->deity?->mantra;
+    }
+
+    public function mantraTransliteration(): ?string
+    {
+        return filled($this->mantra_transliteration)
+            ? $this->mantra_transliteration
+            : $this->deity?->mantra_transliteration;
+    }
+
+    /**
+     * What to play here: this temple's media first, then its deity's.
+     *
+     * @return \Illuminate\Support\Collection<int, DevotionalMedia>
+     */
+    public function allMedia(bool $publishedOnly = true)
+    {
+        $own = $this->relationLoaded('media') ? $this->media : $this->media()->get();
+        $deity = $this->deity?->relationLoaded('media')
+            ? $this->deity->media
+            : ($this->deity?->media()->get() ?? collect());
+
+        return $own->concat($deity)
+            ->when($publishedOnly, fn ($all) => $all->filter->is_published)
+            ->values();
+    }
 
     public function hasCoordinates(): bool
     {

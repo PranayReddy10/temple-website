@@ -47,6 +47,89 @@ php artisan app:deploy --check
 That reports exactly what it would do and changes nothing. Without `--force`
 it lists the pending migrations and asks before running them.
 
+## What the Phase 3 release adds
+
+Six new tables — `login_events`, `devotee_visits`, `visit_photos`,
+`devotee_memories`, `yatras` + `yatra_stops`, and `translations`. They arrive
+through migrations like everything else, so the routine above is unchanged and
+there is still nothing to import.
+
+Two things worth knowing about this one:
+
+- **Sign-in history starts from the deploy.** `login_events` records attempts
+  from the moment the table exists; nothing before it can be reconstructed, so
+  the analytics screen will look sparse for its first week. That is correct,
+  not broken.
+- **`DemoDevoteeSeeder` is not reference data.** It invents devotees, visits,
+  photos and trips so the analytics screen can be looked at on a laptop.
+  `app:deploy` never runs it, and it refuses to run in production. An empty
+  analytics screen is honest; one full of invented pilgrims is a screen
+  someone will eventually quote a number from.
+
+  ```bash
+  php artisan db:seed --class=DemoDevoteeSeeder   # local only
+  ```
+
+## What this release adds
+
+Four migrations. Two are plain additions — deity image and mantra columns,
+temple mantra columns — and two need a word:
+
+- **`devotional_media` becomes polymorphic.** It could only belong to a
+  weekday; it can now belong to a weekday, a deity or a temple. Existing rows
+  are **moved**, not recreated: they are already licensed and published, and
+  recreating them would reset both. The old `devotional_day_id` column is
+  dropped afterwards, along with the index that named it.
+
+  If you have code or a seeder that still passes `devotional_day_id`, it will
+  now throw rather than silently create media with no owner — Eloquent drops
+  an unfillable key without a word, so those rows would have existed and
+  never appeared anywhere. Create through the relation instead:
+  `$day->media()->create([...])`.
+
+- **`support_tickets` and `support_ticket_messages`** are new and start empty.
+
+There is still nothing to import; `app:deploy` applies all four.
+
+To see the support queue with something in it on a laptop:
+
+```bash
+php artisan db:seed --class=DemoSupportSeeder   # local only
+```
+
+Like `DemoDevoteeSeeder`, it refuses to run in production.
+
+## If a migration fails half-way
+
+MySQL does not roll back schema changes. If `app:deploy` dies during a
+migration, the table is already altered and the migration is **not** recorded
+— so the obvious retry can fail on the work that did land.
+
+**Migrations in this project are written to be safe to re-run**: each step
+checks whether it is still needed. So the first thing to try is simply:
+
+```bash
+php artisan app:deploy --force
+```
+
+If it still fails, send the error rather than editing the schema by hand.
+`php artisan migrate:status` shows exactly how far it got.
+
+### The 1553 error, specifically
+
+If you hit this during the Phase 4 deploy:
+
+```
+SQLSTATE[HY000]: General error: 1553 Cannot drop index
+'devotional_media_devotional_day_id_is_published_sort_order_index':
+needed in a foreign key constraint
+```
+
+that was a real bug, fixed in the commit after it. Pull again and re-run
+`php artisan app:deploy --force`; it picks up from wherever it stopped and
+finishes. Nothing is lost — the failure happened before any data was
+removed, and the songs and their licences are untouched.
+
 ## Reference data vs your data
 
 A release sometimes ships **rows** as well as tables — the weekday-to-deity

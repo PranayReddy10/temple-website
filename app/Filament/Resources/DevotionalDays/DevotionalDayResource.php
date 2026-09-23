@@ -5,7 +5,7 @@ namespace App\Filament\Resources\DevotionalDays;
 use App\Filament\Resources\DevotionalDays\Pages\CreateDevotionalDay;
 use App\Filament\Resources\DevotionalDays\Pages\EditDevotionalDay;
 use App\Filament\Resources\DevotionalDays\Pages\ListDevotionalDays;
-use App\Filament\Resources\DevotionalDays\RelationManagers\MediaRelationManager;
+use App\Filament\RelationManagers\DevotionalMediaRelationManager;
 use App\Filament\Resources\DevotionalDays\Schemas\DevotionalDayForm;
 use App\Filament\Resources\DevotionalDays\Tables\DevotionalDaysTable;
 use App\Models\DevotionalDay;
@@ -59,7 +59,7 @@ class DevotionalDayResource extends Resource
     public static function getRelations(): array
     {
         return [
-            MediaRelationManager::class,
+            DevotionalMediaRelationManager::class,
         ];
     }
 

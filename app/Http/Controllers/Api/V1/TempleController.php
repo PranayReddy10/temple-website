@@ -21,7 +21,13 @@ class TempleController extends Controller
             // Published-only is applied here, not exposed as a filter. A draft
             // temple must be unreachable through this endpoint by any input.
             ->published()
-            ->with(['deity', 'state', 'district', 'primaryPhoto']);
+            // Scoped to the one language being served: loading every
+            // translation of every temple to render one of them is the same
+            // N+1 the eager load is here to avoid, only bigger.
+            ->with([
+                'deity', 'state', 'district', 'primaryPhoto',
+                'translations' => fn ($q) => $q->forLocale(app()->getLocale()),
+            ]);
 
         $this->applyFilters($query, $request);
         $this->applySort($query, $request);
@@ -50,6 +56,10 @@ class TempleController extends Controller
             'closures' => fn ($q) => $q->upcoming(),
             'events' => fn ($q) => $q->published()->upcoming(),
             'facilities',
+            'translations' => fn ($q) => $q->forLocale(app()->getLocale()),
+            // The temple's own media, and its deity's as the fallback.
+            'media' => fn ($q) => $q->published(),
+            'deity.media' => fn ($q) => $q->published(),
         ]);
 
         return new TempleDetailResource($temple);
@@ -78,7 +88,8 @@ class TempleController extends Controller
             ->when($request->boolean('verified'), fn (Builder $q) => $q->whereIn('verification_status', [
                 VerificationStatus::Verified->value,
                 VerificationStatus::Official->value,
-            ]));
+            ]))
+            ->when($request->boolean('featured'), fn (Builder $q) => $q->featured());
 
         if ($request->hasCoordinates()) {
             $lat = (float) $request->input('lat');
@@ -105,6 +116,8 @@ class TempleController extends Controller
         match ($sort) {
             '-name' => $query->orderBy('name', 'desc'),
             'recent' => $query->orderByDesc('published_at'),
+            // Famous temples first, then alphabetical within each group.
+            'featured' => $query->orderByDesc('is_featured')->orderBy('name'),
             default => $query->orderBy('name'),
         };
     }

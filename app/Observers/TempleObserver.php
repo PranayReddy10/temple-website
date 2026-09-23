@@ -4,8 +4,8 @@ namespace App\Observers;
 
 use App\Enums\TempleStatus;
 use App\Models\Temple;
+use App\Support\ActingStaff;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 /**
@@ -19,8 +19,10 @@ class TempleObserver
         $this->guardPublishing($temple);
 
         $temple->slug ??= $this->uniqueSlug($temple);
-        $temple->created_by ??= Auth::id();
-        $temple->updated_by ??= Auth::id();
+        // The staff guard by name, never Auth::id(): these are foreign keys
+        // into `users`, and during an API request Auth::id() is a devotee's.
+        $temple->created_by ??= ActingStaff::id();
+        $temple->updated_by ??= ActingStaff::id();
 
         $this->syncPublishedAt($temple);
     }
@@ -35,8 +37,8 @@ class TempleObserver
             $temple->slug = $this->uniqueSlug($temple);
         }
 
-        if (Auth::check()) {
-            $temple->updated_by = Auth::id();
+        if (($staffId = ActingStaff::id()) !== null) {
+            $temple->updated_by = $staffId;
         }
 
         $this->syncPublishedAt($temple);
@@ -55,11 +57,18 @@ class TempleObserver
             return;
         }
 
-        // Seeders, imports and console commands run without an authenticated
-        // user and are trusted; only an actual signed-in editor is restricted.
-        $user = Auth::user();
+        // Seeders, imports and console commands run with nobody signed in
+        // and are trusted; anyone actually signed in has to be a staff member
+        // whose role can publish.
+        //
+        // The two checks are separate on purpose. Asking only the staff guard
+        // would let a request authenticated as something else through the
+        // same gap, because that guard returns null for it too.
+        if (! ActingStaff::someoneIsSignedIn()) {
+            return;
+        }
 
-        if ($user !== null && ! $user->canPublish()) {
+        if (! ActingStaff::user()?->canPublish()) {
             throw new AuthorizationException('Your role cannot publish temples. Set the status to In Review instead.');
         }
     }

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
  * The deity associated with a day of the week.
@@ -45,11 +46,51 @@ class DevotionalDay extends Model
         return $this->belongsTo(Deity::class);
     }
 
-    public function media(): HasMany
+    public function media(): MorphMany
     {
-        return $this->hasMany(DevotionalMedia::class)
+        return $this->morphMany(DevotionalMedia::class, 'mediable')
             ->orderBy('sort_order')
             ->orderBy('id');
+    }
+
+    /**
+     * The mantra for this day, falling back to the deity's own.
+     *
+     * The mantra belongs to the deity; a day carries one only where a
+     * tradition differs. Before the fallback existed the same Shiva mantra
+     * had to be typed on every Shiva day and corrected in every one of them.
+     */
+    public function mantraText(): ?string
+    {
+        return filled($this->mantra) ? $this->mantra : $this->deity?->mantra;
+    }
+
+    public function mantraTransliteration(): ?string
+    {
+        return filled($this->mantra_transliteration)
+            ? $this->mantra_transliteration
+            : $this->deity?->mantra_transliteration;
+    }
+
+    /**
+     * Everything a devotee should hear on this day: the day's own media and
+     * the deity's, in that order.
+     *
+     * The day's comes first because it is the more specific of the two — a
+     * Monday-specific bhajan before the general Shiva aarti.
+     *
+     * @return \Illuminate\Support\Collection<int, DevotionalMedia>
+     */
+    public function allMedia(bool $publishedOnly = true)
+    {
+        $days = $this->relationLoaded('media') ? $this->media : $this->media()->get();
+        $deity = $this->deity?->relationLoaded('media')
+            ? $this->deity->media
+            : ($this->deity?->media()->get() ?? collect());
+
+        return $days->concat($deity)
+            ->when($publishedOnly, fn ($all) => $all->filter->is_published)
+            ->values();
     }
 
     // --- Scopes ---

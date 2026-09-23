@@ -5,14 +5,16 @@ namespace Tests\Feature\Filament;
 use App\Enums\DevotionalMediaType;
 use App\Enums\PhotoCategory;
 use App\Enums\UserRole;
+use App\Filament\Resources\Deities\Pages\EditDeity;
 use App\Filament\Resources\DevotionalDays\Pages\EditDevotionalDay;
-use App\Filament\Resources\DevotionalDays\RelationManagers\MediaRelationManager;
+use App\Filament\RelationManagers\DevotionalMediaRelationManager;
 use App\Filament\Resources\Temples\Pages\EditTemple;
 use App\Filament\Resources\Temples\RelationManagers\ClosuresRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\EventsRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\PhotosRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\PujasRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\TimingsRelationManager;
+use App\Filament\RelationManagers\TranslationsRelationManager;
 use App\Models\Deity;
 use App\Models\DevotionalDay;
 use App\Models\DevotionalMedia;
@@ -131,6 +133,77 @@ class RelationManagerRenderTest extends TestCase
         $this->assertManagerRenders(EventsRelationManager::class, $temple, EditTemple::class, $event);
     }
 
+    public function test_the_translations_manager_renders(): void
+    {
+        $this->signIn();
+        $temple = $this->temple();
+
+        $translation = $temple->setTranslation('name', 'te', 'ఆలయం');
+
+        $this->assertManagerRenders(TranslationsRelationManager::class, $temple, EditTemple::class, $translation);
+    }
+
+    /**
+     * The same two managers, on a deity rather than a temple or a day.
+     *
+     * They are shared classes now, and a shared class that only works for the
+     * owner it was written for is not shared — it is a class that will break
+     * quietly the first time it is reused.
+     */
+    public function test_the_shared_managers_render_on_a_deity(): void
+    {
+        $this->signIn();
+
+        $deity = Deity::create([
+            'name' => 'Shiva',
+            'slug' => 'shiva',
+            'mantra' => 'ॐ नमः शिवाय',
+            'mantra_transliteration' => 'Om Namah Shivaya',
+        ]);
+
+        $media = $deity->media()->create([
+            'type' => DevotionalMediaType::Chant,
+            'title' => 'Shiva Panchakshari',
+            'external_url' => 'https://example.com/chant',
+        ]);
+
+        $this->assertManagerRenders(
+            DevotionalMediaRelationManager::class,
+            $deity,
+            EditDeity::class,
+            $media,
+        );
+
+        $translation = $deity->setTranslation('name', 'te', 'శివుడు');
+
+        $this->assertManagerRenders(
+            TranslationsRelationManager::class,
+            $deity,
+            EditDeity::class,
+            $translation,
+        );
+    }
+
+    /** A temple's own songs, which take precedence over its deity's. */
+    public function test_the_media_manager_renders_on_a_temple(): void
+    {
+        $this->signIn();
+        $temple = $this->temple();
+
+        $media = $temple->media()->create([
+            'type' => DevotionalMediaType::Chant,
+            'title' => 'Suprabhatam',
+            'external_url' => 'https://example.com/suprabhatam',
+        ]);
+
+        $this->assertManagerRenders(
+            DevotionalMediaRelationManager::class,
+            $temple,
+            EditTemple::class,
+            $media,
+        );
+    }
+
     public function test_the_devotional_media_manager_renders(): void
     {
         $this->signIn();
@@ -139,14 +212,13 @@ class RelationManagerRenderTest extends TestCase
 
         // A song is the case that broke: its type drives two conditional
         // fields, and the state arrives as an enum instance.
-        $media = DevotionalMedia::create([
-            'devotional_day_id' => $day->id,
+        $media = $day->media()->create([
             'type' => DevotionalMediaType::Song,
             'title' => 'Bhajan',
             'external_url' => 'https://example.com/a',
             'license' => 'CC BY 4.0',
         ]);
 
-        $this->assertManagerRenders(MediaRelationManager::class, $day, EditDevotionalDay::class, $media);
+        $this->assertManagerRenders(DevotionalMediaRelationManager::class, $day, EditDevotionalDay::class, $media);
     }
 }
