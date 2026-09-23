@@ -65,7 +65,12 @@ class SupportController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $devotee = $request->user();
+        // This route sits outside the auth middleware so that anyone can
+        // file, which leaves the default guard as the session one. A bare
+        // user() would never see the app's bearer token, so a signed-in
+        // devotee would be treated as a stranger and refused for not giving
+        // a name. Ask the devotee guard directly.
+        $devotee = $request->user('devotee');
 
         $validated = $request->validate([
             'kind' => ['nullable', Rule::enum(TicketKind::class)],
