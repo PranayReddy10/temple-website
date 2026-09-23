@@ -20,6 +20,8 @@ class StateController extends Controller
             ->orderBy('name')
             ->get()
             ->map(fn (State $state): array => array_filter([
+                // Needed by the app to set a devotee's home_state_id.
+                'id' => $state->id,
                 'slug' => $state->slug,
                 'name' => $state->name,
                 'code' => $state->code,
