@@ -308,7 +308,32 @@ writes a real file, reads it back, deletes it, and then fetches a stored image
 over HTTP the way a browser would. Configuration that looks right is exactly
 the state somebody is stuck in when they arrive here.
 
-Three things underneath it, all of which were real faults rather than
+**Switching to DigitalOcean Spaces is a radio button now**, not five .env
+variables edited over SSH. Two rules hold it up, and each has a test:
+
+- **Nothing switches until it is proven.** Saving Spaces runs a real write,
+  read and delete against the credentials being entered, and refuses the
+  switch if any of it fails — with a sentence you can act on ("the secret does
+  not match the key", "there is no bucket by that name in this region") rather
+  than the SDK's wall of XML. Credentials that do not work cannot be saved into
+  service, because an upload failing server-side looks to the person uploading
+  like a slow form.
+- **A switch never moves a file.** Every row that holds a file also holds the
+  disk it was written to, so photos uploaded before the change keep resolving
+  from where they are, and switching back loses nothing. This is also why
+  `MediaFileController` serves the local disk whether or not that is where new
+  uploads go — gating it on the current disk sounded careful and would have
+  404'd every older photo the moment somebody switched.
+
+The secret is stored encrypted and never rendered again — not in the form, not
+in the health checks, not in a page somebody is screen-sharing to ask for help.
+Leaving it blank means "keep the one on file", so correcting a typo in the
+bucket name does not wipe it. `.env` still works and still means something: a
+setting overrides it, clearing the setting falls back to it, and a host that
+would rather keep its secrets out of the database can set them in `.env` and
+never open this screen.
+
+Three more things underneath it, all of which were real faults rather than
 precautions:
 
 - **Files are served even when the link is missing.** `MediaFileController`

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Support\StorageHealth;
+use App\Support\MediaStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use League\Flysystem\PathTraversalDetected;
@@ -22,6 +22,10 @@ use Throwable;
  * can lose it. The symptom is every uploaded image in the admin panel going
  * blank at once, with nothing in the logs, because the requests never
  * reached the application.
+ *
+ * It serves the local disk whether or not that is where new uploads go: each
+ * row records the disk it was written to, so a site that has moved to Spaces
+ * still has older photos here, and they must keep resolving.
  *
  * Deliberately registered in routes/web.php rather than relying on Laravel's
  * own `serve` option: that one is skipped whenever routes are cached, which
@@ -47,13 +51,18 @@ class MediaFileController extends Controller
 
     public function __invoke(Request $request, string $path): Response
     {
-        // Only local disks are served from here. When media lives on Spaces
-        // the URLs point at the CDN and this route is not part of the path.
-        if (! StorageHealth::isLocal()) {
-            throw new NotFoundHttpException;
-        }
-
-        $disk = Storage::disk(StorageHealth::mediaDisk());
+        /*
+         * Always the local media disk, whatever uploads are set to today.
+         *
+         * This route exists because /storage/{path} is the local disk's own
+         * url, and only files written there ever get such a URL — a file on
+         * Spaces is delivered from the CDN and never reaches here. Gating this
+         * on the *current* media disk therefore fixed nothing and broke the
+         * one case that matters: switching uploads to Spaces would 404 every
+         * photo uploaded before the switch, which is exactly the moment
+         * somebody needs to be able to switch back.
+         */
+        $disk = Storage::disk(MediaStorage::LOCAL_DISK);
 
         try {
             // Flysystem resolves the path and rejects traversal; doing it

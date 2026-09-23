@@ -2,12 +2,18 @@
 
 namespace App\Filament\Pages;
 
+use App\Support\MediaStorage;
 use App\Support\StorageHealth;
 use App\Support\UploadRules;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Schema;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
@@ -47,6 +53,163 @@ class StorageSettings extends Page
     public ?array $probe = null;
 
     public ?array $reachability = null;
+
+    /** The result of the Spaces connection test, when one has been run. */
+    public ?array $connection = null;
+
+    /**
+     * Backing store for the form's state.
+     *
+     * Load-bearing despite looking unused: Filament writes the schema's state
+     * here, and save() reads it back through getState(). Removing it makes
+     * every saved value silently empty. Same trap as ManageSettings.
+     *
+     * @var array<string, mixed>
+     */
+    public array $data = [];
+
+    public function mount(): void
+    {
+        $this->form->fill([
+            'media_disk' => MediaStorage::selectedDisk(),
+            ...MediaStorage::formValues(),
+            // Never filled from storage. Blank means "leave the stored one
+            // alone"; the placeholder says whether there is one.
+            'spaces_secret' => null,
+        ]);
+    }
+
+    public function form(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                Section::make('Where new uploads go')
+                    ->description('Changing this decides where the next upload is written. Files already uploaded stay exactly where they are and keep working — each one records its own disk — so this is reversible.')
+                    ->icon('heroicon-o-server-stack')
+                    ->schema([
+                        Radio::make('media_disk')
+                            ->hiddenLabel()
+                            ->options([
+                                MediaStorage::LOCAL_DISK => 'This server',
+                                MediaStorage::SPACES_DISK => 'DigitalOcean Spaces',
+                            ])
+                            ->descriptions([
+                                MediaStorage::LOCAL_DISK => 'Simple, and nothing else to pay for. Limited by the hosting plan\'s disk quota, and every image is served by this one server.',
+                                MediaStorage::SPACES_DISK => 'Object storage with a CDN in front. Worth it once there are thousands of temple photos, or when the plan\'s quota starts to bite.',
+                            ])
+                            ->required()
+                            ->live(),
+                    ]),
+
+                Section::make('DigitalOcean Spaces')
+                    ->description('From the Spaces page in your DigitalOcean control panel. Nothing is saved until the connection has been proven, so a wrong value here cannot break uploads.')
+                    ->icon('heroicon-o-cloud')
+                    ->columns(2)
+                    // Shown while Spaces is selected, so the credentials can
+                    // be filled in and tested in the same act as switching.
+                    ->visible(fn (Get $get): bool => $get('media_disk') === MediaStorage::SPACES_DISK)
+                    ->schema([
+                        TextInput::make('spaces_key')
+                            ->label('Access key')
+                            ->maxLength(255)
+                            ->autocomplete(false)
+                            ->helperText('The shorter of the two. Safe to show.'),
+
+                        TextInput::make('spaces_secret')
+                            ->label('Secret key')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(255)
+                            ->autocomplete('new-password')
+                            ->placeholder(MediaStorage::hasSecret() ? 'Stored — leave blank to keep it' : 'Required')
+                            ->helperText(MediaStorage::hasSecret()
+                                ? 'A secret is on file. It is stored encrypted and is never shown again, here or anywhere else. Type a new one only to replace it.'
+                                : 'Stored encrypted, and never shown again once saved.'),
+
+                        TextInput::make('spaces_bucket')
+                            ->label('Bucket name')
+                            ->maxLength(120)
+                            ->placeholder('temple-media'),
+
+                        TextInput::make('spaces_region')
+                            ->label('Region')
+                            ->maxLength(20)
+                            ->placeholder('blr1')
+                            ->helperText('The short code in the endpoint, e.g. blr1 for Bangalore.'),
+
+                        TextInput::make('spaces_endpoint')
+                            ->label('Endpoint')
+                            ->url()
+                            ->maxLength(255)
+                            ->placeholder('https://blr1.digitaloceanspaces.com'),
+
+                        TextInput::make('spaces_cdn_endpoint')
+                            ->label('CDN endpoint')
+                            ->url()
+                            ->maxLength(255)
+                            ->placeholder('https://temple-media.blr1.cdn.digitaloceanspaces.com')
+                            ->helperText('Where images are delivered from. Leave blank to serve them from the bucket itself, which works but skips the edge cache.'),
+                    ]),
+            ])
+            ->statePath('data');
+    }
+
+    /** @return array<int, Action> */
+    protected function getFormActions(): array
+    {
+        return [
+            Action::make('save')
+                ->label('Save')
+                ->submit('save'),
+
+            /*
+             * Testing without saving.
+             *
+             * Worth its own button: typing six values and finding out whether
+             * they are right only by committing them is how somebody ends up
+             * with a site that cannot accept an upload.
+             */
+            Action::make('test')
+                ->label('Test the connection')
+                ->color('gray')
+                ->icon('heroicon-o-signal')
+                ->visible(fn (): bool => ($this->data['media_disk'] ?? null) === MediaStorage::SPACES_DISK)
+                ->action(function (): void {
+                    $this->connection = MediaStorage::test(
+                        MediaStorage::candidateFrom($this->form->getState()),
+                    );
+
+                    Notification::make()
+                        ->title($this->connection['ok'] ? 'Spaces is reachable' : 'Could not use these credentials')
+                        ->body($this->connection['message'])
+                        ->status($this->connection['ok'] ? 'success' : 'danger')
+                        ->send();
+                }),
+        ];
+    }
+
+    public function save(): void
+    {
+        $result = MediaStorage::save($this->form->getState());
+
+        /*
+         * A refusal stays on the page, a success does not.
+         *
+         * The toast fades after a few seconds, and the reason a switch was
+         * refused is the one thing somebody needs to keep reading while they
+         * correct the field it names.
+         */
+        $this->connection = $result['ok'] ? null : $result;
+
+        Notification::make()
+            ->title($result['ok'] ? 'Saved' : 'Not saved')
+            ->body($result['message'])
+            ->status($result['ok'] ? 'success' : 'danger')
+            // A refusal is the whole point of the message, so it stays up
+            // until it is dismissed rather than fading after four seconds.
+            ->persistent(! $result['ok'])
+            ->send();
+    }
 
     public function getSubheading(): ?string
     {
@@ -139,8 +302,8 @@ class StorageSettings extends Page
                     ? 'This server — '.StorageHealth::targetPath()
                     : 'DigitalOcean Spaces ('.config('filesystems.disks.spaces.bucket').')',
                 'note' => $local
-                    ? 'Set MEDIA_DISK=spaces in .env to move new uploads to object storage. Files already here stay here — each row records its own disk.'
-                    : 'New uploads go to Spaces and are served from its CDN.',
+                    ? 'Change it above. Files already here stay here and keep working — each row records its own disk.'
+                    : 'New uploads go to Spaces and are served from its CDN. Anything uploaded before the switch is still on this server and still served from it.',
             ],
 
             $local ? [

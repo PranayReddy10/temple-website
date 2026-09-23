@@ -4,10 +4,13 @@ namespace Tests\Feature\Filament;
 
 use App\Enums\UserRole;
 use App\Filament\Pages\StorageSettings;
+use App\Models\Setting;
 use App\Models\User;
+use App\Support\MediaStorage;
 use App\Support\StorageHealth;
 use App\Support\UploadRules;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -184,7 +187,7 @@ class StorageSettingsTest extends TestCase
         Config::set('filesystems.media', 'public');
         Storage::disk('public')->put('temples/1/darshan.jpg', 'the bytes');
 
-        Http::fake(fn () => throw new \Illuminate\Http\Client\ConnectionException('timed out'));
+        Http::fake(fn () => throw new ConnectionException('timed out'));
 
         $this->actingAs($this->superAdmin());
 
@@ -192,6 +195,63 @@ class StorageSettingsTest extends TestCase
 
         $this->assertNull($page->get('reachability')['ok']);
         $this->assertStringNotContainsString('timed out', $page->get('reachability')['message']);
+    }
+
+    // --- Switching where uploads go ---
+
+    public function test_the_switch_starts_on_whatever_is_in_use(): void
+    {
+        Config::set('filesystems.media', 'public');
+        $this->actingAs($this->superAdmin());
+
+        Livewire::test(StorageSettings::class)
+            ->assertSet('data.media_disk', 'public');
+    }
+
+    /**
+     * The refusal that makes the switch safe to offer at all. Saving
+     * credentials that do not connect would send every later upload into a
+     * bucket that rejects it, and an upload failing server-side looks to the
+     * person uploading like a slow form.
+     */
+    public function test_saving_spaces_credentials_that_do_not_work_changes_nothing(): void
+    {
+        $this->actingAs($this->superAdmin());
+
+        Livewire::test(StorageSettings::class)
+            ->fillForm([
+                'media_disk' => 'spaces',
+                'spaces_key' => 'DO00KEY',
+                'spaces_secret' => 'nope',
+                'spaces_bucket' => 'temple-media',
+                'spaces_region' => 'blr1',
+                'spaces_endpoint' => 'https://blr1.digitaloceanspaces.invalid',
+                'spaces_cdn_endpoint' => '',
+            ])
+            ->call('save');
+
+        $this->assertNull(Setting::get('media_disk'));
+        $this->assertSame('public', config('filesystems.media'));
+    }
+
+    /** The one field that must never reach the page, on any render. */
+    public function test_the_stored_secret_is_never_rendered(): void
+    {
+        MediaStorage::save([
+            'media_disk' => 'public',
+            'spaces_key' => 'DO00KEY',
+            'spaces_secret' => 'a-secret-worth-keeping',
+            'spaces_bucket' => 'temple-media',
+            'spaces_region' => 'blr1',
+            'spaces_endpoint' => 'https://blr1.digitaloceanspaces.com',
+            'spaces_cdn_endpoint' => '',
+        ]);
+
+        $this->actingAs($this->superAdmin());
+
+        Livewire::test(StorageSettings::class)
+            ->assertDontSee('a-secret-worth-keeping')
+            ->assertSet('data.spaces_secret', null);
     }
 
     public function test_the_page_lists_every_kind_of_upload(): void

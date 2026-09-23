@@ -156,13 +156,25 @@ class MediaServingTest extends TestCase
     }
 
     /** With media on Spaces the URLs point at the CDN; this route is not the path. */
-    public function test_the_route_declines_when_media_is_on_a_cloud_disk(): void
+    /**
+     * The case that made the old behaviour a bug.
+     *
+     * This route used to decline whenever the media disk was not local, which
+     * sounded careful and was wrong: /storage/{path} is the local disk's own
+     * url, and a file on Spaces is delivered from the CDN and never arrives
+     * here at all. All the check achieved was 404ing every photo uploaded
+     * before a switch to Spaces — at the exact moment somebody needs to be
+     * able to switch back and find everything intact.
+     */
+    public function test_older_local_files_survive_a_switch_to_spaces(): void
     {
         Storage::fake('public');
         Storage::disk('public')->put('temples/1/darshan.jpg', 'the bytes');
 
         Config::set('filesystems.media', 'spaces');
 
-        $this->get('/storage/temples/1/darshan.jpg')->assertNotFound();
+        $this->get('/storage/temples/1/darshan.jpg')
+            ->assertOk()
+            ->assertStreamedContent('the bytes');
     }
 }

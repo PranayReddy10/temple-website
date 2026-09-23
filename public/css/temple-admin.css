@@ -429,3 +429,29 @@
     white-space: normal;
     max-width: 11rem;
 }
+
+/* The connection-test result, left in place under the storage form. */
+.temple-storage__result {
+    margin-top: 1rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--temple-rule);
+    border-left-width: 3px;
+    border-left-color: #1a7f4b;
+    border-radius: 0.5rem;
+    background-color: var(--temple-wash-a);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--temple-ink);
+}
+
+.temple-storage__result--bad {
+    border-left-color: var(--temple-kumkum);
+    background-color: var(--temple-wash-b);
+}
+
+.temple-storage__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 1.25rem;
+}
