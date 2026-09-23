@@ -4,16 +4,17 @@ namespace App\Providers;
 
 use App\Models\DevotionalMedia;
 use App\Models\Temple;
-use App\Models\User;
-use App\Models\TemplePhoto;
 use App\Models\TempleEvent;
+use App\Models\TemplePhoto;
 use App\Models\TemplePuja;
+use App\Models\User;
 use App\Observers\DevotionalMediaObserver;
+use App\Observers\TempleEventObserver;
 use App\Observers\TempleObserver;
 use App\Observers\TemplePhotoObserver;
-use App\Observers\TempleEventObserver;
 use App\Observers\TemplePujaObserver;
 use App\Support\LoginRecorder;
+use App\Support\MediaStorage;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Database\Eloquent\Model;
@@ -29,6 +30,20 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        /*
+         * Where uploads go is a setting, not only an environment variable.
+         *
+         * Folded over the config once, here, before anything resolves a disk.
+         * Doing it at each call site instead would leave half the application
+         * asking settings and the other half asking config, and the two would
+         * drift the first time somebody added a third place that uploads.
+         *
+         * Safe on a fresh database: Setting::values() returns an empty array
+         * when the table does not exist yet, so `migrate` on an empty schema
+         * still boots.
+         */
+        MediaStorage::apply();
+
         Temple::observe(TempleObserver::class);
         TemplePhoto::observe(TemplePhotoObserver::class);
         TemplePuja::observe(TemplePujaObserver::class);

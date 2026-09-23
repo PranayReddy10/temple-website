@@ -164,7 +164,20 @@ with no DigitalOcean-specific package.
    shown once.
 4. Set the file listing to **restricted**; individual uploads are made public by
    the app, so the bucket itself does not need to be browsable.
-5. Fill in `.env`:
+5. Enter them in the admin panel, under **Administration → Storage**: pick
+   *DigitalOcean Spaces*, fill in the six fields, and press **Save**.
+
+The panel writes a real file to the bucket, reads it back and deletes it before
+saving anything. If it cannot, the switch is refused and uploads keep going to
+this server — so a mistyped secret costs you a sentence on screen rather than
+a week of failed uploads nobody noticed. **Test the connection** does the same
+check without saving. The secret is stored encrypted and never shown again.
+
+### Or in `.env`, if you would rather
+
+The same settings can come from the environment, which is what a host that
+keeps secrets out of the database will want. A value saved in the panel
+overrides `.env`; clear it and `.env` applies again.
 
 ```dotenv
 MEDIA_DISK=spaces
@@ -185,8 +198,14 @@ suite and CI all run with no DigitalOcean account at all. Only production needs
 these values.
 
 Each photo row records the disk it was written to, so photos uploaded before
-the switch keep resolving from local storage afterwards. Moving existing files
-is a separate copy step, not something the switch does for you.
+the switch keep resolving from local storage afterwards — which also means
+switching back loses nothing. Moving existing files to the bucket is a separate
+copy step, not something the switch does for you.
+
+One thing to check with the host before relying on Spaces: **outbound HTTPS
+must be allowed**. Some shared plans filter it, and the symptom is the
+connection test refusing the switch with "this server would not let the request
+out". That is the host's firewall, not your credentials.
 
 ### Image variants
 
@@ -291,6 +310,7 @@ notifications later in the roadmap.
 | Admin panel unstyled | Confirm `public/css/temple-admin.css` deployed and `php artisan storage:link` ran. |
 | Every uploaded image blank at once | Open **Administration → Storage**. It checks the `public/storage` link, whether the host allows symlinks, whether the folder is writable, and fetches a real image over the web to prove it. |
 | An upload appears to do nothing | PHP's own `upload_max_filesize` / `post_max_size`, which shared plans ship at 2 MB. The upload fails before any of this application runs, so nothing reaches the log. The Storage screen shows the server's real limit beside each form's. Raise both in hPanel under PHP Configuration, or in a `.user.ini` at the site root. |
+| Spaces switch is refused | Read what it says — the message names the cause. "Secret does not match the key" means re-copy it (a trailing space is enough); "no bucket by that name in this region" means the region is wrong; "would not let the request out" is the host blocking outbound HTTPS, not your credentials. Uploads carry on going to this server meanwhile. |
 | A mantra plays on Android but not on iPhone | Almost always a server that will not answer a `Range` request. Ours does, through the link and through the fallback alike — but a CDN or proxy in front may not. |
 | PHP syntax errors on deploy | PHP version is below 8.2. Change it in hPanel. |
 

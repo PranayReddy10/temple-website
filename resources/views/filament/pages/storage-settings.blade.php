@@ -9,6 +9,26 @@
     public/css/temple-admin.css. No Vite build, same as the rest of the panel.
 --}}
 <x-filament-panels::page>
+    {{-- The switch first: it is what someone came here to change. --}}
+    <form wire:submit="save">
+        {{ $this->form }}
+
+        @if ($connection !== null)
+            <div @class([
+                'temple-storage__result',
+                'temple-storage__result--bad' => ! $connection['ok'],
+            ])>
+                {{ $connection['message'] }}
+            </div>
+        @endif
+
+        <div class="temple-storage__actions">
+            @foreach ($this->getFormActions() as $action)
+                {{ $action }}
+            @endforeach
+        </div>
+    </form>
+
     <x-filament::section>
         <x-slot name="heading">Is storage working?</x-slot>
         <x-slot name="description">
