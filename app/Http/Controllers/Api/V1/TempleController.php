@@ -57,6 +57,9 @@ class TempleController extends Controller
             'events' => fn ($q) => $q->published()->upcoming(),
             'facilities',
             'translations' => fn ($q) => $q->forLocale(app()->getLocale()),
+            // The temple's own media, and its deity's as the fallback.
+            'media' => fn ($q) => $q->published(),
+            'deity.media' => fn ($q) => $q->published(),
         ]);
 
         return new TempleDetailResource($temple);

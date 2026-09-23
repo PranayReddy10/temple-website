@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\MemoryController;
 use App\Http\Controllers\Api\V1\PassportController;
 use App\Http\Controllers\Api\V1\StateController;
+use App\Http\Controllers\Api\V1\SupportController;
 use App\Http\Controllers\Api\V1\TempleCategoryController;
 use App\Http\Controllers\Api\V1\TempleController;
 use App\Http\Controllers\Api\V1\VisitPhotoController;
@@ -46,6 +47,24 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     // Which languages the app may offer, and which it ships with. Served so
     // adding Kannada does not require shipping a new build to enable it.
     Route::get('languages', [LocaleController::class, 'index'])->name('languages.index');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Support and reports
+    |--------------------------------------------------------------------------
+    |
+    | Filing is deliberately open to anyone, signed in or not. A report that
+    | needs an account is a report most people will not file, and the listing
+    | with the wrong timings goes on sending devotees to a closed gate.
+    |
+    | Throttled harder than the read endpoints: each one costs a person's
+    | attention rather than a query.
+    |
+    */
+    Route::get('support/options', [SupportController::class, 'options'])->name('support.options');
+    Route::post('support', [SupportController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('support.store');
 
     Route::get('events', [EventController::class, 'index'])->name('events.index');
 
@@ -123,6 +142,13 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::delete('me/memories/{memory}', [MemoryController::class, 'destroy'])->name('me.memories.destroy');
 
         // Yatra planner.
+        // A devotee's own tickets, with the replies and never the notes.
+        Route::get('me/support', [SupportController::class, 'index'])->name('me.support.index');
+        Route::get('me/support/{reference}', [SupportController::class, 'show'])->name('me.support.show');
+        Route::post('me/support/{reference}/replies', [SupportController::class, 'reply'])
+            ->middleware('throttle:20,1')
+            ->name('me.support.reply');
+
         Route::get('me/yatras', [YatraController::class, 'index'])->name('me.yatras.index');
         Route::post('me/yatras', [YatraController::class, 'store'])->name('me.yatras.store');
         Route::get('me/yatras/{yatra}', [YatraController::class, 'show'])->name('me.yatras.show');

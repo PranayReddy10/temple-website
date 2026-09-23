@@ -240,3 +240,60 @@ the start), `party_size`, `is_public`.
 Adding a stop takes `day_number`, `planned_on` and `note`. It is idempotent —
 a retried request on a flaky connection must not fail on the unique index —
 and a new stop is appended to the end of its day rather than colliding at zero.
+
+
+## Support and reports
+
+Filing needs no account. A report behind a sign-in wall is a report most
+people will not file, and the listing with the wrong timings goes on sending
+devotees to a closed gate.
+
+```
+GET  /api/v1/support/options          categories, their descriptions, reportable types
+POST /api/v1/support                  10/min
+```
+
+`POST` body: `subject`, `body`, `category`, and `name` (required only when
+nobody is signed in) plus `email`. To make it a **report**, add `about_type`
+(`temple` | `event` | `puja` | `photo`) and `about_id`; the type is an
+allow-list, so a ticket cannot be aimed at an arbitrary model.
+
+The response carries a `reference` (`TP-XXXXXX`) to quote. A ticket in the
+`inappropriate_content` category is filed **urgent** automatically.
+
+A signed-in devotee's own tickets:
+
+```
+GET  /api/v1/me/support
+GET  /api/v1/me/support/{reference}
+POST /api/v1/me/support/{reference}/replies      20/min
+```
+
+`messages` contains **only replies** — internal staff notes are on a separate
+relation and cannot reach this response. Replying reopens a resolved ticket,
+because a resolution the reporter did not accept is not one.
+
+## Mantras and devotional media
+
+`GET /api/v1/temples/{slug}` gained:
+
+```json
+"mantra": {
+  "text": "कौसल्या सुप्रजा राम",
+  "transliteration": "Kausalya Supraja Rama",
+  "is_temple_specific": true
+},
+"devotional_media": [ ... ]
+```
+
+`text` falls back to the temple's **deity's** mantra when the temple has none,
+so the app never renders a heading with nothing under it.
+`is_temple_specific` says which it got, so the two can be shown differently.
+
+`devotional_media` is the temple's own media followed by its deity's — most
+specific first. The licence rule is unchanged: a song or video with no
+recorded licence is never served, whatever it hangs off.
+
+`GET /api/v1/today` and `/days/{weekday}` now include the deity's
+`image_url`, `mantra` and `mantra_meaning`, and a day's `mantra` falls back
+to its deity's the same way.

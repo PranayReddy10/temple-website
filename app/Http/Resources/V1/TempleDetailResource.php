@@ -38,6 +38,21 @@ class TempleDetailResource extends JsonResource
                 'longitude' => $this->longitude !== null ? (float) $this->longitude : null,
             ],
 
+            /*
+             * The verse for this place: its own where it has one, its
+             * deity's otherwise. Never blank where the deity has one, so the
+             * app does not render a heading with nothing under it.
+             */
+            'mantra' => [
+                'text' => $this->mantraText(),
+                'transliteration' => $this->localised('mantra_transliteration')
+                    ?: $this->mantraTransliteration(),
+                'is_temple_specific' => filled($this->mantra),
+            ],
+
+            // This temple's songs first, then its deity's.
+            'devotional_media' => DevotionalMediaResource::collection($this->allMedia()),
+
             'about' => [
                 'short_description' => $this->localised('short_description'),
                 'history' => $this->localised('history'),

@@ -70,6 +70,35 @@ Two things worth knowing about this one:
   php artisan db:seed --class=DemoDevoteeSeeder   # local only
   ```
 
+## What this release adds
+
+Four migrations. Two are plain additions — deity image and mantra columns,
+temple mantra columns — and two need a word:
+
+- **`devotional_media` becomes polymorphic.** It could only belong to a
+  weekday; it can now belong to a weekday, a deity or a temple. Existing rows
+  are **moved**, not recreated: they are already licensed and published, and
+  recreating them would reset both. The old `devotional_day_id` column is
+  dropped afterwards, along with the index that named it.
+
+  If you have code or a seeder that still passes `devotional_day_id`, it will
+  now throw rather than silently create media with no owner — Eloquent drops
+  an unfillable key without a word, so those rows would have existed and
+  never appeared anywhere. Create through the relation instead:
+  `$day->media()->create([...])`.
+
+- **`support_tickets` and `support_ticket_messages`** are new and start empty.
+
+There is still nothing to import; `app:deploy` applies all four.
+
+To see the support queue with something in it on a laptop:
+
+```bash
+php artisan db:seed --class=DemoSupportSeeder   # local only
+```
+
+Like `DemoDevoteeSeeder`, it refuses to run in production.
+
 ## Reference data vs your data
 
 A release sometimes ships **rows** as well as tables — the weekday-to-deity

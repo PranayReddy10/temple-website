@@ -68,9 +68,9 @@ class DashboardLinksTest extends TestCase
             $this->statUrls(TempleWorkQueueWidget::class),
         );
 
-        // Eight tiles across the two widgets; a silent drop to none would
+        // Nine tiles across the two widgets; a silent drop to none would
         // otherwise pass this test vacuously.
-        $this->assertCount(8, $urls);
+        $this->assertCount(9, $urls);
 
         foreach ($urls as $label => $url) {
             $this->assertNotNull($url, "The [{$label}] tile has no link.");

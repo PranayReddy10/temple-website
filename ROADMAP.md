@@ -147,6 +147,32 @@ building both halves at once possible, and it is also why the sync column
 above is the remaining work rather than a defect — a device that was offline
 at the temple gate still has to be able to record the visit.
 
+### Phase 4 — Detail, and being told when we are wrong  ✅ **Complete**
+
+| Slice | Scope | Status |
+| --- | --- | --- |
+| **Deity images and mantras** | Image, mantra with transliteration and meaning, accent colour — on the deity, where they belong, with weekdays falling back to them | ✅ |
+| **Temple cover image** | Set while creating a temple rather than only afterwards; writes the primary photo row rather than a second column | ✅ |
+| **Temple mantras and songs** | Per-temple verse and recordings, falling back to the deity's; one polymorphic media table for weekdays, deities and temples | ✅ |
+| **Side-menu lists** | Puja & Sevas and Temple Photos alongside Events, each sharing one form with the version inside a temple | ✅ |
+| **State-wise and god-wise** | Grouping on the temple list, plus tabs with counts including "needs work" | ✅ |
+| **Support and reports** | One queue, filing without an account, references, internal notes kept apart from replies, allow-listed report subjects | ✅ |
+
+### Phase 5 — What devotees add  ⬜ **Next**
+
+| Slice | Scope | Status |
+| --- | --- | --- |
+| **Likes and follows** | Follow a temple; a like as the lightest signal of interest, distinct from saving and from planning a trip | ⬜ |
+| **Reviews and ratings** | A devotee's account of a visit, moderated like photos are. The hard part is not the schema — it is that a place of worship is not a restaurant, and the product has to decide what it is asking people to rate | ⬜ |
+| **Devotee photos on a temple** | Approved Photo Stamps promoted into a temple's own gallery, credited to the devotee, with the temple able to object | ⬜ |
+| **Notifications** | Festival and event reminders for followed temples; the first thing here that can annoy people, so it starts opt-in and per-temple | ⬜ |
+
+The open question for reviews, worth settling before any of it is built: a
+one-to-five star average is how restaurants are ranked, and applying it to
+temples would produce a leaderboard of places of worship. Rating the *visit*
+— queue length, accessibility, facilities, how accurate our listing turned
+out to be — says something useful without ranking the sacred.
+
 ### Later phases
 
 Community submissions and moderation · GPS and QR visit verification ·

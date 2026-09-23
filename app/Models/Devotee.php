@@ -87,6 +87,11 @@ class Devotee extends Authenticatable
         return $this->hasMany(Yatra::class)->latest();
     }
 
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class);
+    }
+
     public function loginEvents(): MorphMany
     {
         return $this->morphMany(LoginEvent::class, 'authenticatable')->latest('occurred_at');

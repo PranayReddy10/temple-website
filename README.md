@@ -253,6 +253,81 @@ a temple under **Languages** on its edit page; the dress code and entry rules
 matter most, because not understanding those means being turned away at the
 gate.
 
+## Images, mantras and songs
+
+**Deities** carry an image, a mantra (script, transliteration and meaning)
+and an accent colour. The mantra lives on the deity rather than on each
+weekday, because it belongs to the deity: before that, the same Shiva mantra
+had to be typed on every Shiva day and corrected in every one of them. A day
+carries its own only where a tradition differs, and falls back otherwise.
+
+**Temples** have a **cover image** on the form itself, not only in the gallery
+relation manager — which only exists once the record is saved, so a temple
+could be created, published and listed with no image at all. It writes the
+primary `temple_photos` row rather than a second column that could disagree
+with the gallery about which photo leads. Clearing it demotes that photo
+rather than deleting it; the file is not always recoverable.
+
+**Songs, chants and videos** hang off a weekday, a deity *or* a temple — one
+table, because the rights rule is identical in all three cases and three
+copies would be three places for it to drift. Precedence is most specific
+first: a temple's own Suprabhatam before its deity's aarti. A song or video
+still cannot be published without a licence recorded, whichever it belongs to.
+
+In the app, opening a temple gives `mantra` (its own or its deity's, with
+`is_temple_specific` so the two can be rendered differently) and
+`devotional_media` in that order.
+
+## Support and reports
+
+**Support → Support & Reports.** One queue for both, because they are the
+same shape — somebody says something is wrong and waits for an answer — and
+two queues would mean one of them going unread.
+
+Reports are the half that matters. A listing with the wrong timings sends
+devotees to a closed gate and nobody on the team will notice on their own.
+So filing **does not need an account**: a report behind a sign-in wall is a
+report most people will not file. Everyone gets a reference (`TP-XXXXXX`) to
+quote, in an alphabet with no O/0 or I/1 because it gets read over the phone.
+
+- **Inappropriate content is filed urgent automatically** — it is the one
+  category that gets worse every hour it stays up.
+- **Replies and internal notes** live in one chronology, because the order is
+  the story. The reporter's copy comes from a separate relation, so a note
+  cannot leak by something being eager-loaded on the wrong screen. Replies
+  cannot be deleted; only notes can.
+- **Replying sets "waiting for a reply"**, so an answered ticket stops looking
+  identical to an untouched one. The reporter replying reopens it — a
+  resolution they did not accept is not a resolution.
+- The queue sorts **worst first, then oldest**, and opens on what nobody has
+  picked up.
+
+A report points at a record through an allow-list (temple, event, puja,
+photo). Without one, a caller could aim a ticket at any model in the
+application and the admin would render whatever came back.
+
+## Getting around the admin
+
+**Temples** can be grouped **state-wise or deity-wise** from the grouping
+menu — "which Shiva temples do we have" and "what is missing in Telangana"
+are the two questions that come up constantly, and a flat list of two
+thousand rows answers neither. Tabs across the top carry counts: Published,
+Waiting for review, Drafts, and **Needs work** (published but missing
+coordinates, a photo or a description — listings a devotee can already reach
+and be let down by).
+
+Three lists that previously existed only inside a temple are now also in the
+side menu, because each answers a question across all temples:
+
+- **Puja & Sevas** — which sevas have no published price, which booking links
+  have not been confirmed as official.
+- **Temple Photos** — the photo library, with a badge counting the ones with
+  no credit recorded.
+- **Events & Programs** — submissions waiting for review.
+
+Both views share one form and one set of actions, so the same decision cannot
+behave differently depending on where you started.
+
 ## Devotee analytics
 
 **Devotees → Analytics** in the admin panel.
