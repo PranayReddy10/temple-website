@@ -4,10 +4,11 @@ namespace App\Filament\Resources\Deities\Schemas;
 
 use App\Filament\Schemas\MantraFields;
 use App\Models\Deity;
+use App\Support\UploadRules;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Set;
@@ -58,12 +59,12 @@ class DeityForm
                             ->disk(fn (): string => config('filesystems.media'))
                             ->directory('deities')
                             ->visibility('public')
-                            ->maxSize(8192)
-                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                            ->maxSize(UploadRules::maxKbFor('deity_image'))
+                            ->acceptedFileTypes(UploadRules::typesFor('deity_image'))
                             // The disk is recorded on the row so the image
                             // keeps resolving after a move to Spaces.
                             ->afterStateUpdated(fn (Set $set) => $set('image_disk', config('filesystems.media')))
-                            ->helperText('A portrait or murti image. Landscape crops badly on the day screen, so prefer square or taller.')
+                            ->helperText('A portrait or murti image. Landscape crops badly on the day screen, so prefer square or taller. '.UploadRules::summary('deity_image'))
                             ->columnSpanFull(),
 
                         TextInput::make('image_credit')

@@ -107,6 +107,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('me', [DevoteeProfileController::class, 'show'])->name('me.show');
         Route::patch('me', [DevoteeProfileController::class, 'update'])->name('me.update');
 
+        // Multipart, so it cannot ride on the JSON PATCH above.
+        Route::post('me/avatar', [DevoteeProfileController::class, 'storeAvatar'])->name('me.avatar.store');
+        Route::delete('me/avatar', [DevoteeProfileController::class, 'destroyAvatar'])->name('me.avatar.destroy');
+
         Route::get('me/saved-temples', [DevoteeProfileController::class, 'savedTemples'])->name('me.saved.index');
         Route::put('me/saved-temples/{temple:slug}', [DevoteeProfileController::class, 'saveTemple'])->name('me.saved.store');
         Route::delete('me/saved-temples/{temple:slug}', [DevoteeProfileController::class, 'forgetTemple'])->name('me.saved.destroy');

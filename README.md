@@ -291,6 +291,51 @@ this in its own player", or "a YouTube link, but no video in it". A channel or
 search URL cannot be played, and that is worth knowing now rather than when a
 devotee taps it.
 
+## Storage, and why images go blank
+
+**Administration → Storage.**
+
+"None of the images show" has half a dozen causes that are indistinguishable
+from every other screen: the `public/storage` link was never created, a
+redeploy lost it, the host forbids symlinks, the disk is set to Spaces with no
+credentials, the credentials are wrong, or the files are not there. The page
+checks each one separately and says which it is, then offers a button that
+creates the link — the commonest cause, and needing SSH for it is why sites sit
+with blank images for days.
+
+Everything above that reads configuration. One check does not: **Check it now**
+writes a real file, reads it back, deletes it, and then fetches a stored image
+over HTTP the way a browser would. Configuration that looks right is exactly
+the state somebody is stuck in when they arrive here.
+
+Three things underneath it, all of which were real faults rather than
+precautions:
+
+- **Files are served even when the link is missing.** `MediaFileController`
+  answers `/storage/{path}` from PHP when Apache could not, with the same
+  content type, cache headers and `Range` support the web server would have
+  used. Slower, and every image becomes a PHP request — but the site does not
+  go blank. Ranges matter more than they look: without them, seeking in a
+  mantra recording re-downloads it, and Safari and iOS refuse to play audio or
+  video at all.
+- **What may be uploaded is defined once**, in `app/Support/UploadRules.php`.
+  Every upload field reads its accepted types, its size limit and the sentence
+  under the box from it, and the Storage page prints the same table — so the
+  page cannot describe something the form does not enforce. A test fails if a
+  field goes back to writing its own number.
+- **PHP's own limit is shown beside each one.** Shared plans ship
+  `upload_max_filesize` at 2 MB, and a form set to 50 MB on top of that fails
+  before any application code runs: empty `$_FILES`, nothing in the log, an
+  upload that appears to do nothing. Where the server is the smaller of the
+  two, the table prints the server's number and says what the form allows.
+
+**Devotees have a photo now.** `avatar_path` had been on the table since
+devotees existed and the API returned `avatar_url` all along, but nothing could
+write either — so every profile picture was an empty circle. `POST
+/api/v1/me/avatar` sets one, and the admin shows it on the devotee list and
+their page, falling back to initials drawn locally rather than fetched from a
+third party.
+
 ## Support and reports
 
 **Support → Support & Reports.** One queue for both, because they are the

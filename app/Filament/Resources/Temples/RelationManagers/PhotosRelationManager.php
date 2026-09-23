@@ -6,6 +6,7 @@ use App\Enums\PhotoCategory;
 use App\Filament\Support\MediaColumn;
 use App\Models\TemplePhoto;
 use App\Support\FormState;
+use App\Support\UploadRules;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -41,10 +42,10 @@ class PhotosRelationManager extends RelationManager
                     ->disk(fn (): string => config('filesystems.media'))
                     ->directory(fn (): string => 'temples/'.$this->getOwnerRecord()->getKey())
                     ->visibility('public')
-                    ->maxSize(8192)
-                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                    ->maxSize(UploadRules::maxKbFor('temple_photo'))
+                    ->acceptedFileTypes(UploadRules::typesFor('temple_photo'))
                     ->required()
-                    ->helperText('JPEG, PNG or WebP, up to 8 MB. Display sizes are generated automatically.')
+                    ->helperText(UploadRules::summary('temple_photo').' Display sizes are generated automatically.')
                     ->columnSpanFull(),
 
                 Select::make('category')

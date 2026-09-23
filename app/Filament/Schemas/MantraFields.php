@@ -3,8 +3,8 @@
 namespace App\Filament\Schemas;
 
 use App\Enums\DevotionalMediaType;
-use App\Models\DevotionalMedia;
 use App\Support\MediaSource;
+use App\Support\UploadRules;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -111,11 +111,11 @@ class MantraFields
                     ->disk(fn (): string => config('filesystems.media'))
                     ->directory('devotional/mantras')
                     ->visibility('public')
-                    ->maxSize(51200)
-                    ->acceptedFileTypes(['audio/mpeg', 'audio/mp4', 'audio/aac', 'audio/ogg', 'audio/wav'])
+                    ->maxSize(UploadRules::maxKbFor('mantra_recording'))
+                    ->acceptedFileTypes(UploadRules::typesFor('mantra_recording'))
                     ->required(fn (Get $get): bool => $get('source_type') === 'upload')
                     ->visible(fn (Get $get): bool => $get('source_type') === 'upload')
-                    ->helperText('MP3, M4A, AAC, OGG or WAV. Up to 50 MB.'),
+                    ->helperText(UploadRules::summary('mantra_recording')),
 
                 TextInput::make('artist')
                     ->label('Artist / performer')
@@ -129,7 +129,7 @@ class MantraFields
                     // The observer enforces the same rule regardless.
                     ->helperText('A song needs one before it can be published. A plain spoken chant does not, though credit is still expected.'),
             ])
-            ->createOptionUsing(function (array $data, $livewire) use ($ownerClass): ?int {
+            ->createOptionUsing(function (array $data, $livewire): ?int {
                 $owner = $livewire->getRecord();
 
                 if ($owner === null) {

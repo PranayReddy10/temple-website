@@ -29,6 +29,7 @@ use App\Models\Yatra;
 use App\Filament\Widgets\Devotees\DevoteeAudienceWidget;
 use App\Support\DevoteeStats;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -131,6 +132,47 @@ class DevoteeAdminTest extends TestCase
             ->assertSee('Stamps')
             ->assertSee('Trips')
             ->assertSee('Recent sign-ins');
+    }
+
+    /**
+     * The devotee's own photo, which was stored and never rendered.
+     *
+     * avatar_path has been on the table since devotees existed, so an account
+     * with a picture looked identical in the admin to one without. Staff
+     * reviewing a photo stamp or a support message had nothing to go on.
+     */
+    public function test_a_devotee_photo_is_shown_on_their_page(): void
+    {
+        Storage::fake('public');
+        $this->actingAs($this->superAdmin());
+
+        Storage::disk('public')->put('avatars/1/me.jpg', 'the bytes');
+
+        $devotee = Devotee::factory()->create([
+            'avatar_path' => 'avatars/1/me.jpg',
+            'avatar_disk' => 'public',
+        ]);
+
+        $this->get(ViewDevotee::getUrl(['record' => $devotee]))
+            ->assertOk()
+            ->assertSee('avatars/1/me.jpg');
+    }
+
+    /**
+     * Without a photo the circle is drawn here rather than fetched from
+     * ui-avatars.com, so a list of devotees is not a list of requests to
+     * somebody else's server carrying their names.
+     */
+    public function test_a_devotee_without_a_photo_gets_initials_drawn_locally(): void
+    {
+        $this->actingAs($this->superAdmin());
+
+        Devotee::factory()->create(['name' => 'Anusha R', 'avatar_path' => null]);
+
+        $response = $this->get(ListDevotees::getUrl())->assertOk();
+
+        $response->assertSee('data:image/svg+xml;base64,', escape: false);
+        $response->assertDontSee('ui-avatars.com');
     }
 
     public function test_a_suspended_account_can_be_restored(): void
