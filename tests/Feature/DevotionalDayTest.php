@@ -83,8 +83,7 @@ class DevotionalDayTest extends TestCase
     {
         $day = $this->shivaMonday();
 
-        $media = DevotionalMedia::create([
-            'devotional_day_id' => $day->id,
+        $media = $day->media()->create([
             'type' => DevotionalMediaType::Song,
             'title' => 'Shiva Tandava Stotram',
             'external_url' => 'https://example.com/song',
@@ -102,8 +101,7 @@ class DevotionalDayTest extends TestCase
     {
         $day = $this->shivaMonday();
 
-        $media = DevotionalMedia::create([
-            'devotional_day_id' => $day->id,
+        $media = $day->media()->create([
             'type' => DevotionalMediaType::Song,
             'title' => 'Licensed Bhajan',
             'external_url' => 'https://example.com/song',
@@ -118,8 +116,7 @@ class DevotionalDayTest extends TestCase
     {
         $day = $this->shivaMonday();
 
-        $media = DevotionalMedia::create([
-            'devotional_day_id' => $day->id,
+        $media = $day->media()->create([
             'type' => DevotionalMediaType::Photo,
             'title' => 'Temple at dawn',
             'external_url' => 'https://example.com/photo.jpg',
@@ -133,8 +130,7 @@ class DevotionalDayTest extends TestCase
     {
         $day = $this->shivaMonday();
 
-        $media = DevotionalMedia::create([
-            'devotional_day_id' => $day->id,
+        $media = $day->media()->create([
             'type' => DevotionalMediaType::Photo,
             'title' => 'Both set',
             'source_type' => 'external',
@@ -181,15 +177,13 @@ class DevotionalDayTest extends TestCase
     {
         $day = $this->shivaMonday();
 
-        DevotionalMedia::create([
-            'devotional_day_id' => $day->id,
+        $day->media()->create([
             'type' => DevotionalMediaType::Song,
             'title' => 'Unlicensed',
             'external_url' => 'https://example.com/a',
             'is_published' => true,   // forced false by the rights rule
         ]);
-        DevotionalMedia::create([
-            'devotional_day_id' => $day->id,
+        $day->media()->create([
             'type' => DevotionalMediaType::Song,
             'title' => 'Licensed',
             'external_url' => 'https://example.com/b',
@@ -210,8 +204,7 @@ class DevotionalDayTest extends TestCase
     public function test_media_carries_its_attribution_to_the_client(): void
     {
         $day = $this->shivaMonday();
-        DevotionalMedia::create([
-            'devotional_day_id' => $day->id,
+        $day->media()->create([
             'type' => DevotionalMediaType::Song,
             'title' => 'Bhajan',
             'external_url' => 'https://example.com/b',

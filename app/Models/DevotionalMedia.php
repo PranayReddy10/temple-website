@@ -6,7 +6,7 @@ use App\Enums\DevotionalMediaType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Facades\Storage;
 
 class DevotionalMedia extends Model
@@ -16,7 +16,7 @@ class DevotionalMedia extends Model
     protected $table = 'devotional_media';
 
     protected $fillable = [
-        'devotional_day_id', 'type', 'title', 'description',
+        'mediable_type', 'mediable_id', 'type', 'title', 'description',
         'source_type', 'disk', 'path', 'external_url', 'thumbnail_path',
         'artist', 'credit', 'license', 'license_url',
         'duration_seconds', 'sort_order', 'is_published',
@@ -41,9 +41,45 @@ class DevotionalMedia extends Model
         ];
     }
 
-    public function day(): BelongsTo
+    /**
+     * What this belongs to: a weekday, a deity or a temple.
+     *
+     * A song is a song whatever it hangs off, and the licence rules below
+     * are the same in all three cases — which is why there is one table
+     * rather than three with the same columns and three chances to get those
+     * rules wrong.
+     */
+    protected static function booted(): void
     {
-        return $this->belongsTo(DevotionalDay::class, 'devotional_day_id');
+        /*
+         * Media with no owner is media nobody can reach.
+         *
+         * When the owner became polymorphic, `devotional_day_id` stopped
+         * being a fillable column — and Eloquent drops an unfillable key
+         * without a word, so every caller that had not been updated went on
+         * creating rows silently detached from the day they were written for.
+         * They did not error; they just never appeared. This turns that into
+         * the exception it always was.
+         */
+        static::creating(function (self $media): void {
+            if (blank($media->mediable_type) || blank($media->mediable_id)) {
+                throw new \InvalidArgumentException(
+                    'Devotional media needs an owner. Create it through the relation, '
+                    .'e.g. $day->media()->create([...]) or $deity->media()->create([...]).',
+                );
+            }
+        });
+    }
+
+    public function mediable(): MorphTo
+    {
+        return $this->morphTo();
+    }
+
+    /** The weekday this belongs to, where it belongs to one. */
+    public function day(): ?DevotionalDay
+    {
+        return $this->mediable instanceof DevotionalDay ? $this->mediable : null;
     }
 
     public function scopePublished(Builder $query): Builder

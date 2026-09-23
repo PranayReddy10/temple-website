@@ -1,8 +1,7 @@
 <?php
 
-namespace App\Filament\Resources\Temples\RelationManagers;
+namespace App\Filament\RelationManagers;
 
-use App\Models\Temple;
 use App\Models\Translation;
 use App\Support\Locales;
 use Filament\Actions\Action;
@@ -24,7 +23,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * This temple in other languages.
+ * This record in other languages — a temple, a deity, anything translatable.
  *
  * The field list comes from the model's own $translatable, so a slug or a set
  * of coordinates cannot be translated by picking it here — those produce a
@@ -152,20 +151,29 @@ class TranslationsRelationManager extends RelationManager
             ->defaultSort('locale')
             ->emptyStateIcon('heroicon-o-language')
             ->emptyStateHeading('Only in English so far')
-            ->emptyStateDescription('Add a translation so devotees reading Telugu, Hindi or Tamil see this temple in their own language. The dress code and entry rules matter most: not understanding those means being turned away at the gate.');
+            ->emptyStateDescription('Add a translation so devotees reading Telugu, Hindi or Tamil see this in their own language. On a temple the dress code and entry rules matter most: not understanding those means being turned away at the gate.');
     }
 
-    /** @return array<string, string> */
+    /**
+     * The owner's own translatable fields.
+     *
+     * Read from the model rather than listed here, so a slug or a set of
+     * coordinates cannot be translated by picking it: those produce a record
+     * that is broken rather than localised, and the model is the only place
+     * that knows which is which.
+     *
+     * @return array<string, string>
+     */
     protected function fieldOptions(): array
     {
-        $temple = $this->getOwnerRecord();
+        $record = $this->getOwnerRecord();
 
-        return collect($temple->translatableFields())
+        return collect($record->translatableFields())
             ->mapWithKeys(fn (string $field): array => [
                 $field => str($field)->headline()->toString()
                     // Flagged rather than hidden: an empty field is worth
                     // filling in English before anyone translates it.
-                    .(blank($temple->getAttribute($field)) ? ' — empty in English' : ''),
+                    .(blank($record->getAttribute($field)) ? ' — empty in English' : ''),
             ])
             ->all();
     }
@@ -176,10 +184,10 @@ class TranslationsRelationManager extends RelationManager
             return null;
         }
 
-        $temple = $this->getOwnerRecord();
+        $record = $this->getOwnerRecord();
 
-        return $temple instanceof Temple && $temple->isTranslatable($field)
-            ? $temple->getAttribute($field)
+        return method_exists($record, 'isTranslatable') && $record->isTranslatable($field)
+            ? $record->getAttribute($field)
             : null;
     }
 }

@@ -14,6 +14,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
+use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -159,8 +160,41 @@ class TemplesTable
                     RestoreBulkAction::make(),
                 ]),
             ])
+            /*
+             * State-wise and god-wise, which is how anyone actually thinks
+             * about this list.
+             *
+             * "Which Shiva temples do we have" and "what is missing in
+             * Telangana" are the two questions that come up constantly, and
+             * a flat list of two thousand rows answers neither. Grouping
+             * beats separate screens here because the filters, the search
+             * and the columns all keep working inside a group.
+             */
+            ->groups([
+                Group::make('state.name')
+                    ->label('State')
+                    ->collapsible(),
+
+                Group::make('deity.name')
+                    ->label('Deity')
+                    ->collapsible(),
+
+                Group::make('district.name')
+                    ->label('District')
+                    ->collapsible(),
+
+                Group::make('status')
+                    ->label('Status')
+                    ->collapsible(),
+
+                Group::make('verification_status')
+                    ->label('Trust level')
+                    ->collapsible(),
+            ])
+            ->groupingSettingsInDropdownOnDesktop()
             ->defaultSort('updated_at', 'desc')
             ->persistFiltersInSession()
+            ->persistSearchInSession()
             ->persistSortInSession()
             ->emptyStateHeading('No temples yet')
             ->emptyStateDescription('The temple database is the core asset. Add the first record to get started.')

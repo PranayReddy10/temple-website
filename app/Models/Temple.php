@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Temple extends Model
@@ -34,6 +35,7 @@ class Temple extends Model
         'short_description',
         'history',
         'significance',
+        'mantra_transliteration',
         'dress_code',
         'entry_rules',
         'queue_information',
@@ -43,7 +45,8 @@ class Temple extends Model
     protected $fillable = [
         'name', 'slug', 'deity_id',
         'state_id', 'district_id', 'city', 'address', 'pincode', 'latitude', 'longitude',
-        'short_description', 'history', 'significance', 'architecture_style', 'built_period',
+        'short_description', 'history', 'significance', 'mantra', 'mantra_transliteration',
+        'architecture_style', 'built_period',
         'dress_code', 'photography_policy', 'mobile_policy', 'footwear_policy',
         'entry_rules', 'queue_information',
         'official_website', 'contact_phone', 'contact_email',
@@ -140,6 +143,20 @@ class Temple extends Model
             ->withPivot(['role', 'approved_at', 'requested_at'])
             ->wherePivotNotNull('approved_at')
             ->withTimestamps();
+    }
+
+    /**
+     * This temple's own songs and chants.
+     *
+     * Tirumala's Suprabhatam is sung at Tirumala. A devotee standing there
+     * should hear that rather than the general Vishnu aarti, so a temple
+     * carries its own media and falls back to the deity's when it has none.
+     */
+    public function media(): MorphMany
+    {
+        return $this->morphMany(DevotionalMedia::class, 'mediable')
+            ->orderBy('sort_order')
+            ->orderBy('id');
     }
 
     public function visits(): HasMany
@@ -270,6 +287,43 @@ class Temple extends Model
     }
 
     // --- Helpers ---
+
+    /**
+     * The mantra a devotee should see here: this temple's own, or its
+     * deity's.
+     *
+     * Never blank where the deity has one, because a screen that shows a
+     * heading and nothing under it reads as broken rather than as a temple
+     * without its own verse.
+     */
+    public function mantraText(): ?string
+    {
+        return filled($this->mantra) ? $this->mantra : $this->deity?->mantra;
+    }
+
+    public function mantraTransliteration(): ?string
+    {
+        return filled($this->mantra_transliteration)
+            ? $this->mantra_transliteration
+            : $this->deity?->mantra_transliteration;
+    }
+
+    /**
+     * What to play here: this temple's media first, then its deity's.
+     *
+     * @return \Illuminate\Support\Collection<int, DevotionalMedia>
+     */
+    public function allMedia(bool $publishedOnly = true)
+    {
+        $own = $this->relationLoaded('media') ? $this->media : $this->media()->get();
+        $deity = $this->deity?->relationLoaded('media')
+            ? $this->deity->media
+            : ($this->deity?->media()->get() ?? collect());
+
+        return $own->concat($deity)
+            ->when($publishedOnly, fn ($all) => $all->filter->is_published)
+            ->values();
+    }
 
     public function hasCoordinates(): bool
     {

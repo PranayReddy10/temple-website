@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\DevotionalDays\RelationManagers;
+namespace App\Filament\RelationManagers;
 
 use App\Enums\DevotionalMediaType;
 use App\Models\DevotionalMedia;
@@ -26,7 +26,20 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
-class MediaRelationManager extends RelationManager
+/**
+ * Songs, chants, photos and videos — for a weekday, a deity or a temple.
+ *
+ * One class for all three, because the rights rule is the only thing that
+ * really matters here and it is identical in every case: a recording belongs
+ * to its performer or label however old the composition is. Three copies of
+ * this screen would be three places for that rule to drift.
+ *
+ * The three owners nest rather than compete. A temple's own suprabhatam plays
+ * at that temple; its deity's aarti plays wherever that deity is worshipped;
+ * a weekday's media plays on that day. The models decide precedence — see
+ * Temple::allMedia() and DevotionalDay::allMedia() — not this screen.
+ */
+class DevotionalMediaRelationManager extends RelationManager
 {
     protected static string $relationship = 'media';
 
@@ -79,7 +92,9 @@ class MediaRelationManager extends RelationManager
                         FileUpload::make('path')
                             ->label('File')
                             ->disk(fn (): string => config('filesystems.media'))
-                            ->directory('devotional')
+                            ->directory(fn (): string => 'devotional/'
+                                .str(class_basename($this->getOwnerRecord()))->kebab()
+                                .'/'.$this->getOwnerRecord()->getKey())
                             ->visibility('public')
                             ->maxSize(51200)
                             ->acceptedFileTypes(['audio/mpeg', 'audio/mp4', 'audio/ogg', 'image/jpeg', 'image/png', 'image/webp', 'video/mp4'])

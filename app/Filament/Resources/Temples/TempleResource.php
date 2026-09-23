@@ -5,13 +5,14 @@ namespace App\Filament\Resources\Temples;
 use App\Filament\Resources\Temples\Pages\CreateTemple;
 use App\Filament\Resources\Temples\Pages\EditTemple;
 use App\Filament\Resources\Temples\Pages\ListTemples;
+use App\Filament\RelationManagers\DevotionalMediaRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\ClaimsRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\ClosuresRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\EventsRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\PhotosRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\PujasRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\TimingsRelationManager;
-use App\Filament\Resources\Temples\RelationManagers\TranslationsRelationManager;
+use App\Filament\RelationManagers\TranslationsRelationManager;
 use App\Filament\Resources\Temples\Schemas\TempleForm;
 use App\Filament\Resources\Temples\Tables\TemplesTable;
 use App\Models\Temple;
@@ -87,6 +88,9 @@ class TempleResource extends Resource
             PujasRelationManager::class,
             ClosuresRelationManager::class,
             EventsRelationManager::class,
+            // This temple's own songs. Tirumala's Suprabhatam is sung at
+            // Tirumala; where a temple has none, its deity's are used.
+            DevotionalMediaRelationManager::class,
             TranslationsRelationManager::class,
             ClaimsRelationManager::class,
         ];

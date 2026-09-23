@@ -79,6 +79,10 @@ class DevotionalDayController extends Controller
             ->active()
             ->with([
                 'deity',
+                // The deity's own media as well as the day's: the mantra and
+                // the aarti belong to the deity, and typing them again on
+                // every one of its days is how they come to differ.
+                'deity.media' => fn ($q) => $q->published(),
                 // Unpublished media is invisible: it is either unfinished or
                 // waiting on rights we have not confirmed.
                 'media' => fn ($q) => $q->published(),
