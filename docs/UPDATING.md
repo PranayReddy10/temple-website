@@ -99,6 +99,37 @@ php artisan db:seed --class=DemoSupportSeeder   # local only
 
 Like `DemoDevoteeSeeder`, it refuses to run in production.
 
+## If a migration fails half-way
+
+MySQL does not roll back schema changes. If `app:deploy` dies during a
+migration, the table is already altered and the migration is **not** recorded
+— so the obvious retry can fail on the work that did land.
+
+**Migrations in this project are written to be safe to re-run**: each step
+checks whether it is still needed. So the first thing to try is simply:
+
+```bash
+php artisan app:deploy --force
+```
+
+If it still fails, send the error rather than editing the schema by hand.
+`php artisan migrate:status` shows exactly how far it got.
+
+### The 1553 error, specifically
+
+If you hit this during the Phase 4 deploy:
+
+```
+SQLSTATE[HY000]: General error: 1553 Cannot drop index
+'devotional_media_devotional_day_id_is_published_sort_order_index':
+needed in a foreign key constraint
+```
+
+that was a real bug, fixed in the commit after it. Pull again and re-run
+`php artisan app:deploy --force`; it picks up from wherever it stopped and
+finishes. Nothing is lost — the failure happened before any data was
+removed, and the songs and their licences are untouched.
+
 ## Reference data vs your data
 
 A release sometimes ships **rows** as well as tables — the weekday-to-deity
