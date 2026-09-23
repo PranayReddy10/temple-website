@@ -361,6 +361,55 @@ write either — so every profile picture was an empty circle. `POST
 their page, falling back to initials drawn locally rather than fetched from a
 third party.
 
+## On a phone: installing the panels
+
+Both panels are run from a phone far more than anyone plans for — a temple's
+team checking tomorrow's events on the way home, an editor approving a photo on
+a train. In a browser tab that costs a third of a small screen to chrome and a
+hunt through open tabs to get back to.
+
+**My profile → Use this on your phone** says how, per platform. Installed, the
+panel opens from an icon, full height, already signed in.
+
+Two installs, not one: the editorial panel and the temple portal are two jobs
+done by two different people, so each has its own manifest, its own identity and
+its own theme colour. A temple's team gets their own portal from their own icon
+rather than a shortcut into a panel that answers them 403.
+
+**iOS is the reason for most of this.** Safari fires no install prompt — the
+event every other browser offers has never been implemented — so nothing
+appears unless somebody already knows to look under Share → Add to Home Screen.
+That is why the profile page spells it out, and why it says the part people get
+stuck on: it has to be Safari, because Chrome and Firefox on an iPhone cannot
+add anything to the home screen. Safari also only began reading the manifest's
+display mode in 16.4, so the `apple-*` meta tags are not redundant with it —
+they are what iOS actually reads for the title, the icon and the status bar.
+
+The service worker is written to be dull on purpose, because the failure mode
+of a service worker on an admin panel is not "no offline support" — it is
+somebody seeing a page from before a deploy, saving a form against a CSRF token
+that expired three days ago, and being unable to clear it by refreshing. So:
+
+- **No document is ever cached.** A Filament page carries a CSRF token, a
+  Livewire snapshot and whatever that one account may see. Navigations always go
+  to the network; the cache is reached for only when there is no network, and
+  only for the offline page.
+- **Nothing but GET is touched.** Livewire's updates, every form and every
+  upload are POSTs, and the worker declines them before doing anything else.
+- **Static assets only, by path**, and they carry a version in their URLs. What
+  that buys is the thing that matters on a slow connection: the panel opens
+  without waiting on a megabyte of Filament's CSS.
+- **A deploy retires the cache.** The cache name is built from a stamp over the
+  deployed assets, so an old one is deleted on activate rather than left to
+  serve last week's stylesheet.
+
+The icons are drawn by `php artisan app:icons` rather than exported from a
+design tool, so a change of brand colour is a config change and one command. The
+mark is a gopuram — the one silhouette that still reads as "temple" at 32
+pixels. `favicon.ico` is generated too: the one in the repository was zero
+bytes, and the admin panel pointed its favicon at it through `asset()`, so it
+was broken twice over.
+
 ## Support and reports
 
 **Support → Support & Reports.** One queue for both, because they are the

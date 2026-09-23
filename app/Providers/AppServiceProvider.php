@@ -15,6 +15,11 @@ use App\Observers\TemplePhotoObserver;
 use App\Observers\TemplePujaObserver;
 use App\Support\LoginRecorder;
 use App\Support\MediaStorage;
+use App\Support\Pwa;
+use App\Support\TempleTheme;
+use Filament\Facades\Filament;
+use Filament\Support\Facades\FilamentView;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Database\Eloquent\Model;
@@ -43,6 +48,8 @@ class AppServiceProvider extends ServiceProvider
          * still boots.
          */
         MediaStorage::apply();
+
+        $this->registerPanelHead();
 
         Temple::observe(TempleObserver::class);
         TemplePhoto::observe(TemplePhotoObserver::class);
@@ -86,5 +93,31 @@ class AppServiceProvider extends ServiceProvider
                 $event->user === null ? 'unknown_account' : 'bad_password',
             );
         });
+    }
+
+    /**
+     * The head both panels share: the stylesheet, and the install tags.
+     *
+     * Registered once, globally, rather than on each panel — and the panel is
+     * resolved when the hook runs rather than closed over.
+     *
+     * That is not tidiness. Filament's panel-scoped hooks are resolved against
+     * whichever panel booted first, so two providers each registering their
+     * own hook means the second panel renders the first one's tags. Every
+     * request is its own process under PHP-FPM, so both panels looked right
+     * and the temple portal would have served the admin panel's manifest the
+     * day anything kept the process alive between requests.
+     */
+    protected function registerPanelHead(): void
+    {
+        FilamentView::registerRenderHook(
+            PanelsRenderHook::HEAD_END,
+            fn (): string => implode("\n", [
+                // Static stylesheet, not a Vite theme: shared Hostinger has no
+                // Node toolchain, so deploying must never need an npm build.
+                TempleTheme::stylesheetTag(),
+                Pwa::headTags(Filament::getCurrentOrDefaultPanel()?->getId() ?? ''),
+            ]),
+        );
     }
 }

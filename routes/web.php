@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\MediaFileController;
+use App\Http\Controllers\PwaController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -28,6 +29,23 @@ Route::get('/', function () {
 | path like temples/12/photo.jpg match a single parameter.
 |
 */
+/*
+|--------------------------------------------------------------------------
+| Installing the panels on a phone
+|--------------------------------------------------------------------------
+|
+| The worker is at the site root deliberately: a service worker may only
+| control pages at or below its own path, so one served from /pwa/sw.js could
+| never control /admin. The manifests can live anywhere, since a manifest's
+| scope is not bounded by where the manifest itself is served from.
+|
+*/
+Route::get('/sw.js', [PwaController::class, 'serviceWorker'])->name('pwa.worker');
+Route::get('/offline', [PwaController::class, 'offline'])->name('pwa.offline');
+Route::get('/manifest/{panel}.webmanifest', [PwaController::class, 'manifest'])
+    ->where('panel', '[a-z-]+')
+    ->name('pwa.manifest');
+
 Route::get('/storage/{path}', MediaFileController::class)
     ->where('path', '.*')
     ->name('media.file');

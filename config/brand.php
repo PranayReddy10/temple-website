@@ -33,5 +33,8 @@ return [
         'gold' => ['hex' => '#C9A227', 'rgb' => '201, 162, 39'],
         'sandal' => ['hex' => '#F5EBDC', 'rgb' => '245, 235, 220'],
         'deep' => ['hex' => '#3E2723', 'rgb' => '62, 39, 35'],
+        // The panel's own page background, named here so the installed app's
+        // splash screen matches what opens behind it rather than flashing white.
+        'surface' => ['hex' => '#FFFDF9', 'rgb' => '255, 253, 249'],
     ],
 ];

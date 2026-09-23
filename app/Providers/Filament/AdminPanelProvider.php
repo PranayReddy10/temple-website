@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\Profile;
+use App\Support\InitialsAvatarProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -9,11 +11,7 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Navigation\NavigationGroup;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
-use App\Filament\Pages\Auth\Profile;
-use App\Support\InitialsAvatarProvider;
-use App\Support\TempleTheme;
 use Filament\PanelProvider;
-use Filament\View\PanelsRenderHook;
 use Filament\Support\Colors\Color;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -45,7 +43,11 @@ class AdminPanelProvider extends PanelProvider
             // change through the settings screen, config or .env without
             // touching this provider or requiring a deploy.
             ->brandName(fn (): string => setting('brand_name', 'brand.name'))
-            ->favicon(asset('favicon.ico'))
+            // Root-relative, and a real file. asset() builds this from
+            // APP_URL — http://localhost until somebody changes it — and the
+            // favicon.ico it pointed at was zero bytes, so the panel had no
+            // icon at all and the link to it was broken twice over.
+            ->favicon('/icons/favicon-32.png')
             // Saffron primary with kumkum and gold accents: the devotional
             // palette shared with the public site and the Flutter app.
             ->colors([
@@ -77,12 +79,6 @@ class AdminPanelProvider extends PanelProvider
             // the top of the dashboard to do it. Account details moved to the
             // profile page above.
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
-            // Static stylesheet, not a Vite theme: shared Hostinger has no Node
-            // toolchain, so deploying must never require an npm build.
-            ->renderHook(
-                PanelsRenderHook::HEAD_END,
-                fn (): string => TempleTheme::stylesheetTag(),
-            )
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

@@ -55,8 +55,40 @@ class Profile extends BaseEditProfile
         return $schema
             ->components([
                 $this->getAccountSummaryComponent(),
+                $this->getInstallComponent(),
                 $this->getFormContentComponent(),
                 ...Arr::wrap($this->getMultiFactorAuthenticationContentComponent()),
+            ]);
+    }
+
+    /**
+     * How to put this panel on a phone's home screen.
+     *
+     * It is here because iOS gives no install prompt at all — Safari has never
+     * implemented the event every other browser fires, so there is nothing to
+     * hook and nothing appears unless somebody already knows to look under the
+     * Share menu. Most people do not, and the panel stays a browser tab
+     * forever.
+     *
+     * The profile page rather than a banner on every screen: this is a
+     * one-time thing somebody does to their own device, which is exactly what
+     * this page is already for. The section hides itself once the panel is
+     * running installed.
+     */
+    public function getInstallComponent(): Component
+    {
+        return Section::make('Use this on your phone')
+            ->description('Add it to your home screen and it opens from an icon, full screen, already signed in.')
+            ->icon('heroicon-o-device-phone-mobile')
+            ->collapsible()
+            ->collapsed()
+            ->schema([
+                View::make('filament.pages.install-hint')
+                    ->viewData([
+                        'label' => Filament::getCurrentOrDefaultPanel()?->getId() === 'temple'
+                            ? 'Temple Portal'
+                            : 'Temple Admin',
+                    ]),
             ]);
     }
 
