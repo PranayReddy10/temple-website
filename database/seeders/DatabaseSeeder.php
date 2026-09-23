@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             FacilitySeeder::class,
             AdminUserSeeder::class,
             TempleSeeder::class,
+            TelanganaTempleSeeder::class,
             TempleDetailSeeder::class,
             DevotionalDaySeeder::class,
         ]);

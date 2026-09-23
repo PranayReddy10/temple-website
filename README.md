@@ -97,6 +97,31 @@ settings, temple events and daily devotional content.
 - 22 starter temples, seeded honestly as *community* level with no source — they
   are there to be verified, not to pad a count.
 
+## Telangana temples
+
+`TelanganaTempleSeeder` covers 45 temples across every region of Telangana —
+Yadadri, Bhadrachalam, Vemulawada, Basara, Ramappa, the Thousand Pillar
+Temple, Medaram, Chilkur Balaji and more — with 19 famous temples marked
+**featured**, typical opening hours for the major shrines and their common
+sevas.
+
+It runs with `php artisan migrate --seed`. To load it into a live database,
+where `app:deploy` deliberately never re-runs sample seeders:
+
+```bash
+php artisan temples:import-telangana
+```
+
+It is safe to repeat: verified and deleted temples are skipped, existing
+records only have empty fields filled, and timings and pujas are only added to
+temples that have none. Every record is **community** level, every puja has
+"No published price", and every general timing says it is unconfirmed —
+verify each against the temple before raising its trust level. No photographs
+are imported; upload them with credit and licence through the admin.
+
+The API takes `featured=1` and `sort=featured`; the admin has a **Famous
+temple** toggle, column and filter.
+
 ## Slices 2–4 — media, pujas and the public API
 
 **Photos** are stored in DigitalOcean Spaces and served from its CDN. Uploads

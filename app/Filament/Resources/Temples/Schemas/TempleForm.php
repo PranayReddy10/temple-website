@@ -11,6 +11,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -346,6 +347,11 @@ class TempleForm
                     ->helperText(fn (): string => Auth::user()?->canPublish()
                         ? 'Only published temples appear in the app.'
                         : 'Set to In Review when ready. A super admin publishes.'),
+
+                Toggle::make('is_featured')
+                    ->label('Famous temple')
+                    ->helperText('Shown first in the app\'s popular temples. A curation choice, not a trust level.')
+                    ->default(false),
             ]);
     }
 

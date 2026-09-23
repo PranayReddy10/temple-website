@@ -45,6 +45,10 @@ class TempleSummaryResource extends JsonResource
                 fn () => round((float) $this->distance_km, 2),
             ),
 
+            // An editorial "famous temple" mark. Not a trust claim: read
+            // `trust` for how far the record can be relied on.
+            'is_featured' => (bool) $this->is_featured,
+
             'trust' => [
                 'level' => $this->verification_status?->value,
                 'label' => $this->verification_status?->getLabel(),
