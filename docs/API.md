@@ -419,3 +419,73 @@ recorded licence is never served, whatever it hangs off.
 `GET /api/v1/today` and `/days/{weekday}` now include the deity's
 `image_url`, `mantra` and `mantra_meaning`, and a day's `mantra` falls back
 to its deity's the same way.
+
+## App control
+
+```
+GET /api/v1/app/config?platform=android|ios|web&version=0.6.0      open
+```
+
+Read by the app on every launch and on return from the background. Every
+value is set in the admin panel under **App** and **Monetisation**.
+
+| Key | Meaning |
+| --- | --- |
+| `maintenance.enabled`, `title`, `message`, `until` | Cover the app with a notice |
+| `update.available`, `update.required`, `latest_version`, `min_version`, `store_url`, `title`, `message` | Below `min_version` the app is blocked until updated; below `latest_version` an update is offered once |
+| `auth.password`, `auth.google.{enabled, server_client_id, ios_client_id}`, `auth.apple.enabled` | Which sign-in buttons to show |
+| `push.enabled`, `push.firebase` | Public Firebase ids for this platform (`project_id`, `api_key`, `app_id`, `messaging_sender_id`, `ios_bundle_id`). The app starts Firebase from these, so no google-services file is built in |
+| `ads.enabled`, `network` (`admob` \| `applovin_max`), `test_mode`, `units.{native, banner}`, `list_interval`, `placements.{temple_detail, explore, home, day_page}` | False for a devotee whose plan removes ads (send the token) and always on the web |
+| `payments.enabled`, `available_elsewhere`, `gateways[]`, `default_gateway` | Whether plans can be bought on this platform |
+
+## Google and Apple sign-in
+
+```
+POST /api/v1/auth/google   { "id_token": "…" }                                  10/min
+POST /api/v1/auth/apple    { "identity_token": "…", "nonce": "raw", "name": "…" } 10/min
+```
+
+The token is verified here against the provider's published keys, issuer and
+the client ids set under **App → Sign-in methods**. An account is matched by
+the provider's subject id, then by a *verified* email (which links the
+provider to that account), otherwise created. The response is the same as
+`/auth/login`, plus `created`. `403` when the method is switched off; `422`
+for a token that is expired, forged or issued to another app.
+
+`GET /me` now also returns `sign_in_methods`, `home_state_id`,
+`entitlements` (`no_ads`, `memory_photos_per_visit`, `premium_passport`) and
+`subscription` (`plan`, `ends_at`) while one is active.
+
+## Notifications
+
+```
+GET  /api/v1/notifications?platform=android        open; a token adds personal ones and is_read
+POST /api/v1/devices          { token, platform, app_version?, locale? }   open, 20/min
+POST /api/v1/devices/forget   { token }
+POST /api/v1/me/notifications/{id}/read
+POST /api/v1/me/notifications/read-all   { platform? }
+```
+
+Sent from **App → Notifications** to everyone, one platform, followers of a
+temple, a home state or one devotee. Push goes through Firebase topics the
+app subscribes to — `all`, `android`/`ios`, `temple-{id}`, `state-{id}` — or
+to one devotee's registered tokens. A push carries `notification_id`,
+`link_type` (`none`, `temple`, `day`, `screen`, `url`) and `link_value`.
+
+## Plans and payments
+
+```
+GET  /api/v1/plans?platform=android                  open
+GET  /api/v1/me/subscription
+POST /api/v1/me/checkout   { plan, gateway?, platform }          10/min
+GET  /api/v1/me/payments/{id}                        asks the gateway if still open
+POST /api/v1/payments/webhook/{razorpay|phonepe|cashfree|payu}
+```
+
+`checkout` answers with a signed `checkout_url` (30 minutes) and a `done_url`.
+The app opens the first in its in-app browser; the page runs the gateway's own
+checkout, the gateway returns to `/pay/{id}/return/{gateway}`, the server
+confirms with the gateway and lands on `done_url`, where the browser closes.
+The app then polls `me/payments/{id}`. The price is always the plan's, set on
+the server; a plan switches on only when the gateway itself confirms, once,
+however many times the return and the webhook arrive.

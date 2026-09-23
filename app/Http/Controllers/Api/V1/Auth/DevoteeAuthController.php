@@ -18,6 +18,10 @@ class DevoteeAuthController extends Controller
 {
     public function register(RegisterDevoteeRequest $request): JsonResponse
     {
+        // Switched off in Admin → App → Sign-in methods: new accounts come
+        // through Google or Apple only. Existing passwords still sign in.
+        abort_unless((bool) setting('auth_password_enabled', null, true), 403, 'Sign-up with a password is not available. Please continue with Google or Apple.');
+
         $devotee = Devotee::create($request->safe()->only([
             'name', 'email', 'phone', 'password', 'locale',
         ]));

@@ -61,8 +61,11 @@ class VisitPhotoController extends Controller
                 throw ValidationException::withMessages(['visit_id' => 'A memory photo needs the visit it belongs to.']);
             }
 
-            if ($visit->photos()->memories()->count() >= VisitPhoto::MEMORIES_PER_VISIT) {
-                throw ValidationException::withMessages(['photo' => 'A visit keeps up to '.VisitPhoto::MEMORIES_PER_VISIT.' memory photos. Remove one to add another.']);
+            // Three on the free app; a plan can raise it.
+            $limit = $request->user()->entitlements()['memory_photos_per_visit'];
+
+            if ($visit->photos()->memories()->count() >= $limit) {
+                throw ValidationException::withMessages(['photo' => 'A visit keeps up to '.$limit.' memory photos. Remove one to add another.']);
             }
         }
 

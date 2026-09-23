@@ -168,6 +168,18 @@ at the temple gate still has to be able to record the visit.
 | **Admin passport scan** | Scan a devotee's code and open their record | ✅ |
 | **Memory photos** | Up to three private photos per visit alongside the passport photo (`kind = memory`), outside moderation | ✅ |
 
+### Phase 4.2 — App control, sign-in, notifications and money  ✅ **Complete**
+
+| Slice | Scope | Status |
+| --- | --- | --- |
+| **App control** | Maintenance mode and a per-platform update popup (latest / minimum version, store links), read by the app on every launch from `GET /app/config` | ✅ |
+| **Google and Apple sign-in** | Identity tokens verified against the providers' keys; account linking by verified email; each method switchable, client ids set in the admin panel | ✅ |
+| **Notifications** | Compose, schedule and send from the admin panel to everyone, a platform, a temple's followers, a home state or one devotee; in-app inbox with read state; Firebase push over topics, configured without a build | ✅ |
+| **Plans and payments** | Plans with benefits (no ads, more memory photos, gold passport); Razorpay, PhonePe, Cashfree and PayU checkout, server-confirmed, webhook-safe; payments list, refunds, granted plans | ✅ |
+| **Ads** | AdMob or AppLovin MAX (Meta via mediation), native placements on temple, explore, home and day pages, test mode, off for no-ads plans | ✅ |
+
+See `docs/MONETISATION.md` for the store rules and the next phase.
+
 ### Phase 5 — What devotees add  ⬜ **Next**
 
 | Slice | Scope | Status |

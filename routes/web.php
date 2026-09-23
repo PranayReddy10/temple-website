@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\MediaFileController;
 use App\Http\Controllers\PassportPageController;
+use App\Http\Controllers\PayController;
 use App\Http\Controllers\TempleQrPrintController;
 use App\Http\Controllers\PwaController;
 use App\Http\Controllers\TempleCheckinController;
@@ -71,6 +72,18 @@ Route::get('/passport/{code}', PassportPageController::class)
 */
 Route::get('/qr/temples/{temple}/print', [TempleQrPrintController::class, 'show'])->name('temples.qr.print');
 Route::get('/qr/temples/{temple}/download', [TempleQrPrintController::class, 'download'])->name('temples.qr.download');
+
+/*
+| Checkout, opened in the app's in-app browser. The start page is a signed,
+| short-lived link from POST /api/v1/me/checkout; the return is where each
+| gateway sends the devotee back (GET or POST, depending on the gateway).
+*/
+Route::get('/pay/{payment}', [PayController::class, 'show'])->middleware('signed')->name('pay.show');
+Route::match(['get', 'post'], '/pay/{payment}/return/{gateway}', [PayController::class, 'return'])
+    ->where('gateway', '[a-z]+')
+    ->middleware('throttle:30,1')
+    ->name('pay.return');
+Route::get('/pay/{payment}/done', [PayController::class, 'done'])->name('pay.done');
 
 Route::get('/storage/{path}', MediaFileController::class)
     ->where('path', '.*')
