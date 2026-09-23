@@ -21,7 +21,7 @@ class RegisterDevoteeRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255', 'unique:devotees,email'],
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+?[0-9]{7,15}$/', 'unique:devotees,phone'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'locale' => ['nullable', 'string', 'in:en,te,hi'],
+            'locale' => ['nullable', 'string', 'in:en,te,hi,ta,kn'],
         ];
     }
 
