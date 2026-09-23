@@ -4,7 +4,9 @@ namespace App\Filament\Resources\Temples\Schemas;
 
 use App\Enums\TempleStatus;
 use App\Enums\VerificationStatus;
+use App\Models\Temple;
 use App\Models\District;
+use App\Filament\Schemas\MantraFields;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\DatePicker;
@@ -152,25 +154,17 @@ class TempleForm
      * The verse a devotee sees when they open this temple.
      *
      * Blank is the normal case and is fine: the temple falls back to its
-     * deity's mantra rather than rendering a heading with nothing under it.
+     * deity's mantra and recording rather than rendering a heading with
+     * nothing under it.
      */
     protected static function mantraSection(): Section
     {
         return Section::make('Mantra')
-            ->description('Only where this temple has its own. Tirumala has the Suprabhatam; most temples use their deity\'s mantra, which is filled in on the deity record and used automatically here.')
+            ->description('Only where this temple has its own. Tirumala has the Suprabhatam; most temples use their deity\'s, which is filled in on the deity record and used here automatically.')
             ->icon('heroicon-o-musical-note')
             ->columns(1)
             ->collapsed()
-            ->schema([
-                Textarea::make('mantra')
-                    ->label('Mantra (in script)')
-                    ->rows(2),
-
-                Textarea::make('mantra_transliteration')
-                    ->label('Transliteration')
-                    ->rows(2)
-                    ->helperText('Roman script, so a devotee who does not read the original can still chant it.'),
-            ]);
+            ->schema(MantraFields::components(Temple::class, withMeaning: false));
     }
 
     protected static function locationSection(): Section

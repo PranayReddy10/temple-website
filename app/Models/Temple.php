@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TempleStatus;
+use App\Models\Concerns\HasMantra;
 use App\Models\Concerns\HasTranslations;
 use Carbon\CarbonInterface;
 use App\Enums\VerificationStatus;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Temple extends Model
 {
-    use HasFactory, HasTranslations, SoftDeletes;
+    use HasFactory, HasMantra, HasTranslations, SoftDeletes;
 
     /**
      * Fields a devotee may read in their own language.
@@ -45,7 +46,8 @@ class Temple extends Model
     protected $fillable = [
         'name', 'slug', 'deity_id',
         'state_id', 'district_id', 'city', 'address', 'pincode', 'latitude', 'longitude',
-        'short_description', 'history', 'significance', 'mantra', 'mantra_transliteration',
+        'short_description', 'history', 'significance',
+        'mantra', 'mantra_transliteration', 'mantra_media_id',
         'architecture_style', 'built_period',
         'dress_code', 'photography_policy', 'mobile_policy', 'footwear_policy',
         'entry_rules', 'queue_information',
@@ -287,26 +289,6 @@ class Temple extends Model
     }
 
     // --- Helpers ---
-
-    /**
-     * The mantra a devotee should see here: this temple's own, or its
-     * deity's.
-     *
-     * Never blank where the deity has one, because a screen that shows a
-     * heading and nothing under it reads as broken rather than as a temple
-     * without its own verse.
-     */
-    public function mantraText(): ?string
-    {
-        return filled($this->mantra) ? $this->mantra : $this->deity?->mantra;
-    }
-
-    public function mantraTransliteration(): ?string
-    {
-        return filled($this->mantra_transliteration)
-            ? $this->mantra_transliteration
-            : $this->deity?->mantra_transliteration;
-    }
 
     /**
      * What to play here: this temple's media first, then its deity's.

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasMantra;
 use App\Models\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\Storage;
 
 class Deity extends Model
 {
-    use HasFactory, HasTranslations;
+    use HasFactory, HasMantra, HasTranslations;
 
     /** @var array<int, string> */
     protected array $translatable = [
@@ -25,7 +26,7 @@ class Deity extends Model
     protected $fillable = [
         'name', 'slug', 'alternate_names', 'description',
         'image_disk', 'image_path', 'image_credit',
-        'mantra', 'mantra_transliteration', 'mantra_meaning', 'accent_color',
+        'mantra', 'mantra_transliteration', 'mantra_meaning', 'mantra_media_id', 'accent_color',
         'sort_order', 'is_active',
     ];
 
@@ -58,6 +59,12 @@ class Deity extends Model
             ->orderBy('id');
     }
 
+    /** A deity is the end of the chain: there is nothing above it to inherit from. */
+    protected function mantraFallback(): ?object
+    {
+        return null;
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
@@ -71,11 +78,6 @@ class Deity extends Model
 
         return Storage::disk($this->image_disk ?? config('filesystems.media'))
             ->url($this->image_path);
-    }
-
-    public function hasMantra(): bool
-    {
-        return filled($this->mantra);
     }
 
     /**
