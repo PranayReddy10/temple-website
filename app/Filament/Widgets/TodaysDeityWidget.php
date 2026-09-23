@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Resources\DevotionalDays\DevotionalDayResource;
 use App\Models\DevotionalDay;
+use App\Support\DevotionalClock;
 use Filament\Widgets\Widget;
 
 /**
@@ -33,12 +34,12 @@ class TodaysDeityWidget extends Widget
 
     public function getDayName(): string
     {
-        return now()->format('l');
+        return DevotionalClock::now()->format('l');
     }
 
     public function getFormattedDate(): string
     {
-        return now()->format('j F Y');
+        return DevotionalClock::now()->format('j F Y');
     }
 
     /**

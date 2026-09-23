@@ -68,6 +68,38 @@ class AdminPanelTest extends TestCase
         }
     }
 
+    public function test_staff_can_verify_a_temple_code_from_the_panel(): void
+    {
+        $temple = \App\Models\Temple::create(['name' => 'Scanned Temple']);
+
+        $this->actingAs($this->admin())
+            ->get('/admin/verify-qr')
+            ->assertOk()
+            ->assertSee('Start camera');
+
+        \Livewire\Livewire::test(\App\Filament\Pages\VerifyTempleQr::class)
+            ->call('verify', \App\Support\TempleQr::url($temple))
+            ->assertSet('result.valid', true)
+            ->assertSee('Genuine code')
+            ->call('verify', 'https://example.com/not-ours')
+            ->assertSet('result.valid', false);
+    }
+
+    public function test_the_temple_edit_page_offers_its_check_in_code(): void
+    {
+        $temple = \App\Models\Temple::create(['name' => 'Coded Temple']);
+
+        $this->actingAs($this->admin());
+
+        \Livewire\Livewire::test(\App\Filament\Resources\Temples\Pages\EditTemple::class, ['record' => $temple->getRouteKey()])
+            ->assertActionExists('checkinQr')
+            ->mountAction('checkinQr')
+            ->assertMountedActionModalSee(\App\Support\TempleQr::url($temple))
+            ->unmountAction()
+            ->callAction('downloadCheckinQr')
+            ->assertFileDownloaded($temple->slug.'-checkin-qr.svg');
+    }
+
     public function test_the_temple_edit_page_renders_with_its_relation_managers(): void
     {
         $this->seed([StateSeeder::class, DeitySeeder::class, TempleCategorySeeder::class]);

@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Support\DevotionalClock;
 use App\Http\Resources\V1\DevotionalDayResource;
 use App\Models\DevotionalDay;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Support\Carbon;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class DevotionalDayController extends Controller
@@ -22,9 +22,9 @@ class DevotionalDayController extends Controller
      */
     public function today(Request $request): JsonResponse
     {
-        // The app's timezone decides the day, not the server's location. A
-        // devotee in India must not see Sunday's deity late on Saturday.
-        $date = Carbon::now(config('app.timezone'));
+        // The devotional calendar decides the day, not the server clock. The
+        // server keeps UTC, which is still yesterday until 05:30 in India.
+        $date = DevotionalClock::now();
 
         $days = $this->loadDays(fn ($query) => $query->forDate($date));
 

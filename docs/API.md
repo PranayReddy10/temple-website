@@ -165,6 +165,10 @@ confirming that an id exists says something about another devotee's pilgrimage.
 Optional headers, recorded against each sign-in for the analytics screen:
 `X-Platform` (e.g. `android`), `X-App-Version`.
 
+`PATCH /api/v1/me` also takes `gender`: `male`, `female`, `other`,
+`prefer_not_to_say`, or `null`. The profile returns `gender` and
+`gender_label`.
+
 ### Profile photo
 
 ```
@@ -192,12 +196,34 @@ DELETE /api/v1/me/visits/{id}
 ```
 
 `POST` body: `method` (`manual` | `gps` | `qr`), `visited_on` (not in the
-future), `visited_at` (`HH:MM`), `latitude`, `longitude`, `note`, `is_public`.
+future anywhere on Earth, so a device already on tomorrow is not refused),
+`visited_at` (`HH:MM`), `latitude`, `longitude`, `note`, `is_public`, and for
+a `qr` check-in `qr_code` (the scanned text).
 
 A `gps` check-in must carry coordinates, and latitude and longitude must
 arrive together. A `gps` or `qr` check-in within the configured radius
 (`check_in_radius_metres`, default 500m) is **verified** and counts as a
 stamp; `manual` never is, whatever coordinates it sends.
+
+A `qr` check-in that sends `qr_code` is verified when, and only when, the code
+is a genuine signed code for **this** temple, however far the phone's GPS
+says it is. Without `qr_code` it falls back to the radius rule.
+
+### Temple check-in codes
+
+```
+POST /api/v1/qr/verify     { "code": "<scanned text>" }   open, no token
+```
+
+Returns `valid`, `reason` and `temple` (`id`, `slug`, `name`, `city`, or
+`null`). A code is `https://<site>/temples/<slug>/checkin?s=<signature>`,
+signed with the application key, so a code printed by anyone else does not
+verify. Opened in a phone camera, the same URL shows a page saying whether
+it is genuine. Editors print a temple's code from its edit page in the admin
+(**Check-in QR code** / **Download QR**) and check any code at
+**Temples → Verify QR code**.
+
+Rotating `APP_KEY` invalidates every printed code.
 
 Recording a visit also closes the matching stop on any of the devotee's
 upcoming trips.

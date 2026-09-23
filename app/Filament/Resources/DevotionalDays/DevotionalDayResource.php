@@ -44,7 +44,7 @@ class DevotionalDayResource extends Resource
     public static function getNavigationBadge(): ?string
     {
         return static::getModel()::query()
-            ->where('weekday', now()->dayOfWeek)
+            ->where('weekday', \App\Support\DevotionalClock::now()->dayOfWeek)
             ->where('is_active', true)
             ->with('deity')
             ->orderBy('sort_order')
@@ -53,7 +53,7 @@ class DevotionalDayResource extends Resource
 
     public static function getNavigationBadgeTooltip(): ?string
     {
-        return 'Today is '.now()->format('l');
+        return 'Today is '.\App\Support\DevotionalClock::now()->format('l');
     }
 
     public static function getRelations(): array

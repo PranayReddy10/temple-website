@@ -27,8 +27,8 @@ class DevotionalDaysTable
                     ->label('Day')
                     ->formatStateUsing(fn (int $state): string => DevotionalDay::weekdayNames()[$state] ?? '—')
                     ->badge()
-                    ->color(fn (DevotionalDay $record): string => $record->weekday === now()->dayOfWeek ? 'success' : 'gray')
-                    ->description(fn (DevotionalDay $record): ?string => $record->weekday === now()->dayOfWeek ? 'Today' : null)
+                    ->color(fn (DevotionalDay $record): string => $record->weekday === \App\Support\DevotionalClock::now()->dayOfWeek ? 'success' : 'gray')
+                    ->description(fn (DevotionalDay $record): ?string => $record->weekday === \App\Support\DevotionalClock::now()->dayOfWeek ? 'Today' : null)
                     ->sortable(),
 
                 TextColumn::make('deity.name')->label('Deity')->weight('medium')->sortable(),

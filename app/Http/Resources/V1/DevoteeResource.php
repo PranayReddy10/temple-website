@@ -19,6 +19,8 @@ class DevoteeResource extends JsonResource
             'locale' => $this->locale,
             'home_state' => $this->whenLoaded('homeState', fn () => $this->homeState?->name),
             'date_of_birth' => $this->date_of_birth?->toDateString(),
+            'gender' => $this->gender?->value,
+            'gender_label' => $this->gender?->getLabel(),
             'is_verified' => $this->isVerified(),
             'joined_at' => $this->created_at?->toIso8601String(),
         ];

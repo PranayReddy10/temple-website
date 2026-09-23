@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\V1;
 
 use App\Enums\CheckInMethod;
+use App\Support\DevotionalClock;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -22,7 +23,9 @@ class StoreVisitRequest extends FormRequest
             // Not in the future. A passport that can be filled in ahead of
             // time is a wish list, and the plan is explicit that a visit is a
             // record of having been somewhere.
-            'visited_on' => ['nullable', 'date', 'before_or_equal:today'],
+            // "Today" is the device's today: checked against the latest date
+            // anywhere, since the server's UTC day lags India's by 5½ hours.
+            'visited_on' => ['nullable', 'date', 'before_or_equal:'.DevotionalClock::latestDateAnywhere()],
             'visited_at' => ['nullable', 'date_format:H:i'],
 
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
@@ -30,6 +33,10 @@ class StoreVisitRequest extends FormRequest
 
             'note' => ['nullable', 'string', 'max:2000'],
             'is_public' => ['nullable', 'boolean'],
+
+            // The scanned temple code, for a QR check-in. Its signature is
+            // what makes the visit verified.
+            'qr_code' => ['nullable', 'string', 'max:500'],
         ];
     }
 

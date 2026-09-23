@@ -208,6 +208,21 @@ class DevoteeAuthTest extends TestCase
             ->assertJsonPath('data.locale', 'te');
     }
 
+    public function test_a_devotee_can_give_their_gender_or_leave_it_out(): void
+    {
+        $devotee = Devotee::factory()->create();
+        Sanctum::actingAs($devotee, [], 'devotee');
+
+        $this->patchJson('/api/v1/me', ['gender' => 'female'])
+            ->assertOk()
+            ->assertJsonPath('data.gender', 'female')
+            ->assertJsonPath('data.gender_label', 'Female');
+
+        $this->patchJson('/api/v1/me', ['gender' => 'unicorn'])->assertStatus(422)->assertJsonValidationErrors('gender');
+
+        $this->patchJson('/api/v1/me', ['gender' => null])->assertOk()->assertJsonPath('data.gender', null);
+    }
+
     public function test_changing_an_identifier_clears_its_verification(): void
     {
         $devotee = Devotee::factory()->create([

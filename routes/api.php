@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\StateController;
 use App\Http\Controllers\Api\V1\SupportController;
 use App\Http\Controllers\Api\V1\TempleCategoryController;
 use App\Http\Controllers\Api\V1\TempleController;
+use App\Http\Controllers\Api\V1\TempleQrController;
 use App\Http\Controllers\Api\V1\VisitPhotoController;
 use App\Http\Controllers\Api\V1\YatraController;
 use Illuminate\Support\Facades\Route;
@@ -65,6 +66,12 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::post('support', [SupportController::class, 'store'])
         ->middleware('throttle:10,1')
         ->name('support.store');
+
+    // Whether a scanned temple code is one we issued. Open, like search: the
+    // app checks a code before it offers to stamp anything.
+    Route::post('qr/verify', [TempleQrController::class, 'verify'])
+        ->middleware('throttle:60,1')
+        ->name('qr.verify');
 
     Route::get('events', [EventController::class, 'index'])->name('events.index');
 

@@ -112,6 +112,7 @@ class ViewDevotee extends ViewRecord
                         ->tooltip('Email or phone has been confirmed'),
 
                     TextEntry::make('home_state.name')->label('Home state')->placeholder('Not given'),
+                    TextEntry::make('gender')->label('Gender')->placeholder('Not given'),
                 ]),
 
             Section::make('Activity')
