@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Concerns\HasMantra;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
@@ -19,11 +20,11 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  */
 class DevotionalDay extends Model
 {
-    use HasFactory;
+    use HasFactory, HasMantra;
 
     protected $fillable = [
         'weekday', 'deity_id', 'title', 'subtitle', 'significance',
-        'mantra', 'mantra_transliteration', 'accent_color',
+        'mantra', 'mantra_transliteration', 'mantra_media_id', 'accent_color',
         'sort_order', 'is_active',
     ];
 
@@ -51,25 +52,6 @@ class DevotionalDay extends Model
         return $this->morphMany(DevotionalMedia::class, 'mediable')
             ->orderBy('sort_order')
             ->orderBy('id');
-    }
-
-    /**
-     * The mantra for this day, falling back to the deity's own.
-     *
-     * The mantra belongs to the deity; a day carries one only where a
-     * tradition differs. Before the fallback existed the same Shiva mantra
-     * had to be typed on every Shiva day and corrected in every one of them.
-     */
-    public function mantraText(): ?string
-    {
-        return filled($this->mantra) ? $this->mantra : $this->deity?->mantra;
-    }
-
-    public function mantraTransliteration(): ?string
-    {
-        return filled($this->mantra_transliteration)
-            ? $this->mantra_transliteration
-            : $this->deity?->mantra_transliteration;
     }
 
     /**

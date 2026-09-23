@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use App\Support\MediaSource;
 use Illuminate\Support\Facades\Storage;
 
 class DevotionalMedia extends Model
@@ -127,6 +128,46 @@ class DevotionalMedia extends Model
         }
 
         return Storage::disk($this->disk ?? config('filesystems.media'))->url($this->path);
+    }
+
+    /**
+     * How a client should play this: audio, video, youtube, vimeo or link.
+     *
+     * Worked out here rather than in each client. `source_type` only says
+     * whether we host the file, which is not enough to choose a player — a
+     * YouTube page in an <audio> tag plays nothing.
+     */
+    public function playbackKind(): string
+    {
+        return MediaSource::kind(
+            $this->source_type === 'external' ? $this->external_url : null,
+            $this->path,
+        );
+    }
+
+    public function isDirectlyPlayable(): bool
+    {
+        return MediaSource::isDirectlyPlayable($this->playbackKind());
+    }
+
+    public function needsEmbed(): bool
+    {
+        return MediaSource::needsEmbed($this->playbackKind());
+    }
+
+    /** A canonical embed URL, so each client does not build its own. */
+    public function embedUrl(): ?string
+    {
+        return $this->source_type === 'external'
+            ? MediaSource::embedUrl($this->external_url)
+            : null;
+    }
+
+    public function youTubeId(): ?string
+    {
+        return $this->source_type === 'external'
+            ? MediaSource::youTubeId($this->external_url)
+            : null;
     }
 
     public function thumbnailUrl(): ?string

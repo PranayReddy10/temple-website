@@ -275,20 +275,69 @@ because a resolution the reporter did not accept is not one.
 
 ## Mantras and devotional media
 
-`GET /api/v1/temples/{slug}` gained:
+`GET /api/v1/temples/{slug}`:
 
 ```json
 "mantra": {
-  "text": "कौसल्या सुप्रजा राम",
-  "transliteration": "Kausalya Supraja Rama",
-  "is_temple_specific": true
+  "text": "ॐ नमः शिवाय",
+  "transliteration": "Om Namah Shivaya",
+  "meaning": "Salutations to Shiva.",
+  "is_own": false,
+  "audio": { ...a media object, or null... }
 },
 "devotional_media": [ ... ]
 ```
 
-`text` falls back to the temple's **deity's** mantra when the temple has none,
-so the app never renders a heading with nothing under it.
-`is_temple_specific` says which it got, so the two can be shown differently.
+Each field falls back to the temple's **deity** independently — a temple with
+its own verse but no recording shows its verse and plays its deity's chant.
+Falling back wholesale would put a chant of one verse under another.
+
+`is_own` says whether the verse shown is the temple's own. The app should
+render the two differently: "the mantra of this temple" and "the mantra of its
+deity" are not the same claim about the place a devotee is standing in.
+
+`mantra` is `null` when there is no mantra anywhere, and `audio` is `null`
+when there is no recording — which is the normal case. Render the text alone
+rather than an empty player.
+
+> **Renamed:** `is_temple_specific` became `is_own` when the same shape started
+> serving days and deities as well as temples, where "temple specific" is
+> meaningless. It shipped one release earlier and no client reads it.
+
+The same object is on `GET /api/v1/days/{weekday}` and `/today` as
+`mantra_audio`. The flat `mantra` and `mantra_transliteration` fields stay
+there alongside it for the app already reading them; they go in v2.
+
+### Knowing how to play it
+
+Every media object — the mantra's recording and everything in
+`devotional_media` — carries a `playback` block:
+
+```json
+"playback": {
+  "kind": "youtube",
+  "is_playable": false,
+  "needs_embed": true,
+  "embed_url": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+  "youtube_id": "dQw4w9WgXcQ"
+}
+```
+
+`kind` is one of `audio`, `video`, `youtube`, `vimeo`, `link`:
+
+| kind | what to do |
+| --- | --- |
+| `audio`, `video` | put `url` straight into a player — `is_playable` is true |
+| `youtube`, `vimeo` | embed `embed_url`; if it is `null`, open `url` instead |
+| `link` | nothing to play; open `url` in a browser |
+
+`source_type` only says whether we host the file, which is not enough to
+choose a player: a YouTube page inside an `<audio>` element plays nothing.
+The classification is done server-side so a released build does not have to
+pattern-match URLs it was compiled before seeing.
+
+`embed_url` is `null` for a YouTube channel or search link — there is no
+video in it. That is the signal to fall back to opening `url`.
 
 `devotional_media` is the temple's own media followed by its deity's — most
 specific first. The licence rule is unchanged: a song or video with no

@@ -18,10 +18,17 @@ class DevotionalDayResource extends JsonResource
             'subtitle' => $this->subtitle,
             'significance' => $this->significance,
 
-            // The day's own where it has one, the deity's otherwise. A day
-            // carries its own only where a tradition differs.
+            /*
+             * The day's own where it has one, the deity's otherwise — a day
+             * carries its own only where a tradition differs.
+             *
+             * The two flat fields are kept alongside the richer object
+             * because a released app is already reading them and cannot be
+             * updated on demand. They will go in v2.
+             */
             'mantra' => $this->mantraText(),
             'mantra_transliteration' => $this->mantraTransliteration(),
+            'mantra_audio' => MantraResource::forOwner($this->resource),
 
             // The colour the app themes itself with for this day.
             'accent_color' => $this->accentColor(),

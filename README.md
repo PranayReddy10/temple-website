@@ -274,9 +274,22 @@ copies would be three places for it to drift. Precedence is most specific
 first: a temple's own Suprabhatam before its deity's aarti. A song or video
 still cannot be published without a licence recorded, whichever it belongs to.
 
-In the app, opening a temple gives `mantra` (its own or its deity's, with
-`is_temple_specific` so the two can be rendered differently) and
-`devotional_media` in that order.
+**A mantra can be heard, not only read.** Each one can carry a recording —
+paste a YouTube link or upload an MP3 from the mantra section itself, in one
+step, rather than creating the media elsewhere and coming back. The recording
+is an ordinary media row, so it carries its artist, credit, licence and
+duration like everything else we play, and an unpublished or unlicensed one is
+never served however it is attached.
+
+The fallback runs field by field: a temple with its own verse but no recording
+shows its verse and plays its deity's chant. Falling back wholesale would put
+a chant of one verse under another.
+
+The form tells you what the app will do with a link **before** you save it —
+"YouTube — the app will embed this", "a direct audio file — the app will play
+this in its own player", or "a YouTube link, but no video in it". A channel or
+search URL cannot be played, and that is worth knowing now rather than when a
+devotee taps it.
 
 ## Support and reports
 

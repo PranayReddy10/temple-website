@@ -22,6 +22,24 @@ class DevotionalMediaResource extends JsonResource
             'url' => $this->url(),
             'thumbnail_url' => $this->thumbnailUrl(),
 
+            /*
+             * How to play it, decided here so the app does not pattern-match
+             * URLs of its own — a released build cannot be updated when a new
+             * host appears, and a YouTube page inside an audio element plays
+             * nothing at all.
+             *
+             * audio/video: put the url straight into a player.
+             * youtube/vimeo: use embed_url, or open url if that is null.
+             * link: there is nothing to play; open it in a browser.
+             */
+            'playback' => [
+                'kind' => $this->playbackKind(),
+                'is_playable' => $this->isDirectlyPlayable(),
+                'needs_embed' => $this->needsEmbed(),
+                'embed_url' => $this->embedUrl(),
+                'youtube_id' => $this->youTubeId(),
+            ],
+
             'duration_seconds' => $this->duration_seconds,
             'duration_label' => $this->durationLabel(),
 
