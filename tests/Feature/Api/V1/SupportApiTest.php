@@ -87,6 +87,25 @@ class SupportApiTest extends TestCase
         $this->assertSame($devotee->email, $ticket->reporterEmail());
     }
 
+    /**
+     * The route is open to everyone, so it runs without the auth middleware.
+     * A real bearer token must still be recognised there, not only a user
+     * set on the guard by the test helper.
+     */
+    public function test_a_bearer_token_is_recognised_on_the_open_filing_route(): void
+    {
+        $devotee = Devotee::factory()->create();
+        $token = $devotee->createToken('app')->plainTextToken;
+
+        $this->withToken($token)->postJson('/api/v1/support', [
+            'subject' => 'Sent from the app',
+            'body' => 'Signed in, so no name or email in the payload.',
+            'category' => TicketCategory::AppProblem->value,
+        ])->assertCreated();
+
+        $this->assertSame($devotee->id, SupportTicket::firstOrFail()->devotee_id);
+    }
+
     /** Pointing at a record makes it a report rather than a question. */
     public function test_a_ticket_about_a_temple_is_filed_as_a_report(): void
     {
