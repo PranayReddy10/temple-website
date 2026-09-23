@@ -3,6 +3,7 @@
 namespace App\Filament\Schemas;
 
 use App\Models\TemplePuja;
+use App\Support\UploadRules;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -50,8 +51,8 @@ class TemplePujaForm
                             ->disk(fn (): string => config('filesystems.media'))
                             ->directory(fn (?TemplePuja $record): string => 'pujas/'.($templeId ?? $record?->temple_id ?? 'unassigned'))
                             ->visibility('public')
-                            ->maxSize(4096)
-                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                            ->maxSize(UploadRules::maxKbFor('puja_image'))
+                            ->acceptedFileTypes(UploadRules::typesFor('puja_image'))
                             ->helperText('Optional. Shown beside the seva in the app.')
                             ->columnSpanFull(),
                         Textarea::make('includes')

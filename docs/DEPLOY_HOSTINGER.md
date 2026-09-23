@@ -208,6 +208,15 @@ php artisan storage:link
 Run all four again after **every** deploy that changes config, routes or views.
 A stale config cache is the usual reason a `.env` change appears to do nothing.
 
+`storage:link` can fail on a shared plan without it being your fault: some
+hosts disable `symlink()`, and an account moved between servers can lose the
+link. The site does not break — an uploaded file that Apache cannot find falls
+through to `MediaFileController`, which serves it from PHP with the same
+content type, cache headers and range support Apache would have used. It is
+slower, and it means every image is a PHP request, so the link is still worth
+having. **Administration → Storage** in the admin panel says which of the two
+is happening, and offers a button that runs `storage:link` for you.
+
 ## 9. Permissions
 
 ```bash
@@ -280,6 +289,9 @@ notifications later in the roadmap.
 | `SQLSTATE[HY000] [1045]` | Wrong DB username or password, or the user was never granted access to the database. |
 | `SQLSTATE[HY000] [2002]` | Wrong `DB_HOST`. Use the host shown in hPanel. |
 | Admin panel unstyled | Confirm `public/css/temple-admin.css` deployed and `php artisan storage:link` ran. |
+| Every uploaded image blank at once | Open **Administration → Storage**. It checks the `public/storage` link, whether the host allows symlinks, whether the folder is writable, and fetches a real image over the web to prove it. |
+| An upload appears to do nothing | PHP's own `upload_max_filesize` / `post_max_size`, which shared plans ship at 2 MB. The upload fails before any of this application runs, so nothing reaches the log. The Storage screen shows the server's real limit beside each form's. Raise both in hPanel under PHP Configuration, or in a `.user.ini` at the site root. |
+| A mantra plays on Android but not on iPhone | Almost always a server that will not answer a `Range` request. Ours does, through the link and through the fallback alike — but a CDN or proxy in front may not. |
 | PHP syntax errors on deploy | PHP version is below 8.2. Change it in hPanel. |
 
 ## When to leave shared hosting

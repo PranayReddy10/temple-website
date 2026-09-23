@@ -165,6 +165,23 @@ confirming that an id exists says something about another devotee's pilgrimage.
 Optional headers, recorded against each sign-in for the analytics screen:
 `X-Platform` (e.g. `android`), `X-App-Version`.
 
+### Profile photo
+
+```
+POST   /api/v1/me/avatar      multipart, field `avatar`
+DELETE /api/v1/me/avatar
+```
+
+JPEG, PNG or WebP up to 4 MB. Its own endpoint rather than a field on
+`PATCH /api/v1/me`, because that one is JSON and a file is multipart — and
+because a storage path is not something a client should be able to hand us as
+a string.
+
+Uploading replaces whatever was there and deletes the old file. Both verbs
+return the whole profile, so `avatar_url` comes back in the same round trip.
+`avatar_url` is `null` when there is none; the app draws initials in that
+case, as the admin does.
+
 ### Passport
 
 ```

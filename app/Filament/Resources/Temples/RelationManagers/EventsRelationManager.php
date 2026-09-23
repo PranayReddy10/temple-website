@@ -6,6 +6,7 @@ use App\Enums\EventStatus;
 use App\Enums\EventType;
 use App\Filament\Support\MediaColumn;
 use App\Models\TempleEvent;
+use App\Support\UploadRules;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
@@ -61,8 +62,8 @@ class EventsRelationManager extends RelationManager
                             ->disk(fn (): string => config('filesystems.media'))
                             ->directory(fn (): string => 'events/'.$this->getOwnerRecord()->getKey())
                             ->visibility('public')
-                            ->maxSize(8192)
-                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                            ->maxSize(UploadRules::maxKbFor('event_image'))
+                            ->acceptedFileTypes(UploadRules::typesFor('event_image'))
                             ->columnSpanFull(),
                     ]),
 

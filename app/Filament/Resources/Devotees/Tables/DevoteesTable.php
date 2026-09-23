@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\Devotees\Tables;
 
+use App\Filament\Support\MediaColumn;
 use App\Models\Devotee;
+use App\Support\InitialsAvatarProvider;
 use App\Support\Locales;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
@@ -21,6 +23,23 @@ class DevoteesTable
     {
         return $table
             ->columns([
+                /*
+                 * The devotee's own photo, which was being stored and never
+                 * shown: avatar_path has been on the table since devotees
+                 * existed, but nothing in the admin rendered it, so staff
+                 * reviewing a photo stamp or a support message had no face to
+                 * put to the account. Falls back to the same initials mark the
+                 * panel draws for staff, so the column is never a row of
+                 * broken thumbnails.
+                 */
+                MediaColumn::make('avatar_path',
+                    path: fn (Devotee $record): ?string => $record->avatar_path,
+                    disk: fn (Devotee $record): string => $record->avatar_disk ?? config('filesystems.media'),
+                )
+                    ->label('')
+                    ->circular()
+                    ->defaultImageUrl(fn (Devotee $record): string => app(InitialsAvatarProvider::class)->get($record)),
+
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable()

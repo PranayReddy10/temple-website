@@ -44,10 +44,25 @@ return [
 
     'disks' => [
 
+        /*
+         * The private disk. Nothing in this application serves it over HTTP.
+         *
+         * `serve` is off deliberately. Laravel registers a route for any
+         * local disk that has it on, at the disk's own url — and this disk
+         * has no url, so the framework falls back to `/storage/{path}`: the
+         * exact path uploaded media is served from. It claimed both GET and
+         * PUT there, and because it is a private disk its GET answers 403
+         * rather than passing the request on, so the media fallback below it
+         * could never run.
+         *
+         * A PUT upload endpoint for the private disk sitting on the public
+         * media path is not something we need either. It requires a signed
+         * URL, so it was not an open door, but it was an unused door.
+         */
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],

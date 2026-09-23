@@ -4,9 +4,11 @@ namespace App\Filament\Resources\Devotees\Pages;
 
 use App\Filament\Resources\Devotees\DevoteeResource;
 use App\Models\Devotee;
+use App\Support\InitialsAvatarProvider;
 use App\Support\Locales;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\IconEntry;
+use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Grid;
@@ -74,6 +76,23 @@ class ViewDevotee extends ViewRecord
             Section::make('Account')
                 ->columns(3)
                 ->schema([
+                    /*
+                     * Their own photo. Staff arrive here from a support message
+                     * or a flagged upload, and a face is the first thing that
+                     * tells them whether an account is a person or a throwaway.
+                     * The disk is read from the row rather than assumed, so it
+                     * keeps resolving after a move to object storage.
+                     */
+                    ImageEntry::make('avatar_path')
+                        ->label('Photo')
+                        ->disk(fn (Devotee $record): string => $record->avatar_disk ?? config('filesystems.media'))
+                        ->circular()
+                        // Without a size it fills its column, which makes a
+                        // profile photo the loudest thing on the page.
+                        ->imageSize(96)
+                        ->checkFileExistence(false)
+                        ->defaultImageUrl(fn (Devotee $record): string => app(InitialsAvatarProvider::class)->get($record)),
+
                     TextEntry::make('email')->label('Email')->copyable()->placeholder('Not given'),
                     TextEntry::make('phone')->label('Phone')->copyable()->placeholder('Not given'),
 

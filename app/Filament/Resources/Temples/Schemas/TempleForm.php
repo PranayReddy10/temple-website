@@ -4,12 +4,14 @@ namespace App\Filament\Resources\Temples\Schemas;
 
 use App\Enums\TempleStatus;
 use App\Enums\VerificationStatus;
-use App\Models\Temple;
-use App\Models\District;
 use App\Filament\Schemas\MantraFields;
+use App\Models\District;
+use App\Models\Temple;
+use App\Support\FormState;
+use App\Support\UploadRules;
 use Filament\Forms\Components\CheckboxList;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -19,7 +21,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
-use App\Support\FormState;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
@@ -134,8 +135,8 @@ class TempleForm
                     ->disk(fn (): string => config('filesystems.media'))
                     ->directory('temples/covers')
                     ->visibility('public')
-                    ->maxSize(12288)
-                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                    ->maxSize(UploadRules::maxKbFor('temple_photo'))
+                    ->acceptedFileTypes(UploadRules::typesFor('temple_photo'))
                     ->helperText('Landscape works best: it is cropped to a wide card in the app.')
                     // Not a column on temples: the page strips these two out
                     // and writes them to the primary temple_photos row
@@ -416,7 +417,6 @@ class TempleForm
                     ->default(false),
             ]);
     }
-
 
     /** @return array<string, string> */
     protected static function locales(): array

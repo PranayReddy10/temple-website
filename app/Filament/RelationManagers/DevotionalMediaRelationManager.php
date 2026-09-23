@@ -5,6 +5,7 @@ namespace App\Filament\RelationManagers;
 use App\Enums\DevotionalMediaType;
 use App\Models\DevotionalMedia;
 use App\Support\FormState;
+use App\Support\UploadRules;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -96,11 +97,11 @@ class DevotionalMediaRelationManager extends RelationManager
                                 .str(class_basename($this->getOwnerRecord()))->kebab()
                                 .'/'.$this->getOwnerRecord()->getKey())
                             ->visibility('public')
-                            ->maxSize(51200)
-                            ->acceptedFileTypes(['audio/mpeg', 'audio/mp4', 'audio/ogg', 'image/jpeg', 'image/png', 'image/webp', 'video/mp4'])
+                            ->maxSize(UploadRules::maxKbFor('devotional_media'))
+                            ->acceptedFileTypes(UploadRules::typesFor('devotional_media'))
                             ->required(fn (Get $get): bool => $get('source_type') === 'upload')
                             ->visible(fn (Get $get): bool => $get('source_type') === 'upload')
-                            ->helperText('Up to 50 MB.')
+                            ->helperText(UploadRules::summary('devotional_media'))
                             ->columnSpanFull(),
 
                         TextInput::make('duration_seconds')
