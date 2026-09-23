@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
 /**
@@ -35,7 +36,7 @@ class Devotee extends Authenticatable
         'avatar_path', 'avatar_disk', 'locale', 'home_state_id', 'date_of_birth', 'gender',
     ];
 
-    protected $hidden = ['password', 'remember_token'];
+    protected $hidden = ['password', 'remember_token', 'passport_code'];
 
     protected $attributes = [
         'locale' => 'en',
@@ -53,6 +54,55 @@ class Devotee extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Every account has a passport code from the start, so the app can
+        // show one without a second request to mint it.
+        static::creating(function (Devotee $devotee): void {
+            $devotee->passport_code ??= static::newPassportCode();
+        });
+    }
+
+    public static function newPassportCode(): string
+    {
+        return Str::random(20);
+    }
+
+    /**
+     * The devotee whose passport a scanned code shows, if it is still live.
+     *
+     * Accepts the code alone or any URL carrying it, which is what a camera
+     * hands over. A reset code matches nobody.
+     */
+    public static function findByPassportCode(?string $code): ?self
+    {
+        $code = \App\Support\PassportQr::parse((string) $code);
+
+        if ($code === null) {
+            return null;
+        }
+
+        return static::query()->where('passport_code', $code)->where('is_active', true)->first();
+    }
+
+    /** The code, minted now for an account that predates codes. */
+    public function passportCode(): string
+    {
+        if (blank($this->passport_code)) {
+            $this->forceFill(['passport_code' => static::newPassportCode()])->saveQuietly();
+        }
+
+        return $this->passport_code;
+    }
+
+    /** Retires the old code: anything printed or photographed stops working. */
+    public function resetPassportCode(): string
+    {
+        $this->forceFill(['passport_code' => static::newPassportCode()])->saveQuietly();
+
+        return $this->passport_code;
     }
 
     public function homeState(): BelongsTo

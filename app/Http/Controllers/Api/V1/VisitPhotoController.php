@@ -11,6 +11,7 @@ use App\Models\VisitPhoto;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -48,23 +49,38 @@ class VisitPhotoController extends Controller
             'visit_id' => ['nullable', 'integer'],
             'caption' => ['nullable', 'string', 'max:255'],
             'is_public' => ['nullable', 'boolean'],
+            'kind' => ['nullable', 'in:'.VisitPhoto::KIND_STAMP.','.VisitPhoto::KIND_MEMORY],
         ]);
 
+        $kind = $validated['kind'] ?? VisitPhoto::KIND_STAMP;
         $visit = $this->ownedVisit($request, $validated['visit_id'] ?? null, $temple);
 
+        if ($kind === VisitPhoto::KIND_MEMORY) {
+            // A memory belongs to a visit, and a visit keeps three.
+            if ($visit === null) {
+                throw ValidationException::withMessages(['visit_id' => 'A memory photo needs the visit it belongs to.']);
+            }
+
+            if ($visit->photos()->memories()->count() >= VisitPhoto::MEMORIES_PER_VISIT) {
+                throw ValidationException::withMessages(['photo' => 'A visit keeps up to '.VisitPhoto::MEMORIES_PER_VISIT.' memory photos. Remove one to add another.']);
+            }
+        }
+
         $disk = config('filesystems.media');
-        $directory = 'visit-photos/'.$request->user()->getKey();
+        $directory = 'visit-photos/'.$request->user()->getKey().($kind === VisitPhoto::KIND_MEMORY ? '/memories' : '');
 
         $photo = new VisitPhoto([
             'temple_id' => $temple->getKey(),
             'devotee_visit_id' => $visit?->getKey(),
+            'kind' => $kind,
             'disk' => $disk,
             'original_path' => $request->file('photo')->store($directory, ['disk' => $disk]),
-            'stamp_path' => $request->file('stamp')?->store($directory.'/stamps', ['disk' => $disk]),
+            'stamp_path' => $kind === VisitPhoto::KIND_MEMORY ? null : $request->file('stamp')?->store($directory.'/stamps', ['disk' => $disk]),
             'caption' => $validated['caption'] ?? null,
             // Their intent is recorded now; it takes effect only once a
             // moderator has approved the image.
-            'is_public' => $request->boolean('is_public'),
+            // A memory photo is the devotee's alone, whatever was asked for.
+            'is_public' => $kind === VisitPhoto::KIND_STAMP && $request->boolean('is_public'),
         ]);
 
         $photo->devotee_id = $request->user()->getKey();

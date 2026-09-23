@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\FacilityController;
 use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\MemoryController;
 use App\Http\Controllers\Api\V1\PassportController;
+use App\Http\Controllers\Api\V1\PassportShareController;
 use App\Http\Controllers\Api\V1\StateController;
 use App\Http\Controllers\Api\V1\SupportController;
 use App\Http\Controllers\Api\V1\TempleCategoryController;
@@ -73,6 +74,13 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         ->middleware('throttle:60,1')
         ->name('qr.verify');
 
+    // Someone else's passport, from the code they showed. The code is a
+    // random token; throttled so it cannot be guessed at speed either.
+    Route::get('passports/{code}', [PassportShareController::class, 'show'])
+        ->where('code', '[A-Za-z0-9]{16,32}')
+        ->middleware('throttle:60,1')
+        ->name('passports.show');
+
     Route::get('events', [EventController::class, 'index'])->name('events.index');
 
     // Day-wise devotional content: Monday Shiva, Tuesday Hanuman, and so on.
@@ -134,6 +142,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         */
         Route::get('me/passport', [PassportController::class, 'show'])->name('me.passport');
         Route::get('me/visits', [PassportController::class, 'index'])->name('me.visits.index');
+        Route::get('me/passport/qr', [PassportShareController::class, 'mine'])->name('me.passport.qr');
+        Route::post('me/passport/qr/reset', [PassportShareController::class, 'reset'])
+            ->middleware('throttle:6,1')
+            ->name('me.passport.qr.reset');
         Route::post('temples/{temple:slug}/visits', [PassportController::class, 'store'])
             ->name('me.visits.store');
         Route::delete('me/visits/{visit}', [PassportController::class, 'destroy'])->name('me.visits.destroy');

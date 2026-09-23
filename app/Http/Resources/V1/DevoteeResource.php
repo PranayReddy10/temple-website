@@ -22,6 +22,9 @@ class DevoteeResource extends JsonResource
             'gender' => $this->gender?->value,
             'gender_label' => $this->gender?->getLabel(),
             'is_verified' => $this->isVerified(),
+            // What the devotee's own passport QR carries. Only ever returned
+            // to the devotee themselves: this resource is the /me response.
+            'passport_url' => \App\Support\PassportQr::url($this->resource),
             'joined_at' => $this->created_at?->toIso8601String(),
         ];
     }

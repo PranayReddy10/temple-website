@@ -233,6 +233,30 @@ that circuit are in the database) and `total` (how many exist), so the app can
 say "6 of 8 recorded, 12 in all" rather than sending someone hunting for
 temples it cannot show them.
 
+### Passport codes
+
+A devotee's own passport QR carries `passport_url` from `GET /me`: a link
+ending in a random 20-character code. It is never the account id.
+
+```
+GET  /api/v1/me/passport/qr          { data: { code, url } }        token
+POST /api/v1/me/passport/qr/reset    { data: { code, url } }        token, 6/min
+GET  /api/v1/passports/{code}        someone else's passport          open, 60/min
+```
+
+Resetting retires the old code at once: `GET /passports/{old}` is a 404.
+
+`GET /passports/{code}` returns `name`, `avatar_url`, `home_state`,
+`joined_at`, the counts (`stamps`, `temples_visited`, `visits_recorded`,
+`states_covered`) and `visits[]` (temple, `visited_on`, `method`,
+`is_verified`). Only visits the devotee left public are listed and counted.
+No email, phone, date of birth, note or photo is ever included. A phone
+camera without the app opens the same view at `/passport/{code}`.
+
+A visit whose `method.value` is `staff` was marked at the temple counter by
+the temple's own staff after scanning this code; it is verified. The app
+cannot send `method: staff` itself (422).
+
 ### Photo Stamp
 
 ```
@@ -248,6 +272,12 @@ Every upload starts as `pending`. The response returns the moderation status
 and any `moderation_note`, because silence reads as failure and a devotee who
 sees nothing happen will upload it again. `is_visible_to_others` is true only
 when the photo is approved **and** the devotee chose to share it.
+
+Memory photos use the same endpoint with `kind=memory` and a `visit_id`
+(required). A visit keeps three; the fourth is a 422. They are always
+private whatever `is_public` says, never enter moderation, and come back
+from `GET /me/photos` with `kind: "memory"`. Every photo now carries `kind`
+(`stamp` or `memory`).
 
 ### Memories
 

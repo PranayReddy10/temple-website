@@ -14,6 +14,9 @@ class VisitPhotoResource extends JsonResource
             'id' => $this->id,
             'temple_id' => $this->temple_id,
             'visit_id' => $this->devotee_visit_id,
+            // stamp: the one in the passport. memory: one of up to three
+            // kept with the visit, never shown to anyone else.
+            'kind' => $this->kind ?? 'stamp',
 
             // Both, always. The stamp is what gets shared; the original is
             // what the devotee keeps, and losing it is not recoverable.

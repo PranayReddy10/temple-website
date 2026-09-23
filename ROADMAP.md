@@ -158,6 +158,16 @@ at the temple gate still has to be able to record the visit.
 | **State-wise and god-wise** | Grouping on the temple list, plus tabs with counts including "needs work" | ✅ |
 | **Support and reports** | One queue, filing without an account, references, internal notes kept apart from replies, allow-listed report subjects | ✅ |
 
+### Phase 4.1 — Passport QR and the temple counter  ✅ **Complete**
+
+| Slice | Scope | Status |
+| --- | --- | --- |
+| **Temple QR printing for temple staff** | The temple portal shows each temple's signed check-in code, prints it as an A4 poster and downloads the SVG. Staff can print any temple's; a temple admin only their own, anything else is a 404 | ✅ |
+| **Devotee passport codes** | A random, resettable code per devotee (never the id). `GET /passports/{code}` and `/passport/{code}` show the name, photo and public visits only — never contact details, notes or private visits | ✅ |
+| **Marking a visit at the counter** | Temple portal → Scan passport → Mark visited today. Verified, method `staff`, `verified_by` recorded; one per temple per day; only temples the account manages. The app cannot claim `staff` itself | ✅ |
+| **Admin passport scan** | Scan a devotee's code and open their record | ✅ |
+| **Memory photos** | Up to three private photos per visit alongside the passport photo (`kind = memory`), outside moderation | ✅ |
+
 ### Phase 5 — What devotees add  ⬜ **Next**
 
 | Slice | Scope | Status |
