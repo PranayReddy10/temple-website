@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\MediaUrl;
 use App\Enums\PhotoModerationStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -105,6 +106,6 @@ class VisitPhoto extends Model
             return null;
         }
 
-        return Storage::disk($this->disk ?? config('filesystems.media'))->url($path);
+        return MediaUrl::for($this->disk, $path);
     }
 }

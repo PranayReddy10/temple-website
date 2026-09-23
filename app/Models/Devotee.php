@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\MediaUrl;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -134,8 +135,7 @@ class Devotee extends Authenticatable
             return null;
         }
 
-        return Storage::disk($this->avatar_disk ?? config('filesystems.media'))
-            ->url($this->avatar_path);
+        return MediaUrl::for($this->avatar_disk, $this->avatar_path);
     }
 
     public function isVerified(): bool

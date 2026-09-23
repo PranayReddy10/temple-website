@@ -50,7 +50,7 @@ class TempleAdminDetailTest extends TestCase
             'accent_color' => '#4E7A51',
         ]);
 
-        $this->assertStringStartsWith('/storage/', $deity->imageUrl());
+        $this->assertStringStartsWith(url('/storage/'), $deity->imageUrl());
         $this->assertTrue($deity->hasMantra());
         $this->assertSame('#4E7A51', $deity->accentColor());
     }

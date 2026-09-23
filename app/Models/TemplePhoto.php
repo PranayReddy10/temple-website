@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\MediaUrl;
 use App\Enums\PhotoCategory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -76,7 +77,7 @@ class TemplePhoto extends Model
             return null;
         }
 
-        return Storage::disk($this->disk ?? config('filesystems.media'))->url($path);
+        return MediaUrl::for($this->disk, $path);
     }
 
     /** Every stored variant, for deleting the whole set at once. */

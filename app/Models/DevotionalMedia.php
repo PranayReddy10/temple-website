@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\MediaUrl;
 use App\Enums\DevotionalMediaType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -127,7 +128,7 @@ class DevotionalMedia extends Model
             return null;
         }
 
-        return Storage::disk($this->disk ?? config('filesystems.media'))->url($this->path);
+        return MediaUrl::for($this->disk, $this->path);
     }
 
     /**
@@ -176,7 +177,7 @@ class DevotionalMedia extends Model
             return null;
         }
 
-        return Storage::disk($this->disk ?? config('filesystems.media'))->url($this->thumbnail_path);
+        return MediaUrl::for($this->disk, $this->thumbnail_path);
     }
 
     public function durationLabel(): ?string

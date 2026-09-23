@@ -234,7 +234,7 @@ class MantraRecordingTest extends TestCase
 
         $this->assertSame(MediaSource::AUDIO, $audio['playback']['kind']);
         $this->assertTrue($audio['playback']['is_playable']);
-        $this->assertStringStartsWith('/storage/', $audio['url']);
+        $this->assertStringStartsWith(url('/storage/'), $audio['url']);
     }
 
     /** A mantra with no recording is the normal case, and must not be a broken player. */
