@@ -7,6 +7,7 @@ use App\Http\Resources\V1\DevoteeResource;
 use App\Http\Resources\V1\TempleSummaryResource;
 use App\Models\Temple;
 use Illuminate\Http\JsonResponse;
+use App\Support\Locales;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -25,7 +26,7 @@ class DevoteeProfileController extends Controller
             'name' => ['sometimes', 'string', 'max:120'],
             'email' => ['sometimes', 'nullable', 'email', 'max:255', Rule::unique('devotees', 'email')->ignore($devotee->id)],
             'phone' => ['sometimes', 'nullable', 'string', 'max:20', 'regex:/^\+?[0-9]{7,15}$/', Rule::unique('devotees', 'phone')->ignore($devotee->id)],
-            'locale' => ['sometimes', 'string', 'in:en,te,hi'],
+            'locale' => ['sometimes', 'string', Rule::in(array_keys(Locales::supported()))],
             'home_state_id' => ['sometimes', 'nullable', 'integer', 'exists:states,id'],
             'date_of_birth' => ['sometimes', 'nullable', 'date', 'before:today'],
         ]);
