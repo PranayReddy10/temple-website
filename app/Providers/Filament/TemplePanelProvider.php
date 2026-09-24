@@ -10,6 +10,8 @@ use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
+use Filament\View\PanelsRenderHook;
+use Illuminate\Contracts\View\View;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -56,6 +58,9 @@ class TemplePanelProvider extends PanelProvider
             ])
             ->discoverResources(in: app_path('Filament/Temple/Resources'), for: 'App\Filament\Temple\Resources')
             ->discoverPages(in: app_path('Filament/Temple/Pages'), for: 'App\Filament\Temple\Pages')
+            // The running version, in the sidebar and under the sign-in form.
+            ->renderHook(PanelsRenderHook::SIDEBAR_FOOTER, fn (): View => view('filament.partials.version'))
+            ->renderHook(PanelsRenderHook::AUTH_LOGIN_FORM_AFTER, fn (): View => view('filament.partials.version'))
             ->pages([
                 Dashboard::class,
             ])
