@@ -21,6 +21,10 @@ class PassportResource extends JsonResource
     {
         $verifiedTempleIds = $this->resource->visits()
             ->verified()
+            // visits() is ordered by visited_on. MySQL refuses DISTINCT with
+            // an ORDER BY on a column it does not select (error 3065); SQLite
+            // allows it, so only production and the MySQL job ever saw this.
+            ->reorder()
             ->distinct()
             ->pluck('temple_id');
 
