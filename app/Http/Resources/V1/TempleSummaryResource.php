@@ -28,6 +28,7 @@ class TempleSummaryResource extends JsonResource
             'deity' => $this->whenLoaded('deity', fn () => [
                 'slug' => $this->deity->slug,
                 'name' => $this->deity->name,
+                'image_url' => $this->deity->imageUrl(),
             ]),
 
             'location' => [

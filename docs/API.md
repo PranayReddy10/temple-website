@@ -57,6 +57,15 @@ visitor rules, contact, trust, timings, pujas, photos, upcoming closures and
 facilities.
 
 ## `GET /api/v1/deities`
+
+Each deity carries `image_url` (null when none) and `image_credit`. Temple
+summaries and details carry the deity's `image_url` too. Editors upload
+images on the deity's page, or fetch public-domain paintings from Wikimedia
+Commons with **Find images for all** / **Find a public-domain image**, or
+`php artisan deities:fetch-images` (`--deity=shiva`, `--replace`,
+`--dry-run`). Only files Commons marks public domain are taken; an editor's
+own upload is never replaced.
+
 ## `GET /api/v1/categories`
 ## `GET /api/v1/states`
 

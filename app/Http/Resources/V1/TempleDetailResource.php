@@ -22,6 +22,8 @@ class TempleDetailResource extends JsonResource
                 'slug' => $this->deity->slug,
                 'name' => $this->deity->name,
                 'alternate_names' => $this->deity->alternate_names,
+                'image_url' => $this->deity->imageUrl(),
+                'image_credit' => $this->deity->image_credit,
             ] : null),
 
             'categories' => $this->whenLoaded('categories', fn () => $this->categories
