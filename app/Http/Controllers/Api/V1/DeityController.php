@@ -24,6 +24,11 @@ class DeityController extends Controller
                 'alternate_names' => $deity->alternate_names,
                 'description' => $deity->description,
                 'temple_count' => $deity->temples_count,
+                // Uploaded in the admin, or a public-domain painting fetched
+                // by deities:fetch-images. The app draws the deity's emblem
+                // when this is null.
+                'image_url' => $deity->imageUrl(),
+                'image_credit' => $deity->image_credit,
             ]);
 
         return response()->json(['data' => $deities]);
