@@ -35,7 +35,7 @@ class VisitsRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('id')
-            ->modifyQueryUsing(fn (Builder $query) => $query->with('temple:id,name,city'))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['temple:id,name,city', 'verifier:id,name']))
             ->columns([
                 TextColumn::make('temple.name')
                     ->label('Temple')
@@ -61,6 +61,12 @@ class VisitsRelationManager extends RelationManager
                         ? '—'
                         : ($state < 1000 ? $state.' m' : round($state / 1000, 1).' km'))
                     ->tooltip('How far the check-in was from the temple')
+                    ->toggleable(),
+
+                TextColumn::make('verifier.name')
+                    ->label('Marked by')
+                    ->placeholder('—')
+                    ->tooltip('The temple staff member who marked this visit at the counter')
                     ->toggleable(),
 
                 IconColumn::make('is_public')->label('Shared')->boolean()->toggleable(isToggledHiddenByDefault: true),

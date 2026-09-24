@@ -20,12 +20,16 @@ enum CheckInMethod: string implements HasColor, HasIcon, HasLabel
     case Gps = 'gps';
     case Qr = 'qr';
 
+    /** Marked at the temple by its own staff, after scanning the devotee's passport. */
+    case Staff = 'staff';
+
     public function getLabel(): string
     {
         return match ($this) {
             self::Manual => 'Entered by hand',
             self::Gps => 'At the temple (GPS)',
             self::Qr => 'Scanned a temple code',
+            self::Staff => 'Marked by temple staff',
         };
     }
 
@@ -35,6 +39,7 @@ enum CheckInMethod: string implements HasColor, HasIcon, HasLabel
             self::Manual => 'gray',
             self::Gps => 'info',
             self::Qr => 'success',
+            self::Staff => 'warning',
         };
     }
 
@@ -44,6 +49,7 @@ enum CheckInMethod: string implements HasColor, HasIcon, HasLabel
             self::Manual => 'heroicon-m-pencil',
             self::Gps => 'heroicon-m-map-pin',
             self::Qr => 'heroicon-m-qr-code',
+            self::Staff => 'heroicon-m-building-library',
         };
     }
 
@@ -57,5 +63,18 @@ enum CheckInMethod: string implements HasColor, HasIcon, HasLabel
     public function isSelfVerifying(): bool
     {
         return $this !== self::Manual;
+    }
+
+    /**
+     * Methods a devotee's own device may claim.
+     *
+     * A staff-marked visit is written only by the temple portal, so a
+     * request from the app naming it is refused rather than trusted.
+     *
+     * @return array<int, self>
+     */
+    public static function deviceMethods(): array
+    {
+        return [self::Manual, self::Gps, self::Qr];
     }
 }

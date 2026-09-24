@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\MediaFileController;
+use App\Http\Controllers\PassportPageController;
+use App\Http\Controllers\PayController;
+use App\Http\Controllers\TempleQrPrintController;
 use App\Http\Controllers\PwaController;
 use App\Http\Controllers\TempleCheckinController;
 use Illuminate\Support\Facades\Route;
@@ -53,6 +56,34 @@ Route::get('/manifest/{panel}.webmanifest', [PwaController::class, 'manifest'])
 Route::get('/temples/{slug}/checkin', TempleCheckinController::class)
     ->where('slug', '[a-z0-9-]+')
     ->name('temples.checkin');
+
+/*
+| A devotee's passport code, opened by a phone camera rather than the app.
+*/
+Route::get('/passport/{code}', PassportPageController::class)
+    ->where('code', '[A-Za-z0-9]{16,32}')
+    ->middleware('throttle:60,1')
+    ->name('passport.show');
+
+/*
+| A temple's check-in code as a printable poster. Signed-in panel users only
+| (staff, or the temple's own approved admins); the controller decides which,
+| and sends a signed-out visitor to sign in first.
+*/
+Route::get('/qr/temples/{temple}/print', [TempleQrPrintController::class, 'show'])->name('temples.qr.print');
+Route::get('/qr/temples/{temple}/download', [TempleQrPrintController::class, 'download'])->name('temples.qr.download');
+
+/*
+| Checkout, opened in the app's in-app browser. The start page is a signed,
+| short-lived link from POST /api/v1/me/checkout; the return is where each
+| gateway sends the devotee back (GET or POST, depending on the gateway).
+*/
+Route::get('/pay/{payment}', [PayController::class, 'show'])->middleware('signed')->name('pay.show');
+Route::match(['get', 'post'], '/pay/{payment}/return/{gateway}', [PayController::class, 'return'])
+    ->where('gateway', '[a-z]+')
+    ->middleware('throttle:30,1')
+    ->name('pay.return');
+Route::get('/pay/{payment}/done', [PayController::class, 'done'])->name('pay.done');
 
 Route::get('/storage/{path}', MediaFileController::class)
     ->where('path', '.*')

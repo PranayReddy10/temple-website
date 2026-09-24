@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
 /**
@@ -35,7 +36,7 @@ class Devotee extends Authenticatable
         'avatar_path', 'avatar_disk', 'locale', 'home_state_id', 'date_of_birth', 'gender',
     ];
 
-    protected $hidden = ['password', 'remember_token'];
+    protected $hidden = ['password', 'remember_token', 'passport_code', 'google_id', 'apple_id'];
 
     protected $attributes = [
         'locale' => 'en',
@@ -53,6 +54,55 @@ class Devotee extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Every account has a passport code from the start, so the app can
+        // show one without a second request to mint it.
+        static::creating(function (Devotee $devotee): void {
+            $devotee->passport_code ??= static::newPassportCode();
+        });
+    }
+
+    public static function newPassportCode(): string
+    {
+        return Str::random(20);
+    }
+
+    /**
+     * The devotee whose passport a scanned code shows, if it is still live.
+     *
+     * Accepts the code alone or any URL carrying it, which is what a camera
+     * hands over. A reset code matches nobody.
+     */
+    public static function findByPassportCode(?string $code): ?self
+    {
+        $code = \App\Support\PassportQr::parse((string) $code);
+
+        if ($code === null) {
+            return null;
+        }
+
+        return static::query()->where('passport_code', $code)->where('is_active', true)->first();
+    }
+
+    /** The code, minted now for an account that predates codes. */
+    public function passportCode(): string
+    {
+        if (blank($this->passport_code)) {
+            $this->forceFill(['passport_code' => static::newPassportCode()])->saveQuietly();
+        }
+
+        return $this->passport_code;
+    }
+
+    /** Retires the old code: anything printed or photographed stops working. */
+    public function resetPassportCode(): string
+    {
+        $this->forceFill(['passport_code' => static::newPassportCode()])->saveQuietly();
+
+        return $this->passport_code;
     }
 
     public function homeState(): BelongsTo
@@ -92,6 +142,56 @@ class Devotee extends Authenticatable
     public function supportTickets(): HasMany
     {
         return $this->hasMany(SupportTicket::class);
+    }
+
+    public function devices(): HasMany
+    {
+        return $this->hasMany(DevoteeDevice::class);
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(DevoteeSubscription::class)->latest('ends_at');
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class)->latest();
+    }
+
+    /** The subscription in force now, the one lasting longest if several are. */
+    public function currentSubscription(): ?DevoteeSubscription
+    {
+        return $this->subscriptions()->current()->with('plan')->orderByDesc('ends_at')->first();
+    }
+
+    /**
+     * What this devotee may do beyond the free app, merged across every plan
+     * in force: the most generous value of each benefit wins.
+     *
+     * @return array{no_ads: bool, memory_photos_per_visit: int, premium_passport: bool}
+     */
+    public function entitlements(): array
+    {
+        $entitlements = [
+            'no_ads' => false,
+            'memory_photos_per_visit' => VisitPhoto::MEMORIES_PER_VISIT,
+            'premium_passport' => false,
+        ];
+
+        $plans = $this->subscriptions()->current()->with('plan')->get()->pluck('plan')->filter();
+
+        foreach ($plans as $plan) {
+            $benefits = (array) $plan->benefits;
+            $entitlements['no_ads'] = $entitlements['no_ads'] || (bool) ($benefits['no_ads'] ?? false);
+            $entitlements['premium_passport'] = $entitlements['premium_passport'] || (bool) ($benefits['premium_passport'] ?? false);
+            $entitlements['memory_photos_per_visit'] = max(
+                $entitlements['memory_photos_per_visit'],
+                min(50, (int) ($benefits['memory_photos_per_visit'] ?? 0)),
+            );
+        }
+
+        return $entitlements;
     }
 
     public function loginEvents(): MorphMany

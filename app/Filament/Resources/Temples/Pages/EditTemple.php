@@ -30,6 +30,12 @@ class EditTemple extends EditRecord
                 ->modalContent(fn (): View => view('filament.temples.qr', ['temple' => $this->getRecord()]))
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Close'),
+            Action::make('printCheckinQr')
+                ->label('Print QR')
+                ->icon('heroicon-o-printer')
+                ->color('gray')
+                ->url(fn (): string => route('temples.qr.print', $this->getRecord()))
+                ->openUrlInNewTab(),
             Action::make('downloadCheckinQr')
                 ->label('Download QR')
                 ->icon('heroicon-o-arrow-down-tray')

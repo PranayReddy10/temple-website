@@ -24,6 +24,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // the whole group rather than to the endpoints that remembered.
         $middleware->api(append: [SetApiLocale::class]);
 
+        // Gateways POST the devotee back to these pages from their own
+        // domain (PayU always, Razorpay's handler form too), which a CSRF
+        // token cannot survive. Each return is checked with the gateway
+        // itself instead.
+        $middleware->validateCsrfTokens(except: ['pay/*']);
+
         /*
          * Behind Cloudflare or any TLS-terminating proxy, the origin sees a
          * plain HTTP request carrying X-Forwarded-Proto: https. Untrusted,
