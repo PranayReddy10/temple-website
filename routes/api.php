@@ -1,6 +1,10 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AppConfigController;
 use App\Http\Controllers\Api\V1\Auth\DevoteeAuthController;
+use App\Http\Controllers\Api\V1\Auth\SocialAuthController;
+use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\DeityController;
 use App\Http\Controllers\Api\V1\DevoteeProfileController;
 use App\Http\Controllers\Api\V1\DevotionalDayController;
@@ -9,6 +13,7 @@ use App\Http\Controllers\Api\V1\FacilityController;
 use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\MemoryController;
 use App\Http\Controllers\Api\V1\PassportController;
+use App\Http\Controllers\Api\V1\PassportShareController;
 use App\Http\Controllers\Api\V1\StateController;
 use App\Http\Controllers\Api\V1\SupportController;
 use App\Http\Controllers\Api\V1\TempleCategoryController;
@@ -73,7 +78,37 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         ->middleware('throttle:60,1')
         ->name('qr.verify');
 
+    // Someone else's passport, from the code they showed. The code is a
+    // random token; throttled so it cannot be guessed at speed either.
+    Route::get('passports/{code}', [PassportShareController::class, 'show'])
+        ->where('code', '[A-Za-z0-9]{16,32}')
+        ->middleware('throttle:60,1')
+        ->name('passports.show');
+
     Route::get('events', [EventController::class, 'index'])->name('events.index');
+
+    /*
+    |--------------------------------------------------------------------------
+    | App control, notifications and plans
+    |--------------------------------------------------------------------------
+    |
+    | Read on every launch and open to everyone: maintenance, updates, sign-in
+    | methods, ads, payments and push setup, all set from the admin panel.
+    | The inbox and device registration work signed out too.
+    |
+    */
+    Route::get('app/config', [AppConfigController::class, 'show'])->name('app.config');
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('devices', [NotificationController::class, 'registerDevice'])->middleware('throttle:20,1')->name('devices.store');
+    Route::post('devices/forget', [NotificationController::class, 'forgetDevice'])->middleware('throttle:20,1')->name('devices.destroy');
+    Route::get('plans', [SubscriptionController::class, 'plans'])->name('plans.index');
+
+    // Gateways call these server to server. Each one is verified by its
+    // signature or by asking the gateway, never by trusting the body.
+    Route::post('payments/webhook/{gateway}', [SubscriptionController::class, 'webhook'])
+        ->where('gateway', '[a-z]+')
+        ->middleware('throttle:120,1')
+        ->name('payments.webhook');
 
     // Day-wise devotional content: Monday Shiva, Tuesday Hanuman, and so on.
     Route::get('today', [DevotionalDayController::class, 'today'])->name('today');
@@ -105,6 +140,15 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->middleware('throttle:6,1')
             ->name('login');
 
+        // "Continue with Google" / "Sign in with Apple": the identity token the
+        // app obtained on the device, verified here.
+        Route::post('google', [SocialAuthController::class, 'google'])
+            ->middleware('throttle:10,1')
+            ->name('google');
+        Route::post('apple', [SocialAuthController::class, 'apple'])
+            ->middleware('throttle:10,1')
+            ->name('apple');
+
         Route::post('logout', [DevoteeAuthController::class, 'logout'])
             ->middleware('auth:devotee')
             ->name('logout');
@@ -134,6 +178,17 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         */
         Route::get('me/passport', [PassportController::class, 'show'])->name('me.passport');
         Route::get('me/visits', [PassportController::class, 'index'])->name('me.visits.index');
+        Route::get('me/passport/qr', [PassportShareController::class, 'mine'])->name('me.passport.qr');
+
+        Route::post('me/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('me.notifications.read');
+        Route::post('me/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('me.notifications.read_all');
+
+        Route::get('me/subscription', [SubscriptionController::class, 'show'])->name('me.subscription');
+        Route::post('me/checkout', [SubscriptionController::class, 'checkout'])->middleware('throttle:10,1')->name('me.checkout');
+        Route::get('me/payments/{uuid}', [SubscriptionController::class, 'status'])->name('me.payments.show');
+        Route::post('me/passport/qr/reset', [PassportShareController::class, 'reset'])
+            ->middleware('throttle:6,1')
+            ->name('me.passport.qr.reset');
         Route::post('temples/{temple:slug}/visits', [PassportController::class, 'store'])
             ->name('me.visits.store');
         Route::delete('me/visits/{visit}', [PassportController::class, 'destroy'])->name('me.visits.destroy');

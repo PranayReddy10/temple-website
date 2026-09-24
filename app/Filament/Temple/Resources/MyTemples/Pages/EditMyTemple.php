@@ -2,21 +2,44 @@
 
 namespace App\Filament\Temple\Resources\MyTemples\Pages;
 
-use App\Filament\Support\TempleQrActions;
+use App\Filament\Temple\Pages\ScanPassport;
 use App\Filament\Temple\Resources\MyTemples\MyTempleResource;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Contracts\View\View;
 
 class EditMyTemple extends EditRecord
 {
     protected static string $resource = MyTempleResource::class;
 
     /**
-     * The temple's check-in code, to print for its gate. No delete action: a
-     * temple team cannot remove its own listing.
+     * No delete action: a temple team cannot remove its own listing.
+     *
+     * The check-in code is here so the team can print it for their own gate
+     * without asking the editors for it.
      */
     protected function getHeaderActions(): array
     {
-        return TempleQrActions::make(fn () => $this->getRecord());
+        return [
+            Action::make('checkinQr')
+                ->label('Check-in QR code')
+                ->icon('heroicon-o-qr-code')
+                ->color('gray')
+                ->modalHeading('Check-in QR code')
+                ->modalContent(fn (): View => view('filament.temples.qr', ['temple' => $this->getRecord()]))
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel('Close'),
+            Action::make('printCheckinQr')
+                ->label('Print QR')
+                ->icon('heroicon-o-printer')
+                ->color('gray')
+                ->url(fn (): string => route('temples.qr.print', $this->getRecord()))
+                ->openUrlInNewTab(),
+            Action::make('scanPassport')
+                ->label('Scan a passport')
+                ->icon('heroicon-o-identification')
+                ->url(ScanPassport::getUrl()),
+        ];
     }
 
     protected function getRedirectUrl(): string

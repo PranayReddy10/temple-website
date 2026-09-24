@@ -242,6 +242,30 @@ that circuit are in the database) and `total` (how many exist), so the app can
 say "6 of 8 recorded, 12 in all" rather than sending someone hunting for
 temples it cannot show them.
 
+### Passport codes
+
+A devotee's own passport QR carries `passport_url` from `GET /me`: a link
+ending in a random 20-character code. It is never the account id.
+
+```
+GET  /api/v1/me/passport/qr          { data: { code, url } }        token
+POST /api/v1/me/passport/qr/reset    { data: { code, url } }        token, 6/min
+GET  /api/v1/passports/{code}        someone else's passport          open, 60/min
+```
+
+Resetting retires the old code at once: `GET /passports/{old}` is a 404.
+
+`GET /passports/{code}` returns `name`, `avatar_url`, `home_state`,
+`joined_at`, the counts (`stamps`, `temples_visited`, `visits_recorded`,
+`states_covered`) and `visits[]` (temple, `visited_on`, `method`,
+`is_verified`). Only visits the devotee left public are listed and counted.
+No email, phone, date of birth, note or photo is ever included. A phone
+camera without the app opens the same view at `/passport/{code}`.
+
+A visit whose `method.value` is `staff` was marked at the temple counter by
+the temple's own staff after scanning this code; it is verified. The app
+cannot send `method: staff` itself (422).
+
 ### Photo Stamp
 
 ```
@@ -257,6 +281,12 @@ Every upload starts as `pending`. The response returns the moderation status
 and any `moderation_note`, because silence reads as failure and a devotee who
 sees nothing happen will upload it again. `is_visible_to_others` is true only
 when the photo is approved **and** the devotee chose to share it.
+
+Memory photos use the same endpoint with `kind=memory` and a `visit_id`
+(required). A visit keeps three; the fourth is a 422. They are always
+private whatever `is_public` says, never enter moderation, and come back
+from `GET /me/photos` with `kind: "memory"`. Every photo now carries `kind`
+(`stamp` or `memory`).
 
 ### Memories
 
@@ -398,3 +428,73 @@ recorded licence is never served, whatever it hangs off.
 `GET /api/v1/today` and `/days/{weekday}` now include the deity's
 `image_url`, `mantra` and `mantra_meaning`, and a day's `mantra` falls back
 to its deity's the same way.
+
+## App control
+
+```
+GET /api/v1/app/config?platform=android|ios|web&version=0.6.0      open
+```
+
+Read by the app on every launch and on return from the background. Every
+value is set in the admin panel under **App** and **Monetisation**.
+
+| Key | Meaning |
+| --- | --- |
+| `maintenance.enabled`, `title`, `message`, `until` | Cover the app with a notice |
+| `update.available`, `update.required`, `latest_version`, `min_version`, `store_url`, `title`, `message` | Below `min_version` the app is blocked until updated; below `latest_version` an update is offered once |
+| `auth.password`, `auth.google.{enabled, server_client_id, ios_client_id}`, `auth.apple.enabled` | Which sign-in buttons to show |
+| `push.enabled`, `push.firebase` | Public Firebase ids for this platform (`project_id`, `api_key`, `app_id`, `messaging_sender_id`, `ios_bundle_id`). The app starts Firebase from these, so no google-services file is built in |
+| `ads.enabled`, `network` (`admob` \| `applovin_max`), `test_mode`, `units.{native, banner}`, `list_interval`, `placements.{temple_detail, explore, home, day_page}` | False for a devotee whose plan removes ads (send the token) and always on the web |
+| `payments.enabled`, `available_elsewhere`, `gateways[]`, `default_gateway` | Whether plans can be bought on this platform |
+
+## Google and Apple sign-in
+
+```
+POST /api/v1/auth/google   { "id_token": "…" }                                  10/min
+POST /api/v1/auth/apple    { "identity_token": "…", "nonce": "raw", "name": "…" } 10/min
+```
+
+The token is verified here against the provider's published keys, issuer and
+the client ids set under **App → Sign-in methods**. An account is matched by
+the provider's subject id, then by a *verified* email (which links the
+provider to that account), otherwise created. The response is the same as
+`/auth/login`, plus `created`. `403` when the method is switched off; `422`
+for a token that is expired, forged or issued to another app.
+
+`GET /me` now also returns `sign_in_methods`, `home_state_id`,
+`entitlements` (`no_ads`, `memory_photos_per_visit`, `premium_passport`) and
+`subscription` (`plan`, `ends_at`) while one is active.
+
+## Notifications
+
+```
+GET  /api/v1/notifications?platform=android        open; a token adds personal ones and is_read
+POST /api/v1/devices          { token, platform, app_version?, locale? }   open, 20/min
+POST /api/v1/devices/forget   { token }
+POST /api/v1/me/notifications/{id}/read
+POST /api/v1/me/notifications/read-all   { platform? }
+```
+
+Sent from **App → Notifications** to everyone, one platform, followers of a
+temple, a home state or one devotee. Push goes through Firebase topics the
+app subscribes to — `all`, `android`/`ios`, `temple-{id}`, `state-{id}` — or
+to one devotee's registered tokens. A push carries `notification_id`,
+`link_type` (`none`, `temple`, `day`, `screen`, `url`) and `link_value`.
+
+## Plans and payments
+
+```
+GET  /api/v1/plans?platform=android                  open
+GET  /api/v1/me/subscription
+POST /api/v1/me/checkout   { plan, gateway?, platform }          10/min
+GET  /api/v1/me/payments/{id}                        asks the gateway if still open
+POST /api/v1/payments/webhook/{razorpay|phonepe|cashfree|payu}
+```
+
+`checkout` answers with a signed `checkout_url` (30 minutes) and a `done_url`.
+The app opens the first in its in-app browser; the page runs the gateway's own
+checkout, the gateway returns to `/pay/{id}/return/{gateway}`, the server
+confirms with the gateway and lands on `done_url`, where the browser closes.
+The app then polls `me/payments/{id}`. The price is always the plan's, set on
+the server; a plan switches on only when the gateway itself confirms, once,
+however many times the return and the webhook arrive.

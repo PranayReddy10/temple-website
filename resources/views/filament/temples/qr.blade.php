@@ -8,5 +8,8 @@
         Print this and display it at the entrance. Devotees scan it from the temple's page in the app
         to collect a <strong>verified</strong> stamp. A phone camera opening it shows whether it is genuine.
     </p>
+    <p style="margin-top:12px">
+        <a href="{{ route('temples.qr.print', $temple) }}" target="_blank" rel="noopener" style="text-decoration:underline;font-weight:600">Open the printable poster</a>
+    </p>
     <p style="font-size:.75rem;opacity:.6;margin-top:8px;word-break:break-all">{{ \App\Support\TempleQr::url($temple) }}</p>
 </div>

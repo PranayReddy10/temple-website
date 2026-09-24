@@ -39,7 +39,9 @@ class VisitPhotoResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->with([
+            // Memory photos are private to the devotee and never published,
+            // so they are not this queue's business.
+            ->modifyQueryUsing(fn (Builder $query) => $query->stamps()->with([
                 'devotee:id,name', 'temple:id,name', 'moderator:id,name',
             ]))
             ->columns(PhotoModeration::columns())

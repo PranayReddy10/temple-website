@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
 
@@ -66,6 +67,12 @@ class Setting extends Model
 
     public static function set(string $key, mixed $value, string $type = 'string'): void
     {
+        if ($type === 'secret' && filled($value)) {
+            // Encrypted at rest with the app key. The cached settings array
+            // holds the ciphertext too; secret() decrypts at the point of use.
+            $value = Crypt::encryptString((string) $value);
+        }
+
         static::updateOrCreate(
             ['key' => $key],
             [
@@ -73,6 +80,26 @@ class Setting extends Model
                 'type' => $type,
             ],
         );
+    }
+
+    /**
+     * A credential saved from the admin panel: a payment gateway's secret, a
+     * push service account. Null when unset or when it cannot be decrypted
+     * (an APP_KEY that changed since it was saved), never the ciphertext.
+     */
+    public static function secret(string $key): ?string
+    {
+        $stored = static::get($key);
+
+        if (! is_string($stored) || $stored === '') {
+            return null;
+        }
+
+        try {
+            return Crypt::decryptString($stored);
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     protected static function readFromDatabase(): array

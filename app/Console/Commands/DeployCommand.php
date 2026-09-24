@@ -8,6 +8,8 @@ use Database\Seeders\FacilitySeeder;
 use Database\Seeders\StateSeeder;
 use Database\Seeders\TempleCategorySeeder;
 use Illuminate\Console\Command;
+use App\Support\AppVersion;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Migrations\Migrator;
@@ -60,6 +62,11 @@ class DeployCommand extends Command
     {
         $this->line('');
         $this->components->info('Deploy check for '.config('app.env'));
+        $this->line('  Code on this server: '.AppVersion::label());
+        if (AppVersion::commit() !== null) {
+            $this->line('  If that commit is not the latest on GitHub, run `git pull` first: merging on');
+            $this->line('  GitHub does not change the files here.');
+        }
 
         if (! $this->autoloaderIsCurrent()) {
             $this->components->error('The autoloader is stale.');
@@ -121,7 +128,11 @@ class DeployCommand extends Command
         $this->ensureStorageLink();
 
         $this->line('');
-        $this->components->info('Deploy complete.');
+        $this->components->info('Deploy complete. Running '.AppVersion::label().'.');
+        $this->line('  The same version shows at the bottom of the admin sidebar. If the panel still');
+        $this->line('  shows an older one, the web server is holding old code in PHP OPcache: restart');
+        $this->line('  PHP (Hostinger hPanel → Advanced → PHP Configuration → save, or change and');
+        $this->line('  restore the PHP version).');
 
         return self::SUCCESS;
     }
@@ -207,6 +218,16 @@ class DeployCommand extends Command
         foreach (['config:clear', 'route:clear', 'view:clear'] as $command) {
             $this->callSilently($command);
         }
+
+        // Filament keeps its own list of discovered pages and resources in
+        // bootstrap/cache/filament once `php artisan optimize` has run, and
+        // none of the clears above touch it: new admin pages then stay
+        // invisible however many times the code is pulled. Cleared, not
+        // rebuilt — discovery is cheap and a stale list is the worse failure.
+        if (array_key_exists('filament:optimize-clear', Artisan::all())) {
+            $this->callSilently('filament:optimize-clear');
+        }
+        File::deleteDirectory(base_path('bootstrap/cache/filament'));
 
         if (app()->environment('production')) {
             foreach (['config:cache', 'route:cache', 'view:cache'] as $command) {

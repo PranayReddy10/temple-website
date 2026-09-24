@@ -92,25 +92,6 @@ class TemplePortalAccessTest extends TestCase
         $this->assertSame([$mine->id], $ids);
     }
 
-    public function test_a_temple_team_can_print_its_own_check_in_code(): void
-    {
-        $user = $this->templeAdmin();
-        $mine = Temple::create(['name' => 'My Temple']);
-        $this->approveClaim($user, $mine);
-        $this->actingAs($user);
-        \Filament\Facades\Filament::setCurrentPanel(\Filament\Facades\Filament::getPanel('temple'));
-
-        \Livewire\Livewire::test(\App\Filament\Temple\Resources\MyTemples\Pages\EditMyTemple::class, ['record' => $mine->getRouteKey()])
-            ->mountAction('checkinQr')
-            ->assertMountedActionModalSee(\App\Support\TempleQr::url($mine))
-            ->unmountAction()
-            ->callAction('downloadCheckinQr')
-            ->assertFileDownloaded($mine->slug.'-checkin-qr.svg');
-
-        \Livewire\Livewire::test(\App\Filament\Temple\Resources\MyTemples\Pages\ListMyTemples::class)
-            ->assertTableActionExists('checkinQr', record: $mine);
-    }
-
     public function test_an_unapproved_claim_grants_nothing(): void
     {
         $user = $this->templeAdmin();

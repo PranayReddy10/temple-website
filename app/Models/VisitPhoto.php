@@ -18,12 +18,22 @@ class VisitPhoto extends Model
     use HasFactory;
 
     protected $fillable = [
-        'devotee_id', 'temple_id', 'devotee_visit_id',
+        'devotee_id', 'temple_id', 'devotee_visit_id', 'kind',
         'disk', 'original_path', 'stamp_path', 'caption',
         'status', 'moderated_by', 'moderated_at', 'moderation_note', 'is_public',
     ];
 
+    /** The photo in the passport, shareable once approved. */
+    public const KIND_STAMP = 'stamp';
+
+    /** One of up to three kept with a visit, seen only by the devotee. */
+    public const KIND_MEMORY = 'memory';
+
+    /** Memory photos a single visit may hold. */
+    public const MEMORIES_PER_VISIT = 3;
+
     protected $attributes = [
+        'kind' => self::KIND_STAMP,
         'status' => 'pending',
         'is_public' => false,
     ];
@@ -59,9 +69,23 @@ class VisitPhoto extends Model
 
     // --- Scopes ---
 
+    /**
+     * Memory photos never wait on a moderator: nobody but their owner can
+     * ever see them, so there is nothing to approve.
+     */
     public function scopeAwaitingModeration(Builder $query): Builder
     {
-        return $query->where('status', PhotoModerationStatus::Pending);
+        return $query->where('status', PhotoModerationStatus::Pending)->where('kind', self::KIND_STAMP);
+    }
+
+    public function scopeStamps(Builder $query): Builder
+    {
+        return $query->where('kind', self::KIND_STAMP);
+    }
+
+    public function scopeMemories(Builder $query): Builder
+    {
+        return $query->where('kind', self::KIND_MEMORY);
     }
 
     /**
@@ -74,14 +98,20 @@ class VisitPhoto extends Model
     public function scopeVisibleToOthers(Builder $query): Builder
     {
         return $query->where('status', PhotoModerationStatus::Approved)
-            ->where('is_public', true);
+            ->where('is_public', true)
+            ->where('kind', self::KIND_STAMP);
     }
 
     // --- Helpers ---
 
     public function isVisibleToOthers(): bool
     {
-        return $this->status->allowsPublication() && $this->is_public;
+        return $this->status->allowsPublication() && $this->is_public && ! $this->isMemory();
+    }
+
+    public function isMemory(): bool
+    {
+        return $this->kind === self::KIND_MEMORY;
     }
 
     public function originalUrl(): ?string

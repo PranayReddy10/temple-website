@@ -18,7 +18,7 @@ class StoreVisitRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'method' => ['nullable', Rule::enum(CheckInMethod::class)],
+            'method' => ['nullable', Rule::enum(CheckInMethod::class)->only(CheckInMethod::deviceMethods())],
 
             // Not in the future. A passport that can be filled in ahead of
             // time is a wish list, and the plan is explicit that a visit is a

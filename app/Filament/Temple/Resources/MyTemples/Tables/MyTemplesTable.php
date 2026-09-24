@@ -7,7 +7,6 @@ use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Contracts\View\View;
 
 class MyTemplesTable
 {
@@ -31,15 +30,12 @@ class MyTemplesTable
             ])
             ->recordActions([
                 EditAction::make()->label('Manage'),
-                // The code to print for the gate, one tap from the list.
-                Action::make('checkinQr')
-                    ->label('QR code')
-                    ->icon('heroicon-o-qr-code')
+                Action::make('printQr')
+                    ->label('Print QR')
+                    ->icon('heroicon-o-printer')
                     ->color('gray')
-                    ->modalHeading('Check-in QR code')
-                    ->modalContent(fn (Temple $record): View => view('filament.temples.qr', ['temple' => $record]))
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Close'),
+                    ->url(fn (Temple $record): string => route('temples.qr.print', $record))
+                    ->openUrlInNewTab(),
             ])
             ->emptyStateHeading('No temples yet')
             ->emptyStateDescription('Your claim has not been approved yet, or no temple has been assigned to your account. Contact the editorial team if you expected to see one here.')

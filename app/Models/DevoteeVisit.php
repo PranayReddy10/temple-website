@@ -68,6 +68,12 @@ class DevoteeVisit extends Model
         return $this->hasMany(VisitPhoto::class);
     }
 
+    /** The temple staff member who marked this visit, for one marked at a counter. */
+    public function verifier(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by');
+    }
+
     public function memories(): HasMany
     {
         return $this->hasMany(DevoteeMemory::class);

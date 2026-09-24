@@ -1,18 +1,36 @@
 # Updating the live site
 
-Run this after every code change. It is the same four lines every time.
+Run this after every code change. It is the same lines every time.
 
 ```bash
 cd ~/domains/madeforu.co.in/public_html/temple
 
 php artisan down
-git pull origin claude/compassionate-ritchie-g4t6db
+git checkout main          # once: older instructions left servers on a feature branch
+git pull origin main
 composer install --no-dev --optimize-autoloader
 php artisan app:deploy --force
 php artisan up
 ```
 
 That is the whole routine. **You never import a .sql file again.**
+
+Merging a pull request on GitHub changes `main` on GitHub only. The server
+gets it at `git pull origin main`; skip that line and every other step runs
+against the old code.
+
+### Is the new code actually running?
+
+The version and commit show at the bottom of the admin sidebar and under
+the sign-in form (for example `v0.8.0 · 0713cf5`), and `app:deploy` prints
+them. Compare the commit with the latest one on GitHub's `main`:
+
+| What you see | Cause | Fix |
+| --- | --- | --- |
+| Old commit in `app:deploy` output | The server has not pulled `main` | `git checkout main && git pull origin main`, then deploy again |
+| New commit from `app:deploy`, old one in the panel | PHP OPcache in the web server still holds the old files | hPanel → Advanced → PHP Configuration → save (or switch PHP version and back) |
+| No version at all in the panel | The server is older than this guide | Pull `main` |
+| New pages missing only for some accounts | App control, Monetisation and Settings are for **Super Admin** accounts | Sign in as a super admin |
 
 ---
 
@@ -35,7 +53,9 @@ you cannot get the order wrong.
    `undefined function`. This is why `composer install` comes first.
 2. **Runs pending migrations** — the new tables and columns.
 3. **Seeds reference data that is missing**, and only when the table is empty.
-4. **Rebuilds the caches**, so a stale config cache does not hide your changes.
+4. **Rebuilds the caches**, so a stale config cache does not hide your changes,
+   and clears Filament's cached list of admin pages, which otherwise hides
+   every page added since `php artisan optimize` was last run.
 5. **Creates `public/storage`** if it is not there.
 
 Look before you leap:
