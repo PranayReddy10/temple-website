@@ -151,7 +151,12 @@ final class AppConfig
             'enabled' => $allowedHere && $gateways !== [] && (bool) setting('payments_enabled', null, false),
             // Plans are still listed on iOS, so the app can say where to buy.
             'available_elsewhere' => ! $allowedHere && $gateways !== [] && (bool) setting('payments_enabled', null, false),
-            'gateways' => array_map(fn (string $g): array => ['code' => $g, 'name' => Payment::GATEWAYS[$g]], $gateways),
+            'gateways' => array_map(fn (string $g): array => [
+                'code' => $g,
+                'name' => Payment::GATEWAYS[$g],
+                // Paid through the gateway's own SDK in the app.
+                'native' => in_array($g, \App\Http\Controllers\Api\V1\SubscriptionController::NATIVE_SDK, true),
+            ], $gateways),
             'default_gateway' => in_array(setting('payments_default_gateway'), $gateways, true) ? setting('payments_default_gateway') : ($gateways[0] ?? null),
         ];
     }

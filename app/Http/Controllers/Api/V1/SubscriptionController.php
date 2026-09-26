@@ -80,13 +80,16 @@ class SubscriptionController extends Controller
         }
 
         $sdk = null;
+        $sdkError = null;
 
         if (($validated['mode'] ?? 'web') === 'sdk' && in_array($payment->gateway, self::NATIVE_SDK, true)) {
             try {
                 $sdk = $this->sdk($payment->load('plan', 'devotee'));
             } catch (Throwable $e) {
-                // The web checkout below still works; the app uses it.
-                Log::warning('Native checkout could not start', ['payment' => $payment->uuid, 'error' => $e->getMessage()]);
+                // Said to the app rather than swallowed: the app does not
+                // fall back to a web page for a gateway it pays natively.
+                $sdkError = $e->getMessage();
+                Log::warning('Native checkout could not start', ['payment' => $payment->uuid, 'error' => $sdkError]);
             }
         }
 
@@ -95,6 +98,9 @@ class SubscriptionController extends Controller
             // Present when the app should open the gateway's SDK; null means
             // use checkout_url in the system browser tab.
             'sdk' => $sdk,
+            // Why sdk is null for a gateway that has one: wrong keys, a
+            // missing merchant id, the gateway refusing the order.
+            'sdk_error' => $sdkError,
             'checkout_url' => URL::temporarySignedRoute('pay.show', now()->addMinutes(30), ['payment' => $payment]),
             // The in-app browser closes when it reaches this page.
             'done_url' => route('pay.done', ['payment' => $payment]),
@@ -102,7 +108,7 @@ class SubscriptionController extends Controller
     }
 
     /** Gateways the app pays through natively rather than a web page. */
-    protected const NATIVE_SDK = ['razorpay', 'cashfree'];
+    public const NATIVE_SDK = ['razorpay', 'cashfree', 'phonepe'];
 
     /**
      * What the gateway's SDK needs to open its payment sheet.
@@ -111,7 +117,8 @@ class SubscriptionController extends Controller
      */
     protected function sdk(Payment $payment): array
     {
-        $start = $this->payments->gateway($payment->gateway)->start($payment)['data'] ?? [];
+        // PhonePe's app SDK has its own order call; its web start is not used.
+        $start = $payment->gateway === 'phonepe' ? [] : ($this->payments->gateway($payment->gateway)->start($payment)['data'] ?? []);
         $devotee = $payment->devotee;
 
         return match ($payment->gateway) {
@@ -136,7 +143,28 @@ class SubscriptionController extends Controller
                 'session_id' => $start['session_id'],
                 'environment' => ($start['mode'] ?? 'sandbox') === 'production' ? 'production' : 'sandbox',
             ],
+            'phonepe' => $this->phonePeSdk($payment),
         };
+    }
+
+    /** @return array<string, mixed> */
+    protected function phonePeSdk(Payment $payment): array
+    {
+        /** @var \App\Support\Payments\Gateways\PhonePe $phonepe */
+        $phonepe = $this->payments->gateway('phonepe');
+
+        $merchantId = $phonepe->merchantId() ?? throw new \RuntimeException('PhonePe merchant id is not set in the admin (Settings → Payments).');
+        $order = $phonepe->sdkOrder($payment);
+
+        return [
+            'gateway' => 'phonepe',
+            'environment' => $phonepe->environment(),
+            'merchant_id' => $merchantId,
+            'order_id' => $order['order_id'],
+            'token' => $order['token'],
+            // Ties the app's journey to PhonePe's logs, per their docs.
+            'flow_id' => 'devotee'.$payment->devotee_id,
+        ];
     }
 
     /**

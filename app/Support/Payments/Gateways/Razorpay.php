@@ -44,7 +44,9 @@ class Razorpay implements PaymentGateway
                     'notes' => ['payment' => $payment->uuid, 'plan' => $payment->plan?->code],
                 ]);
 
-            if (! $response->successful()) {
+            // An answer without an order id is no order: sending on would open
+            // the payment sheet for nothing.
+            if (! $response->successful() || blank($response->json('id'))) {
                 throw new RuntimeException('Razorpay could not create the order: '.($response->json('error.description') ?? $response->status()));
             }
 

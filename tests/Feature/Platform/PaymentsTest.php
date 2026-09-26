@@ -155,6 +155,57 @@ class PaymentsTest extends TestCase
         $this->assertSame(1, $devotee->subscriptions()->count());
     }
 
+    public function test_phonepe_opens_its_app_sdk_and_is_confirmed_with_phonepe(): void
+    {
+        $devotee = $this->devotee();
+        Setting::set('payments_phonepe_enabled', '1', 'boolean');
+        Setting::set('payments_phonepe_client_id', 'pp');
+        Setting::set('payments_phonepe_client_secret', 'pps', 'secret');
+        Setting::set('payments_phonepe_merchant_id', 'M123');
+        Http::fake([
+            '*/v1/oauth/token' => Http::response(['access_token' => 'tok']),
+            '*/checkout/v2/sdk/order' => Http::response(['orderId' => 'OMO_SDK', 'token' => 'sdk_tok', 'state' => 'PENDING']),
+            '*/checkout/v2/order/*/status' => Http::response(['state' => 'COMPLETED', 'paymentDetails' => [['transactionId' => 'T9']]]),
+        ]);
+
+        $checkout = $this->postJson('/api/v1/me/checkout', ['plan' => 'yatri-plus', 'gateway' => 'phonepe', 'mode' => 'sdk'])
+            ->assertCreated()
+            ->assertJsonPath('data.sdk.gateway', 'phonepe')
+            ->assertJsonPath('data.sdk.merchant_id', 'M123')
+            ->assertJsonPath('data.sdk.order_id', 'OMO_SDK')
+            ->assertJsonPath('data.sdk.token', 'sdk_tok')
+            ->assertJsonPath('data.sdk.environment', 'SANDBOX')
+            ->assertJsonPath('data.sdk_error', null);
+
+        $this->postJson('/api/v1/me/payments/'.$checkout->json('data.payment.id').'/confirm')
+            ->assertOk()->assertJsonPath('data.status', 'paid');
+        $this->assertSame(1, $devotee->subscriptions()->count());
+        $this->getJson('/api/v1/plans?platform=android')->assertJsonPath('meta.payments.gateways.0.native', true);
+    }
+
+    public function test_a_native_gateway_that_cannot_start_says_why(): void
+    {
+        $this->devotee();
+        Setting::set('payments_phonepe_enabled', '1', 'boolean');
+        Setting::set('payments_phonepe_client_id', 'pp');
+        Setting::set('payments_phonepe_client_secret', 'pps', 'secret');
+        // No merchant id set; Razorpay refuses the keys.
+        Http::fake([
+            'api.razorpay.com/*' => Http::response(['error' => ['description' => 'Authentication failed']], 401),
+            '*' => Http::response(['access_token' => 'tok']),
+        ]);
+
+        $this->postJson('/api/v1/me/checkout', ['plan' => 'yatri-plus', 'gateway' => 'phonepe', 'mode' => 'sdk'])
+            ->assertCreated()
+            ->assertJsonPath('data.sdk', null)
+            ->assertJsonPath('data.sdk_error', 'PhonePe merchant id is not set in the admin (Settings → Payments).');
+
+        $this->postJson('/api/v1/me/checkout', ['plan' => 'yatri-plus', 'gateway' => 'razorpay', 'mode' => 'sdk'])
+            ->assertCreated()
+            ->assertJsonPath('data.sdk', null)
+            ->assertJsonPath('data.sdk_error', 'Razorpay could not create the order: Authentication failed');
+    }
+
     public function test_one_devotee_cannot_confirm_anothers_payment(): void
     {
         $this->devotee();
