@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\SupportController;
 use App\Http\Controllers\Api\V1\TempleCategoryController;
 use App\Http\Controllers\Api\V1\TempleController;
 use App\Http\Controllers\Api\V1\TempleQrController;
+use App\Http\Controllers\Api\V1\TempleSuggestionController;
 use App\Http\Controllers\Api\V1\VisitPhotoController;
 use App\Http\Controllers\Api\V1\YatraController;
 use Illuminate\Support\Facades\Route;
@@ -105,6 +106,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         ->where('pincode', '[0-9]{6}')
         ->middleware('throttle:30,1')
         ->name('pincode.show');
+
+    Route::get('temple-suggestions/options', [TempleSuggestionController::class, 'options'])->name('temple-suggestions.options');
 
     Route::get('seva-drives/options', [SevaDriveController::class, 'options'])->name('seva.options');
     Route::get('seva-drives', [SevaDriveController::class, 'index'])->name('seva.index');
@@ -251,6 +254,12 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         | organiser's, checked against the drive in the controller.
         |
         */
+        // "My temple is not listed." Reviewed before anything is published.
+        Route::get('me/temple-suggestions', [TempleSuggestionController::class, 'index'])->name('me.temple-suggestions.index');
+        Route::post('me/temple-suggestions', [TempleSuggestionController::class, 'store'])
+            ->middleware('throttle:6,1')
+            ->name('me.temple-suggestions.store');
+
         Route::get('me/seva-drives', [SevaDriveController::class, 'mine'])->name('me.seva.index');
         Route::post('me/seva-drives', [SevaDriveController::class, 'store'])
             ->middleware('throttle:6,1')

@@ -196,6 +196,20 @@ temples would produce a leaderboard of places of worship. Rating the *visit*
 — queue length, accessibility, facilities, how accurate our listing turned
 out to be — says something useful without ranking the sacred.
 
+### Phase 6 — The temple's own app  ⬜ **Next, after the devotee app**
+
+Temples reach the platform today through the admin (staff) and through
+devotees and temple members who add a missing temple from the app — **Temples
+→ Suggested temples** — leaving their role (trustee, priest, committee, office
+staff) and phone. Those people are who this phase hands each temple to.
+
+| Slice | Scope | Status |
+| --- | --- | --- |
+| **Add a temple from the app** | "My temple is not listed": full form with name, PIN-code address, deity, history, festivals, timings, contact, photos and who is sending it; duplicate check against listed temples; staff create a draft temple from it, match it to an existing one, or turn it down with a note the sender sees | ✅ |
+| **Temple member app** | A separate app for trustees, priests and temple offices: sign in by phone, claim a listed temple (starting from the members who added or were named on it), and manage timings, closures, pujas, events and photos — the work the `/temple` web portal does today | ⬜ |
+| **Puja & seva booking** | Book and pay for pujas, sevas and prasadam through the temple's own listing, with the temple confirming each booking from its app | ⬜ |
+| **Stay & travel near a temple** | Hotels, dharmashalas and transport near each temple, with the temple able to recommend its own accommodation | ⬜ |
+
 ### Later phases
 
 Community submissions and moderation · GPS and QR visit verification ·

@@ -469,4 +469,36 @@ class SevaDriveApiTest extends TestCase
         $this->assertSame(SevaDriveStatus::Completed, $drive->status);
         $this->assertTrue($drive->isVerified());
     }
+
+    public function test_a_donor_sees_their_donation_marked_paid_once_the_organiser_confirms(): void
+    {
+        $organiser = Devotee::factory()->create();
+        $drive = $this->raise($organiser);
+        $drive->verify(null);
+
+        $donor = Devotee::factory()->create(['name' => 'Lakshmi']);
+        Sanctum::actingAs($donor, guard: 'devotee');
+        $id = $this->postJson("/api/v1/seva-drives/{$drive->id}/donations", ['amount' => 501, 'payment_app' => 'gpay', 'upi_ref' => '425399991111'])->json('data.id');
+
+        $this->getJson("/api/v1/seva-drives/{$drive->id}")
+            ->assertJsonPath('data.my_donations.0.amount', 501)
+            ->assertJsonPath('data.my_donations.0.payment_app_label', 'Google Pay')
+            ->assertJsonPath('data.my_donations.0.confirmed', false)
+            ->assertJsonCount(0, 'data.supporters');
+
+        Sanctum::actingAs($organiser, guard: 'devotee');
+        $this->postJson("/api/v1/me/seva-drives/{$drive->id}/donations/{$id}/confirm")->assertOk();
+
+        Sanctum::actingAs($donor, guard: 'devotee');
+        $this->getJson("/api/v1/seva-drives/{$drive->id}")
+            ->assertJsonPath('data.my_donations.0.confirmed', true)
+            ->assertJsonPath('data.supporters.0.name', 'Lakshmi')
+            ->assertJsonPath('data.supporters.0.amount', 501);
+
+        // Somebody else sees the supporter, and none of the donor's own rows.
+        Sanctum::actingAs(Devotee::factory()->create(), guard: 'devotee');
+        $this->getJson("/api/v1/seva-drives/{$drive->id}")
+            ->assertJsonCount(0, 'data.my_donations')
+            ->assertJsonPath('data.supporters.0.name', 'Lakshmi');
+    }
 }

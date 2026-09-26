@@ -400,6 +400,11 @@ DELETE /api/v1/seva-drives/{id}/join
 POST   /api/v1/seva-drives/{id}/donations              amount, payment_app, upi_ref, paid_on, message, is_anonymous
 ```
 
+On a drive's own page, `my_donations` lists the signed-in devotee's
+donations with `confirmed` (shown as paid once the organiser confirms), and
+`supporters` lists the latest confirmed donations for everyone (the name is
+"A devotee" for anonymous donors).
+
 `payment_app` is one of `phonepe`, `gpay`, `paytm`, `bhim`, `amazonpay`,
 `other_upi`, `bank`, `cash`; `paid_on` is a date, not in the future
 (defaults to today). Donation rows carry `payment_app_label` and `paid_on`.
@@ -431,6 +436,28 @@ Rules the server holds, whatever the request says:
 
 Anybody can report a drive through Support: `POST /api/v1/support` with
 `about_type=seva_drive` and `about_id`.
+
+## Adding a temple that is not listed
+
+```
+GET  /api/v1/temple-suggestions/options     roles, max photos
+GET  /api/v1/me/temple-suggestions          the devotee's own, with status and note
+POST /api/v1/me/temple-suggestions          multipart, 6/min
+```
+
+Required: `name`, `city`, `description` (20+ characters), `submitter_role`
+(`devotee` | `trustee` | `priest` | `committee` | `staff` | `other`) and at
+least one of `photos[]` (up to 8). Optional: `alternate_names`, `deity_id` or
+`deity_name`, `address`, `pincode`, `district`, `state_id`, `latitude`,
+`longitude`, `history`, `built_period`, `festivals`, `opens_at` / `closes_at`
+(`HH:MM`), `timings_note`, `contact_phone`, `official_website`,
+`submitter_name`, `submitter_phone` (required for temple members),
+`submitter_note`.
+
+Nothing is published. Staff review it under **Temples → Suggested temples**
+and create a draft temple from it, mark it `duplicate` of a listed temple, or
+`rejected` with a note. `temple` in the response points at the listing once it
+is public.
 
 ## PIN codes
 
