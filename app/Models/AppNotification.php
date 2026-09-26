@@ -16,7 +16,9 @@ class AppNotification extends Model
     public const AUDIENCES = [
         'all' => 'Everyone',
         'platform' => 'One platform',
-        'temple' => 'Devotees who saved a temple',
+        'temple' => 'Followers of a temple',
+        'temple_festival' => 'Followers of a temple who asked for festival reminders',
+        'temple_event' => 'Followers of a temple who asked for event reminders',
         'state' => 'Devotees from a home state',
         'devotee' => 'One devotee',
     ];
@@ -36,7 +38,7 @@ class AppNotification extends Model
 
     protected $fillable = [
         'title', 'body', 'image_url', 'link_type', 'link_value',
-        'audience', 'audience_id', 'platform', 'status', 'scheduled_at', 'created_by',
+        'audience', 'audience_id', 'platform', 'status', 'scheduled_at', 'created_by', 'source_key',
     ];
 
     protected $attributes = [
@@ -61,6 +63,17 @@ class AppNotification extends Model
     public function reads(): HasMany
     {
         return $this->hasMany(AppNotificationRead::class);
+    }
+
+    /** The audiences a reminder uses, and the follow column each honours. */
+    public const REMINDER_AUDIENCES = [
+        'temple_festival' => 'notify_festivals',
+        'temple_event' => 'notify_events',
+    ];
+
+    public function isReminder(): bool
+    {
+        return array_key_exists($this->audience, self::REMINDER_AUDIENCES);
     }
 
     public function scopeSent(Builder $query): Builder
@@ -95,8 +108,15 @@ class AppNotification extends Model
                     $q->orWhere(fn (Builder $p) => $p->where('audience', 'state')->where('audience_id', $devotee->home_state_id));
                 }
 
+                // Following is what asks to be told; saving is a bookmark.
                 $q->orWhere(fn (Builder $p) => $p->where('audience', 'temple')
-                    ->whereIn('audience_id', $devotee->savedTemples()->select('temples.id')));
+                    ->whereIn('audience_id', $devotee->follows()->select('temple_id')));
+
+                // Reminders reach only followers who asked for that kind.
+                $q->orWhere(fn (Builder $p) => $p->where('audience', 'temple_festival')
+                    ->whereIn('audience_id', $devotee->follows()->where('notify_festivals', true)->select('temple_id')));
+                $q->orWhere(fn (Builder $p) => $p->where('audience', 'temple_event')
+                    ->whereIn('audience_id', $devotee->follows()->where('notify_events', true)->select('temple_id')));
             }
         });
     }

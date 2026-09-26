@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\DeityController;
 use App\Http\Controllers\Api\V1\DevoteeProfileController;
 use App\Http\Controllers\Api\V1\DevotionalDayController;
+use App\Http\Controllers\Api\V1\EngagementController;
 use App\Http\Controllers\Api\V1\EventController;
 use App\Http\Controllers\Api\V1\FacilityController;
 use App\Http\Controllers\Api\V1\GeocodeController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Api\V1\MemoryController;
 use App\Http\Controllers\Api\V1\PassportController;
 use App\Http\Controllers\Api\V1\PincodeController;
 use App\Http\Controllers\Api\V1\PujaBookingController;
+use App\Http\Controllers\Api\V1\ReviewController;
 use App\Http\Controllers\Api\V1\PassportShareController;
 use App\Http\Controllers\Api\V1\SevaDriveController;
 use App\Http\Controllers\Api\V1\StateController;
@@ -91,6 +93,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         ->name('passports.show');
 
     Route::get('events', [EventController::class, 'index'])->name('events.index');
+
+    // What devotees said about visiting: published accounts, with the
+    // per-dimension summary. There is no overall score, on purpose.
+    Route::get('temples/{temple:slug}/reviews', [ReviewController::class, 'index'])->name('temples.reviews.index');
 
     /*
     |--------------------------------------------------------------------------
@@ -197,6 +203,27 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         // Multipart, so it cannot ride on the JSON PATCH above.
         Route::post('me/avatar', [DevoteeProfileController::class, 'storeAvatar'])->name('me.avatar.store');
         Route::delete('me/avatar', [DevoteeProfileController::class, 'destroyAvatar'])->name('me.avatar.destroy');
+
+        /*
+        |----------------------------------------------------------------------
+        | Likes, follows and accounts of visits
+        |----------------------------------------------------------------------
+        |
+        | Idempotent puts and deletes: the app records a tap at once and sends
+        | it when it can. A review is moderated before anyone else reads it.
+        |
+        */
+        Route::get('me/likes', [EngagementController::class, 'likes'])->name('me.likes.index');
+        Route::put('me/likes/{temple:slug}', [EngagementController::class, 'like'])->name('me.likes.store');
+        Route::delete('me/likes/{temple:slug}', [EngagementController::class, 'unlike'])->name('me.likes.destroy');
+        Route::get('me/follows', [EngagementController::class, 'follows'])->name('me.follows.index');
+        Route::put('me/follows/{temple:slug}', [EngagementController::class, 'follow'])->name('me.follows.store');
+        Route::delete('me/follows/{temple:slug}', [EngagementController::class, 'unfollow'])->name('me.follows.destroy');
+        Route::get('me/reviews', [ReviewController::class, 'mine'])->name('me.reviews.index');
+        Route::post('temples/{temple:slug}/reviews', [ReviewController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('me.reviews.store');
+        Route::delete('me/reviews/{review}', [ReviewController::class, 'destroy'])->name('me.reviews.destroy');
 
         Route::get('me/saved-temples', [DevoteeProfileController::class, 'savedTemples'])->name('me.saved.index');
         Route::put('me/saved-temples/{temple:slug}', [DevoteeProfileController::class, 'saveTemple'])->name('me.saved.store');

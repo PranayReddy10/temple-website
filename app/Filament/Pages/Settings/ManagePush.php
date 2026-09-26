@@ -32,6 +32,7 @@ class ManagePush extends SettingsPage
     {
         return [
             'push_enabled' => ['boolean', false],
+            'notifications_event_reminders' => ['boolean', true],
             'firebase_project_id' => ['string', null],
             'firebase_messaging_sender_id' => ['string', null],
             'firebase_android_api_key' => ['string', null],
@@ -51,6 +52,8 @@ class ManagePush extends SettingsPage
                 ->schema([
                     Toggle::make('push_enabled')->label('Send push notifications')
                         ->helperText('When off, notifications still appear in the app\'s inbox; nothing is pushed to phones.'),
+                    Toggle::make('notifications_event_reminders')->label('Festival and event reminders')
+                        ->helperText('The evening before a temple\'s festival or event, its followers who asked for reminders are told (inbox, and push when set up). Per temple and per kind, chosen by each devotee in the app. Needs the scheduler cron.'),
                 ]),
             Section::make('Firebase project')
                 ->description('Firebase console → Project settings → General. Add an Android app and an iOS app, then copy their ids here.')

@@ -145,6 +145,33 @@ class Devotee extends Authenticatable
         return $this->hasMany(SevaDrive::class)->latest();
     }
 
+    public function likes(): HasMany
+    {
+        return $this->hasMany(TempleLike::class);
+    }
+
+    public function follows(): HasMany
+    {
+        return $this->hasMany(TempleFollow::class);
+    }
+
+    public function likedTemples(): BelongsToMany
+    {
+        return $this->belongsToMany(Temple::class, 'temple_likes')->withTimestamps();
+    }
+
+    public function followedTemples(): BelongsToMany
+    {
+        return $this->belongsToMany(Temple::class, 'temple_follows')
+            ->withPivot(['notify_festivals', 'notify_events'])
+            ->withTimestamps();
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(TempleReview::class)->latest();
+    }
+
     /** Pujas and sevas booked through the app. */
     public function pujaBookings(): HasMany
     {

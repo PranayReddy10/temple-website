@@ -15,3 +15,8 @@ Schedule::command('notifications:send-due')->everyMinute()->withoutOverlapping()
 // Subscriptions end on their own (entitlements read ends_at); this only
 // marks payments abandoned at the gateway, so the admin list stays honest.
 Schedule::command('payments:expire-stale')->hourly();
+
+// Festival and event reminders for followers who asked, the evening before.
+// 18:00 in the devotional time zone: early enough to plan, late enough not
+// to wake anyone.
+Schedule::command('notifications:event-reminders')->dailyAt('18:00')->timezone(config('brand.timezone', 'Asia/Kolkata'));

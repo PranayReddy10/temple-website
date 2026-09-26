@@ -52,7 +52,7 @@ class TempleController extends Controller
             'deity', 'state', 'district', 'categories', 'aliases',
             'timings',
             'pujas' => fn ($q) => $q->published(),
-            'photos' => fn ($q) => $q->published(),
+            'photos' => fn ($q) => $q->published()->with('devotee:id,name,avatar_path,avatar_disk'),
             'primaryPhoto',
             'closures' => fn ($q) => $q->upcoming(),
             'events' => fn ($q) => $q->published()->upcoming(),

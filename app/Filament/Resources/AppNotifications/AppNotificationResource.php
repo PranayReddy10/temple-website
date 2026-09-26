@@ -78,7 +78,10 @@ class AppNotificationResource extends Resource
                     ->visible(fn (Get $get) => $get('link_type') === 'url'),
             ]),
             Section::make('Who receives it')->columns(2)->schema([
-                Select::make('audience')->options(AppNotification::AUDIENCES)->default('all')->required()->live()->native(false),
+                Select::make('audience')
+                    ->options(collect(AppNotification::AUDIENCES)->except(array_keys(AppNotification::REMINDER_AUDIENCES))->all())
+                    ->default('all')->required()->live()->native(false)
+                    ->helperText('Festival and event reminders to followers are sent automatically the evening before (Settings → Push).'),
                 Select::make('platform')->options(['android' => 'Android', 'ios' => 'iPhone / iPad'])
                     ->visible(fn (Get $get) => $get('audience') === 'platform')->required(fn (Get $get) => $get('audience') === 'platform'),
                 Select::make('audience_id')->label('Temple')->searchable()->key('aud_temple')

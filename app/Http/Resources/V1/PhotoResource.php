@@ -27,6 +27,12 @@ class PhotoResource extends JsonResource
             'credit' => $this->credit,
             'source_url' => $this->source_url,
             'license' => $this->license,
+            // Promoted from a devotee's Photo Stamp: shown with their name.
+            'is_devotee_photo' => $this->isDevoteePhoto(),
+            'devotee' => $this->isDevoteePhoto() ? [
+                'name' => \App\Http\Resources\V1\ReviewResource::shortName($this->devotee?->name ?? $this->credit),
+                'avatar_url' => $this->devotee?->avatarUrl(),
+            ] : null,
         ];
     }
 }

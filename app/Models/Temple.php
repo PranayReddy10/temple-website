@@ -135,6 +135,37 @@ class Temple extends Model
         return $this->hasMany(PujaBooking::class);
     }
 
+    // --- What devotees add ---
+
+    public function likes(): HasMany
+    {
+        return $this->hasMany(TempleLike::class);
+    }
+
+    public function follows(): HasMany
+    {
+        return $this->hasMany(TempleFollow::class);
+    }
+
+    /** Devotees who asked to be told about this temple. */
+    public function followers(): BelongsToMany
+    {
+        return $this->belongsToMany(Devotee::class, 'temple_follows')
+            ->withPivot(['notify_festivals', 'notify_events'])
+            ->withTimestamps();
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(TempleReview::class)->latest();
+    }
+
+    /** Gallery photos that came from devotees' Photo Stamps. */
+    public function devoteePhotos(): HasMany
+    {
+        return $this->hasMany(TemplePhoto::class)->whereNotNull('visit_photo_id');
+    }
+
     public function facilities(): BelongsToMany
     {
         return $this->belongsToMany(Facility::class)

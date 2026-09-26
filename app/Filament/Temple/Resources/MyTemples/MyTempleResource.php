@@ -7,6 +7,7 @@ use App\Filament\Resources\Temples\RelationManagers\ClosuresRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\EventsRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\PhotosRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\PujasRelationManager;
+use App\Filament\Resources\Temples\RelationManagers\ReviewsRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\TimingsRelationManager;
 use App\Filament\Temple\Resources\MyTemples\Pages\EditMyTemple;
 use App\Filament\Temple\Resources\MyTemples\Pages\ListMyTemples;
@@ -103,6 +104,7 @@ class MyTempleResource extends Resource
             TimingsRelationManager::class,
             PujasRelationManager::class,
             BookingsRelationManager::class,
+            ReviewsRelationManager::class,
             EventsRelationManager::class,
             ClosuresRelationManager::class,
         ];

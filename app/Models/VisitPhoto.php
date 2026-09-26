@@ -67,6 +67,18 @@ class VisitPhoto extends Model
         return $this->belongsTo(User::class, 'moderated_by');
     }
 
+    /** The gallery photo this was promoted into, once staff did so. */
+    public function promotedPhoto(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(TemplePhoto::class, 'visit_photo_id');
+    }
+
+    /** Approved, shared, and not a memory: fit to be offered to the temple's gallery. */
+    public function canBePromoted(): bool
+    {
+        return $this->isVisibleToOthers() && $this->promotedPhoto === null;
+    }
+
     // --- Scopes ---
 
     /**

@@ -27,7 +27,7 @@ class PhotosRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('id')
-            ->modifyQueryUsing(fn (Builder $query) => $query->with('temple:id,name'))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['temple:id,name', 'promotedPhoto:id,visit_photo_id,temple_objected_at']))
             ->columns(PhotoModeration::columns(withDevotee: false))
             ->filters(PhotoModeration::filters())
             ->recordActions(PhotoModeration::recordActions())

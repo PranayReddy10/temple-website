@@ -39,6 +39,8 @@ class VisitPhotoResource extends JsonResource
 
             'is_public' => (bool) $this->is_public,
             'is_visible_to_others' => $this->isVisibleToOthers(),
+            // Staff put it in the temple's own gallery, credited to the devotee.
+            'is_in_temple_gallery' => $this->relationLoaded('promotedPhoto') ? $this->promotedPhoto !== null : $this->promotedPhoto()->exists(),
 
             'created_at' => $this->created_at?->toIso8601String(),
         ];
