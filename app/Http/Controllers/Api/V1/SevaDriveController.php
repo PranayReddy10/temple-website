@@ -319,7 +319,7 @@ class SevaDriveController extends Controller
             throw ValidationException::withMessages(['drive' => 'You are organising this drive.']);
         }
 
-        if (! $drive->status->acceptsVolunteers()) {
+        if (! $drive->acceptsVolunteers()) {
             throw ValidationException::withMessages(['drive' => 'This drive is no longer taking volunteers.']);
         }
 
@@ -577,14 +577,16 @@ class SevaDriveController extends Controller
             ->with(['organiser:id,name,avatar_disk,avatar_path', 'temple:id,slug,name', 'state:id,name', 'media'])
             ->withCount('volunteers')
             ->withSum('volunteers', 'party_size')
-            ->withSum(['donations as donations_raised' => fn (Builder $q) => $q->whereNotNull('confirmed_at')], 'amount');
+            ->withSum(['donations as donations_raised' => fn (Builder $q) => $q->whereNotNull('confirmed_at')], 'amount')
+            ->withCount(['donations as donors_count' => fn (Builder $q) => $q->whereNotNull('confirmed_at')]);
     }
 
     protected function loadDetail(SevaDrive $drive): SevaDrive
     {
         return $drive->load(['organiser:id,name,avatar_disk,avatar_path', 'temple:id,slug,name', 'state:id,name', 'media', 'volunteers:id,seva_drive_id,devotee_id,party_size'])
-            ->loadCount('volunteers')
-            ->loadSum('volunteers', 'party_size');
+            ->loadCount(['volunteers', 'donations as donors_count' => fn (Builder $q) => $q->whereNotNull('confirmed_at')])
+            ->loadSum('volunteers', 'party_size')
+            ->loadSum(['donations as donations_raised' => fn (Builder $q) => $q->whereNotNull('confirmed_at')], 'amount');
     }
 
     /** @return array<string, mixed> */

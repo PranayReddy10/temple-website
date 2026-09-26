@@ -7,6 +7,7 @@ use App\Enums\TicketKind;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\SupportTicketResource;
 use App\Models\Devotee;
+use App\Models\SevaDrive;
 use App\Models\SupportTicket;
 use App\Models\Temple;
 use App\Models\TempleEvent;
@@ -43,6 +44,7 @@ class SupportController extends Controller
         'event' => TempleEvent::class,
         'puja' => TemplePuja::class,
         'photo' => VisitPhoto::class,
+        'seva_drive' => SevaDrive::class,
     ];
 
     /** The categories and their descriptions, so the app need not hard-code them. */
@@ -194,6 +196,12 @@ class SupportController extends Controller
         $record = $model::find($id);
 
         if ($record === null) {
+            throw new NotFoundHttpException();
+        }
+
+        // A drive nobody can see yet cannot be reported by somebody who has
+        // seen it; its id being guessable should not make it reportable.
+        if ($record instanceof SevaDrive && ! $record->status->isPublic()) {
             throw new NotFoundHttpException();
         }
 

@@ -23,6 +23,9 @@ enum SevaDriveStatus: string implements HasColor, HasIcon, HasLabel
     case Verified = 'verified';
     case Cancelled = 'cancelled';
 
+    /** Taken down by staff. Seen only by staff and, with the reason, the organiser. */
+    case Blocked = 'blocked';
+
     public function getLabel(): string
     {
         return match ($this) {
@@ -32,6 +35,7 @@ enum SevaDriveStatus: string implements HasColor, HasIcon, HasLabel
             self::Completed => 'Done — verifying',
             self::Verified => 'Verified',
             self::Cancelled => 'Cancelled',
+            self::Blocked => 'Blocked',
         };
     }
 
@@ -44,6 +48,7 @@ enum SevaDriveStatus: string implements HasColor, HasIcon, HasLabel
             self::Completed => 'primary',
             self::Verified => 'success',
             self::Cancelled => 'gray',
+            self::Blocked => 'danger',
         };
     }
 
@@ -56,6 +61,7 @@ enum SevaDriveStatus: string implements HasColor, HasIcon, HasLabel
             self::Completed => 'heroicon-m-camera',
             self::Verified => 'heroicon-m-check-badge',
             self::Cancelled => 'heroicon-m-no-symbol',
+            self::Blocked => 'heroicon-m-shield-exclamation',
         };
     }
 

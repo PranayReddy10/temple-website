@@ -301,4 +301,68 @@ class SevaDriveApiTest extends TestCase
             'photos' => [UploadedFile::fake()->image('one-too-many.jpg')],
         ], self::JSON)->assertUnprocessable()->assertJsonValidationErrors('photos');
     }
+
+    public function test_anyone_sees_how_many_are_coming_and_how_much_was_raised(): void
+    {
+        $drive = $this->raise(Devotee::factory()->create());
+        $drive->forceFill(['status' => SevaDriveStatus::Verified])->save();
+        $drive->volunteers()->create(['devotee_id' => Devotee::factory()->create()->id, 'party_size' => 4]);
+        $drive->donations()->create(['amount' => 300])->forceFill(['confirmed_at' => now()])->save();
+        $drive->donations()->create(['amount' => 900]); // not confirmed: does not count
+
+        auth('devotee')->forgetUser();
+        $this->app['auth']->forgetGuards();
+
+        $this->getJson("/api/v1/seva-drives/{$drive->id}")
+            ->assertOk()
+            ->assertJsonPath('data.volunteers_joined', 4)
+            ->assertJsonPath('data.signups', 1)
+            ->assertJsonPath('data.donations.raised', 300)
+            ->assertJsonPath('data.donations.donors', 1)
+            ->assertJsonPath('data.organiser.is_team', false)
+            ->assertJsonPath('data.is_multi_day', false);
+    }
+
+    public function test_the_organiser_sees_who_is_coming(): void
+    {
+        $organiser = Devotee::factory()->create();
+        $drive = $this->raise($organiser);
+        $drive->forceFill(['status' => SevaDriveStatus::Approved])->save();
+        $volunteer = Devotee::factory()->create(['name' => 'Lakshmi']);
+        $drive->volunteers()->create(['devotee_id' => $volunteer->id, 'party_size' => 2, 'note' => 'Bringing sacks']);
+
+        Sanctum::actingAs($organiser, guard: 'devotee');
+
+        $this->getJson("/api/v1/me/seva-drives/{$drive->id}/volunteers")
+            ->assertOk()
+            ->assertJsonPath('data.0.name', 'Lakshmi')
+            ->assertJsonPath('data.0.party_size', 2)
+            ->assertJsonPath('data.0.note', 'Bringing sacks');
+    }
+
+    public function test_a_blocked_drive_shows_the_organiser_why_and_cannot_be_edited(): void
+    {
+        $organiser = Devotee::factory()->create();
+        $drive = $this->raise($organiser);
+        $drive->block('Photographs are not of this place.');
+
+        $this->getJson("/api/v1/seva-drives/{$drive->id}")
+            ->assertOk()
+            ->assertJsonPath('data.status.value', 'blocked')
+            ->assertJsonPath('data.mine.block_reason', 'Photographs are not of this place.');
+
+        $this->patchJson("/api/v1/me/seva-drives/{$drive->id}", ['title' => 'Trying again with a new title'])
+            ->assertUnprocessable();
+    }
+
+    public function test_a_misleading_drive_cannot_be_joined(): void
+    {
+        $drive = $this->raise(Devotee::factory()->create());
+        $drive->forceFill(['status' => SevaDriveStatus::Approved, 'is_misleading' => true, 'misleading_note' => 'Wrong place'])->save();
+
+        Sanctum::actingAs(Devotee::factory()->create(), guard: 'devotee');
+
+        $this->getJson("/api/v1/seva-drives/{$drive->id}")->assertJsonPath('data.viewer.can_join', false);
+        $this->postJson("/api/v1/seva-drives/{$drive->id}/join")->assertUnprocessable();
+    }
 }

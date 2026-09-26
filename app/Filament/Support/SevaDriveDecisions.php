@@ -93,6 +93,61 @@ class SevaDriveDecisions
                     $record->donations_enabled = ! $record->donations_enabled;
                     $record->save();
                 }),
+
+            /*
+             * Misleading: the drive stays up with a warning, because people
+             * who joined or gave need to see what happened to it; joining and
+             * donations close.
+             */
+            Action::make('mark_misleading')
+                ->label('Mark misleading')
+                ->icon('heroicon-o-exclamation-triangle')
+                ->color('warning')
+                ->visible(fn (SevaDrive $record): bool => ! $record->is_misleading && $record->status !== SevaDriveStatus::Blocked)
+                ->form([
+                    Textarea::make('misleading_note')
+                        ->label('What is misleading')
+                        ->required()
+                        ->rows(3)
+                        ->helperText('Shown on the drive in the app, as a warning to everybody. Joining and donations close.'),
+                ])
+                ->action(fn (SevaDrive $record, array $data) => $record->markMisleading($data['misleading_note'])),
+
+            Action::make('clear_misleading')
+                ->label('Remove misleading warning')
+                ->icon('heroicon-o-check-circle')
+                ->color('gray')
+                ->visible(fn (SevaDrive $record): bool => $record->is_misleading)
+                ->requiresConfirmation()
+                ->action(fn (SevaDrive $record) => $record->markMisleading(null)),
+
+            /*
+             * Blocked: taken down for everybody but staff and the organiser,
+             * who sees the reason. Unblocking puts it back as it was.
+             */
+            Action::make('block')
+                ->label('Block')
+                ->icon('heroicon-o-shield-exclamation')
+                ->color('danger')
+                ->visible(fn (SevaDrive $record): bool => $record->status !== SevaDriveStatus::Blocked)
+                ->form([
+                    Textarea::make('block_reason')
+                        ->label('Why')
+                        ->required()
+                        ->rows(3)
+                        ->helperText('The organiser sees this. Nobody else can open the drive while it is blocked.'),
+                ])
+                ->action(fn (SevaDrive $record, array $data) => $record->block($data['block_reason'])),
+
+            Action::make('unblock')
+                ->label('Unblock')
+                ->icon('heroicon-o-lock-open')
+                ->color('success')
+                ->visible(fn (SevaDrive $record): bool => $record->status === SevaDriveStatus::Blocked)
+                ->requiresConfirmation()
+                ->modalDescription(fn (SevaDrive $record): string => 'It goes back to "'
+                    .(SevaDriveStatus::tryFrom((string) $record->status_before_block)?->getLabel() ?? 'Waiting for review').'".')
+                ->action(fn (SevaDrive $record) => $record->unblock()),
         ];
     }
 
