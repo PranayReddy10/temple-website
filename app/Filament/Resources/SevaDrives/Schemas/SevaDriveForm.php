@@ -84,7 +84,30 @@ class SevaDriveForm
                             ->native(false)
                             ->placeholder('Not a listed temple'),
                         TextInput::make('address')->maxLength(255),
+                        TextInput::make('pincode')
+                            ->label('PIN code')
+                            ->maxLength(6)
+                            ->regex('/^[1-9][0-9]{5}$/')
+                            ->live(onBlur: true)
+                            ->helperText('Fills in the state, district and town.')
+                            ->afterStateUpdated(function (?string $state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get): void {
+                                $found = $state ? \App\Support\PincodeLookup::find($state) : null;
+
+                                if ($found === null) {
+                                    return;
+                                }
+
+                                if ($found['state_id']) {
+                                    $set('state_id', $found['state_id']);
+                                }
+                                $set('district', $found['district']);
+
+                                if (blank($get('city')) && count($found['places']) === 1) {
+                                    $set('city', $found['places'][0]['name']);
+                                }
+                            }),
                         TextInput::make('city')->label('Village / town / city')->maxLength(80),
+                        TextInput::make('district')->maxLength(80),
                         Select::make('state_id')->label('State')->relationship('state', 'name')->searchable()->preload()->native(false),
                         TextInput::make('meeting_point')->maxLength(255),
                         TextInput::make('latitude')->numeric()->minValue(-90)->maxValue(90),
@@ -142,6 +165,17 @@ class SevaDriveForm
         unset($data['before_photos']);
 
         $drive->forceFill($data);
+
+        // Choosing "Verified" in the form is verifying it: record who and
+        // when, as the Verify button does. Moving it away clears both.
+        if ($drive->status === SevaDriveStatus::Verified) {
+            $drive->verified_at ??= now();
+            $drive->verified_by ??= \Illuminate\Support\Facades\Auth::id();
+            $drive->completed_at ??= now();
+        } elseif ($drive->isDirty('status')) {
+            $drive->verified_at = null;
+            $drive->verified_by = null;
+        }
 
         return $drive;
     }

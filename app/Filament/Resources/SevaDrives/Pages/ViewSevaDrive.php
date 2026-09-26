@@ -129,7 +129,7 @@ class ViewSevaDrive extends ViewRecord
                     TextEntry::make('place_name')->label('Place'),
                     TextEntry::make('address')->placeholder('—'),
                     TextEntry::make('city')
-                        ->state(fn (SevaDrive $record): string => collect([$record->city, $record->state?->name])->filter()->implode(', ') ?: '—'),
+                        ->state(fn (SevaDrive $record): string => collect([$record->city, $record->district, $record->state?->name, $record->pincode])->filter()->implode(', ') ?: '—'),
                     TextEntry::make('temple.name')->label('Listed temple')->placeholder('Not a listed temple'),
                     TextEntry::make('meeting_point')->placeholder('—'),
                     TextEntry::make('map')
@@ -139,6 +139,10 @@ class ViewSevaDrive extends ViewRecord
                             ? 'https://www.google.com/maps?q='.$record->latitude.','.$record->longitude
                             : null, shouldOpenInNewTab: true)
                         ->color(fn (SevaDrive $record): ?string => $record->latitude !== null ? 'primary' : null),
+                    TextEntry::make('verifier.name')
+                        ->label('Verified by')
+                        ->visible(fn (SevaDrive $record): bool => $record->verified_at !== null)
+                        ->state(fn (SevaDrive $record): string => ($record->verifier?->name ?? 'Staff').' · '.$record->verified_at?->format('d M Y')),
                     TextEntry::make('date_label')->label('Dates')->state(fn (SevaDrive $record): string => $record->dateLabel())->columnSpan(2),
                     TextEntry::make('starts_at')->label('Starts')->dateTime('d M Y, H:i'),
                     TextEntry::make('ends_at')->label('Ends')->dateTime('d M Y, H:i')->placeholder('—'),

@@ -50,13 +50,17 @@ class SevaDriveDecisions
                 ->label('Verify the work')
                 ->icon('heroicon-o-check-badge')
                 ->color('success')
-                ->visible(fn (SevaDrive $record): bool => $record->status === SevaDriveStatus::Completed)
+                // From "done" as normal, but also straight from "open": staff
+                // who were there, or who have the after photographs another
+                // way, should not have to wait for the organiser to tap Done.
+                ->visible(fn (SevaDrive $record): bool => in_array($record->status, [SevaDriveStatus::Approved, SevaDriveStatus::Completed], true))
                 ->requiresConfirmation()
                 ->modalHeading('Verify this drive?')
                 ->modalDescription(fn (SevaDrive $record): string => 'Compare the before and after photographs first. Verifying shows a Verified badge'
                     .(filled($record->upi_id) ? ' and opens donations to '.$record->upi_id.'.' : '.'))
                 ->action(function (SevaDrive $record): void {
                     $record->status = SevaDriveStatus::Verified;
+                    $record->completed_at ??= now();
                     $record->verified_at = now();
                     $record->verified_by = Auth::id();
                     $record->save();

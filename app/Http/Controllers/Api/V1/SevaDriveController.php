@@ -67,6 +67,7 @@ class SevaDriveController extends Controller
             'temple' => ['nullable', 'string', 'max:191'],
             'state_id' => ['nullable', 'integer'],
             'q' => ['nullable', 'string', 'max:100'],
+            'verified' => ['nullable', 'boolean'],
         ]);
 
         $query = $this->withListing(SevaDrive::query()->publiclyVisible());
@@ -91,6 +92,10 @@ class SevaDriveController extends Controller
             $query->whereHas('temple', fn (Builder $q) => $q->where('slug', $request->input('temple')));
         }
 
+        if ($request->boolean('verified')) {
+            $query->where('status', SevaDriveStatus::Verified);
+        }
+
         if ($request->filled('state_id')) {
             $query->where('state_id', $request->integer('state_id'));
         }
@@ -99,7 +104,9 @@ class SevaDriveController extends Controller
             $term = '%'.str_replace(['%', '_'], ['\%', '\_'], $request->input('q')).'%';
             $query->where(fn (Builder $q) => $q->where('title', 'like', $term)
                 ->orWhere('place_name', 'like', $term)
-                ->orWhere('city', 'like', $term));
+                ->orWhere('city', 'like', $term)
+                ->orWhere('district', 'like', $term)
+                ->orWhere('pincode', $request->input('q')));
         }
 
         return SevaDriveResource::collection(
@@ -466,6 +473,8 @@ class SevaDriveController extends Controller
             'place_name' => [$required, 'string', 'max:191'],
             'address' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:80'],
+            'pincode' => ['nullable', 'string', 'regex:/^[1-9][0-9]{5}$/'],
+            'district' => ['nullable', 'string', 'max:80'],
             'state_id' => ['nullable', 'integer', 'exists:states,id'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],

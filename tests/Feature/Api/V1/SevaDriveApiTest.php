@@ -365,4 +365,27 @@ class SevaDriveApiTest extends TestCase
         $this->getJson("/api/v1/seva-drives/{$drive->id}")->assertJsonPath('data.viewer.can_join', false);
         $this->postJson("/api/v1/seva-drives/{$drive->id}/join")->assertUnprocessable();
     }
+
+    public function test_the_finished_list_can_show_only_verified_drives(): void
+    {
+        $verified = $this->raise(Devotee::factory()->create(), ['title' => 'Verified tank clean-up']);
+        $verified->forceFill(['status' => SevaDriveStatus::Verified, 'completed_at' => now()])->save();
+        $done = $this->raise(Devotee::factory()->create(), ['title' => 'Done, not yet verified']);
+        $done->forceFill(['status' => SevaDriveStatus::Completed, 'completed_at' => now()])->save();
+
+        $this->getJson('/api/v1/seva-drives?when=done')->assertJsonCount(2, 'data');
+        $this->getJson('/api/v1/seva-drives?when=done&verified=1')
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.title', 'Verified tank clean-up');
+    }
+
+    public function test_a_drive_keeps_its_pin_code_and_district(): void
+    {
+        $drive = $this->raise(Devotee::factory()->create(), ['pincode' => '508101', 'district' => 'Yadadri Bhuvanagiri']);
+
+        $this->assertSame('508101', $drive->pincode);
+        $this->getJson("/api/v1/seva-drives/{$drive->id}")
+            ->assertJsonPath('data.place.pincode', '508101')
+            ->assertJsonPath('data.place.district', 'Yadadri Bhuvanagiri');
+    }
 }

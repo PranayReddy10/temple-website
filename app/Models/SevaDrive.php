@@ -27,7 +27,7 @@ class SevaDrive extends Model
      * request must never be able to approve its own drive.
      */
     protected $fillable = [
-        'temple_id', 'title', 'cause', 'place_name', 'address', 'city', 'state_id',
+        'temple_id', 'title', 'cause', 'place_name', 'address', 'pincode', 'city', 'district', 'state_id',
         'latitude', 'longitude', 'meeting_point', 'problem', 'plan', 'what_to_bring',
         'starts_at', 'ends_at', 'volunteers_needed', 'contact_phone',
         'upi_id', 'upi_name', 'donation_goal', 'donation_purpose',

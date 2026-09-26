@@ -244,4 +244,37 @@ class SevaDriveAdminTest extends TestCase
             'subject' => 'Report', 'body' => 'x', 'name' => 'A', 'about_type' => 'seva_drive', 'about_id' => $drive->id,
         ])->assertNotFound();
     }
+
+    public function test_staff_can_verify_an_open_drive_without_waiting_for_the_organiser(): void
+    {
+        $staff = $this->staff();
+        $this->actingAs($staff);
+        $drive = $this->drive(['status' => SevaDriveStatus::Approved]);
+
+        Livewire::test(ViewSevaDrive::class, ['record' => $drive->getRouteKey()])
+            ->assertActionVisible('verify')
+            ->callAction('verify');
+
+        $drive->refresh();
+        $this->assertSame(SevaDriveStatus::Verified, $drive->status);
+        $this->assertNotNull($drive->completed_at);
+        $this->assertSame($staff->id, $drive->verified_by);
+    }
+
+    public function test_choosing_verified_in_the_form_records_who_verified_it(): void
+    {
+        $staff = $this->staff();
+        $this->actingAs($staff);
+        $drive = $this->drive(['status' => SevaDriveStatus::Completed]);
+
+        Livewire::test(EditSevaDrive::class, ['record' => $drive->getRouteKey()])
+            ->fillForm(['status' => SevaDriveStatus::Verified->value])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $drive->refresh();
+        $this->assertSame(SevaDriveStatus::Verified, $drive->status);
+        $this->assertSame($staff->id, $drive->verified_by);
+        $this->assertTrue($drive->acceptsDonations());
+    }
 }

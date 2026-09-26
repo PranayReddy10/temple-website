@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\FacilityController;
 use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\MemoryController;
 use App\Http\Controllers\Api\V1\PassportController;
+use App\Http\Controllers\Api\V1\PincodeController;
 use App\Http\Controllers\Api\V1\PassportShareController;
 use App\Http\Controllers\Api\V1\SevaDriveController;
 use App\Http\Controllers\Api\V1\StateController;
@@ -98,6 +99,13 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     | and a drive's UPI ID is served only once staff have verified the work.
     |
     */
+    // Typing a PIN code fills in the state, district and town. Throttled: it
+    // is answered by a third party on a cache miss.
+    Route::get('pincode/{pincode}', [PincodeController::class, 'show'])
+        ->where('pincode', '[0-9]{6}')
+        ->middleware('throttle:30,1')
+        ->name('pincode.show');
+
     Route::get('seva-drives/options', [SevaDriveController::class, 'options'])->name('seva.options');
     Route::get('seva-drives', [SevaDriveController::class, 'index'])->name('seva.index');
     Route::get('seva-drives/{drive}', [SevaDriveController::class, 'show'])
