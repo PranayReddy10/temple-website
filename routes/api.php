@@ -10,10 +10,12 @@ use App\Http\Controllers\Api\V1\DevoteeProfileController;
 use App\Http\Controllers\Api\V1\DevotionalDayController;
 use App\Http\Controllers\Api\V1\EventController;
 use App\Http\Controllers\Api\V1\FacilityController;
+use App\Http\Controllers\Api\V1\GeocodeController;
 use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\MemoryController;
 use App\Http\Controllers\Api\V1\PassportController;
 use App\Http\Controllers\Api\V1\PincodeController;
+use App\Http\Controllers\Api\V1\PujaBookingController;
 use App\Http\Controllers\Api\V1\PassportShareController;
 use App\Http\Controllers\Api\V1\SevaDriveController;
 use App\Http\Controllers\Api\V1\StateController;
@@ -106,6 +108,12 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         ->where('pincode', '[0-9]{6}')
         ->middleware('throttle:30,1')
         ->name('pincode.show');
+
+    // Dropping a pin fills in the same fields from the map. Throttled for
+    // the same reason, and because the map service asks to be.
+    Route::get('geocode/reverse', [GeocodeController::class, 'reverse'])
+        ->middleware('throttle:30,1')
+        ->name('geocode.reverse');
 
     Route::get('temple-suggestions/options', [TempleSuggestionController::class, 'options'])->name('temple-suggestions.options');
 
@@ -215,6 +223,29 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('me/checkout', [SubscriptionController::class, 'checkout'])->middleware('throttle:10,1')->name('me.checkout');
         Route::get('me/payments/{uuid}', [SubscriptionController::class, 'status'])->name('me.payments.show');
         Route::post('me/payments/{uuid}/confirm', [SubscriptionController::class, 'confirm'])->middleware('throttle:20,1')->name('me.payments.confirm');
+        /*
+        |----------------------------------------------------------------------
+        | Puja & seva booking
+        |----------------------------------------------------------------------
+        |
+        | Made against a temple's own listing, so created under the temple's
+        | URL; read back only as the devotee's own. Placing one is throttled
+        | like a checkout, because for a priced seva it is one.
+        |
+        */
+        Route::get('me/bookings', [PujaBookingController::class, 'index'])->name('me.bookings.index');
+        Route::get('me/bookings/{reference}', [PujaBookingController::class, 'show'])
+            ->where('reference', '[A-Za-z0-9]{6,16}')
+            ->name('me.bookings.show');
+        Route::post('me/bookings/{reference}/cancel', [PujaBookingController::class, 'cancel'])
+            ->where('reference', '[A-Za-z0-9]{6,16}')
+            ->name('me.bookings.cancel');
+        Route::post('temples/{temple:slug}/pujas/{puja}/bookings', [PujaBookingController::class, 'store'])
+            ->withoutScopedBindings()
+            ->whereNumber('puja')
+            ->middleware('throttle:10,1')
+            ->name('me.bookings.store');
+
         Route::post('me/passport/qr/reset', [PassportShareController::class, 'reset'])
             ->middleware('throttle:6,1')
             ->name('me.passport.qr.reset');

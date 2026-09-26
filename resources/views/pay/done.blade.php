@@ -8,7 +8,11 @@
     @if ($paid)
         <div class="mark">✓</div>
         <h1>Thank you</h1>
-        <p class="muted">{{ $payment->plan?->name }} is active on your account. You can return to the app.</p>
+        @if ($payment->isForBooking())
+            <p class="muted">Your booking for {{ $payment->description() }} is confirmed. Its code is in the app under My seva bookings; show it at the temple counter.</p>
+        @else
+            <p class="muted">{{ $payment->description() }} is active on your account. You can return to the app.</p>
+        @endif
     @elseif ($failed)
         <div class="mark">!</div>
         <h1>Payment not completed</h1>
@@ -16,7 +20,7 @@
     @else
         <div class="spinner"></div>
         <h1>Confirming your payment…</h1>
-        <p class="muted">This can take a minute. You can return to the app; your plan switches on as soon as the bank confirms.</p>
+        <p class="muted">This can take a minute. You can return to the app; {{ $payment->isForBooking() ? 'your booking is confirmed' : 'your plan switches on' }} as soon as the bank confirms.</p>
         <script>setTimeout(function () { location.reload(); }, 5000);</script>
     @endif
 </main>

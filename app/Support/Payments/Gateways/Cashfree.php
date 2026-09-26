@@ -68,7 +68,7 @@ class Cashfree implements PaymentGateway
                 'customer_phone' => preg_replace('/\D/', '', (string) $devotee->phone) ?: '9999999999',
             ]),
             'order_meta' => ['return_url' => route('pay.return', ['payment' => $payment, 'gateway' => 'cashfree'])],
-            'order_note' => $payment->plan?->name,
+            'order_note' => $payment->description(),
         ]);
 
         if (! $response->successful() || blank($response->json('payment_session_id'))) {

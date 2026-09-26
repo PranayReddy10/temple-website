@@ -38,16 +38,23 @@ class PincodeApiTest extends TestCase
 
     public function test_an_unknown_pin_code_is_a_404(): void
     {
-        Http::fake(['api.postalpincode.in/*' => Http::response([['Status' => 'Error', 'PostOffice' => null]])]);
+        // India Post says no, and so does the map.
+        Http::fake([
+            'api.postalpincode.in/*' => Http::response([['Status' => 'Error', 'PostOffice' => null]]),
+            'nominatim.openstreetmap.org/*' => Http::response([]),
+        ]);
 
         $this->getJson('/api/v1/pincode/999999')->assertNotFound();
     }
 
-    public function test_the_lookup_being_down_is_a_404_not_a_500(): void
+    public function test_the_lookup_being_down_is_a_503_not_a_500_or_a_wrong_code(): void
     {
-        Http::fake(['api.postalpincode.in/*' => Http::response('', 503)]);
+        Http::fake([
+            'api.postalpincode.in/*' => Http::response('', 503),
+            'nominatim.openstreetmap.org/*' => Http::response('', 503),
+        ]);
 
-        $this->getJson('/api/v1/pincode/500001')->assertNotFound();
+        $this->getJson('/api/v1/pincode/500001')->assertStatus(503);
     }
 
     public function test_only_six_digit_codes_are_asked_about(): void

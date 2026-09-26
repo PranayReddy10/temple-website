@@ -47,11 +47,15 @@ class PaymentResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->with(['devotee:id,name,email,phone', 'plan:id,name']))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['devotee:id,name,email,phone', 'plan:id,name', 'booking.puja:id,name', 'booking.temple:id,name']))
             ->columns([
                 TextColumn::make('created_at')->label('When')->dateTime('d M Y, H:i')->sortable(),
                 TextColumn::make('devotee.name')->label('Devotee')->searchable()->description(fn (Payment $r) => $r->devotee?->email ?? $r->devotee?->phone),
-                TextColumn::make('plan.name')->label('Plan')->placeholder('—'),
+                TextColumn::make('description')
+                    ->label('For')
+                    ->state(fn (Payment $r): string => $r->description())
+                    ->description(fn (Payment $r): ?string => $r->isForBooking() ? 'Seva booking '.($r->booking?->reference ?? '') : null)
+                    ->wrap(),
                 TextColumn::make('amount_paise')->label('Amount')->formatStateUsing(fn (Payment $r) => $r->amountLabel())->alignEnd()->sortable(),
                 TextColumn::make('gateway')->formatStateUsing(fn (string $state) => Payment::GATEWAYS[$state] ?? $state)->badge()->color('gray'),
                 TextColumn::make('status')->badge()->color(fn (string $state) => match ($state) {
@@ -63,6 +67,7 @@ class PaymentResource extends Resource
             ->filters([
                 SelectFilter::make('status')->options(['created' => 'Created', 'pending' => 'Pending', 'paid' => 'Paid', 'failed' => 'Failed', 'refunded' => 'Refunded']),
                 SelectFilter::make('gateway')->options(Payment::GATEWAYS),
+                SelectFilter::make('purpose')->options([Payment::SUBSCRIPTION => 'Plan', Payment::PUJA_BOOKING => 'Seva booking']),
             ])
             ->recordActions([
                 Action::make('reconcile')->label('Check with gateway')->icon('heroicon-o-arrow-path')->color('gray')

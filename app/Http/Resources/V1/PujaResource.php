@@ -12,6 +12,7 @@ class PujaResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'kind' => $this->kind?->value ?? 'puja',
             'name' => $this->name,
             'description' => $this->description,
             'image_url' => $this->imageUrl(),
@@ -38,6 +39,22 @@ class PujaResource extends JsonResource
                 'is_official' => $this->hasOfficialBooking(),
                 'label' => $this->bookingLabel(),
                 'note' => $this->booking_note,
+            ],
+
+            /*
+             * Booking through the app, where the temple has switched it on.
+             * `enabled` false means the listing is information only and the
+             * client shows it exactly as before; nothing here is compulsory.
+             */
+            'app_booking' => [
+                'enabled' => $this->isBookableInApp(),
+                'requires_payment' => $this->requiresPayment(),
+                'fee_per_person' => (bool) $this->fee_per_person,
+                'amount_paise' => $this->amountPaiseFor(1),
+                'max_people' => (int) $this->max_people_per_booking,
+                'advance_days' => (int) $this->booking_advance_days,
+                'capacity_per_day' => $this->booking_capacity_per_day,
+                'instructions' => $this->booking_instructions,
             ],
         ];
     }

@@ -2,23 +2,26 @@
 
 namespace App\Models;
 
+use App\Enums\PujaKind;
 use App\Support\MediaUrl;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TemplePuja extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'temple_id', 'name', 'description', 'image_disk', 'image_path',
+        'temple_id', 'kind', 'name', 'description', 'image_disk', 'image_path',
         'includes', 'eligibility',
         'starts_at', 'duration_minutes', 'schedule_note',
         'fee_amount', 'fee_currency', 'is_free',
         'booking_url', 'booking_is_official', 'booking_note',
+        'app_booking_enabled', 'fee_per_person', 'max_people_per_booking',
+        'booking_advance_days', 'booking_capacity_per_day', 'booking_instructions',
         'sort_order', 'is_published',
     ];
 
@@ -30,9 +33,14 @@ class TemplePuja extends Model
      * rendered without the rupee symbol.
      */
     protected $attributes = [
+        'kind' => 'puja',
         'fee_currency' => 'INR',
         'is_free' => false,
         'booking_is_official' => false,
+        'app_booking_enabled' => false,
+        'fee_per_person' => true,
+        'max_people_per_booking' => 10,
+        'booking_advance_days' => 30,
         'is_published' => true,
         'sort_order' => 0,
     ];
@@ -40,9 +48,15 @@ class TemplePuja extends Model
     protected function casts(): array
     {
         return [
+            'kind' => PujaKind::class,
             'fee_amount' => 'decimal:2',
             'is_free' => 'boolean',
             'booking_is_official' => 'boolean',
+            'app_booking_enabled' => 'boolean',
+            'fee_per_person' => 'boolean',
+            'max_people_per_booking' => 'integer',
+            'booking_advance_days' => 'integer',
+            'booking_capacity_per_day' => 'integer',
             'is_published' => 'boolean',
             'duration_minutes' => 'integer',
             'sort_order' => 'integer',
@@ -52,6 +66,11 @@ class TemplePuja extends Model
     public function temple(): BelongsTo
     {
         return $this->belongsTo(Temple::class);
+    }
+
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(PujaBooking::class);
     }
 
     /**
@@ -133,5 +152,59 @@ class TemplePuja extends Model
         return $this->booking_is_official
             ? 'Official booking'
             : 'Third-party link — not the official booking route';
+    }
+
+    // --- Booking through the app ---
+
+    /**
+     * Whether a devotee can book this in the app right now.
+     *
+     * Switched on by the temple per seva, and only meaningful with a price
+     * the app can charge or an explicit "free": a seva with no published
+     * price cannot be paid for, so it cannot be booked either.
+     */
+    public function isBookableInApp(): bool
+    {
+        return $this->app_booking_enabled
+            && $this->is_published
+            && ($this->is_free || $this->fee_amount !== null);
+    }
+
+    /** What one booking for this many people costs, in paise. */
+    public function amountPaiseFor(int $people): int
+    {
+        if ($this->is_free || $this->fee_amount === null) {
+            return 0;
+        }
+
+        $each = (int) round(((float) $this->fee_amount) * 100);
+
+        return $this->fee_per_person ? $each * max(1, $people) : $each;
+    }
+
+    public function requiresPayment(): bool
+    {
+        return ! $this->is_free && $this->fee_amount !== null && (float) $this->fee_amount > 0;
+    }
+
+    /** The last day a booking may be made for. */
+    public function lastBookableDate(): \Carbon\CarbonImmutable
+    {
+        return \App\Support\DevotionalClock::now()->addDays(max(0, (int) $this->booking_advance_days))->startOfDay();
+    }
+
+    /** How many more bookings a day can take, or null when the temple set no limit. */
+    public function remainingCapacityOn(\Carbon\CarbonInterface|string $date): ?int
+    {
+        if ($this->booking_capacity_per_day === null) {
+            return null;
+        }
+
+        $taken = $this->bookings()
+            ->whereDate('booked_for', $date)
+            ->whereIn('status', [\App\Enums\BookingStatus::PendingPayment->value, \App\Enums\BookingStatus::Confirmed->value, \App\Enums\BookingStatus::Verified->value])
+            ->count();
+
+        return max(0, $this->booking_capacity_per_day - $taken);
     }
 }

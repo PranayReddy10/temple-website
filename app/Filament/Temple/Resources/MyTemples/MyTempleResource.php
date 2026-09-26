@@ -2,6 +2,7 @@
 
 namespace App\Filament\Temple\Resources\MyTemples;
 
+use App\Filament\Resources\Temples\RelationManagers\BookingsRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\ClosuresRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\EventsRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\PhotosRelationManager;
@@ -101,6 +102,7 @@ class MyTempleResource extends Resource
             PhotosRelationManager::class,
             TimingsRelationManager::class,
             PujasRelationManager::class,
+            BookingsRelationManager::class,
             EventsRelationManager::class,
             ClosuresRelationManager::class,
         ];

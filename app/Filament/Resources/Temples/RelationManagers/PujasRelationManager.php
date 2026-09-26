@@ -47,7 +47,8 @@ class PujasRelationManager extends RelationManager
                     fn (TemplePuja $record): string => $record->image_disk ?? config('filesystems.media'),
                 )->label('')->height(40)->circular(),
 
-                TextColumn::make('name')->searchable()->weight('medium')->wrap(),
+                TextColumn::make('name')->searchable()->weight('medium')->wrap()
+                    ->description(fn (TemplePuja $record): ?string => $record->kind?->getLabel()),
 
                 TextColumn::make('when')
                     ->label('When')
@@ -85,6 +86,17 @@ class PujasRelationManager extends RelationManager
                         'Third party' => 'warning',
                         default => 'gray',
                     }),
+
+                IconColumn::make('app_booking_enabled')
+                    ->label('In app')
+                    ->state(fn (TemplePuja $record): bool => $record->isBookableInApp())
+                    ->boolean()
+                    ->trueIcon('heroicon-o-device-phone-mobile')
+                    ->falseIcon('heroicon-o-minus')
+                    ->falseColor('gray')
+                    ->tooltip(fn (TemplePuja $record): string => $record->isBookableInApp()
+                        ? 'Devotees book this in the app'
+                        : 'Information only; booking in the app is off'),
 
                 IconColumn::make('is_published')->label('Published')->boolean(),
             ])

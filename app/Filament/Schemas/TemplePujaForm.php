@@ -2,9 +2,12 @@
 
 namespace App\Filament\Schemas;
 
+use App\Enums\PujaKind;
 use App\Models\TemplePuja;
 use App\Support\UploadRules;
+use Closure;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
@@ -40,8 +43,15 @@ class TemplePujaForm
                         TextInput::make('name')
                             ->required()
                             ->maxLength(255)
-                            ->placeholder('e.g. Abhishekam, Archana, Kalyanotsavam')
-                            ->columnSpanFull(),
+                            ->placeholder('e.g. Abhishekam, Archana, Kalyanotsavam'),
+
+                        Select::make('kind')
+                            ->label('Kind')
+                            ->options(PujaKind::class)
+                            ->default(PujaKind::Puja)
+                            ->required()
+                            ->native(false)
+                            ->helperText('The app groups the list by this. Prasadam ordered in the app is collected at the counter.'),
 
                         Textarea::make('description')->rows(3)->columnSpanFull(),
 
@@ -118,6 +128,66 @@ class TemplePujaForm
                         TextInput::make('booking_note')
                             ->label('Booking note')
                             ->maxLength(255),
+                    ]),
+
+                Section::make('Book through the app')
+                    ->columns(2)
+                    ->description('Optional, per seva. Off, the app shows the seva as information only, with the booking link above if there is one. On, devotees book (and pay the published fee) in the app and show a code at your counter, where you scan it and mark it received. Nothing changes for sevas you leave off.')
+                    ->icon('heroicon-o-device-phone-mobile')
+                    ->collapsible()
+                    ->schema([
+                        Toggle::make('app_booking_enabled')
+                            ->label('Devotees can book this in the app')
+                            ->live()
+                            ->columnSpanFull()
+                            // Said here as well as enforced in the observer,
+                            // so the person switching it on learns why it
+                            // will not stay on rather than finding it off.
+                            ->rule(fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
+                                if ($value && ! $get('is_free') && blank($get('fee_amount'))) {
+                                    $fail('To take bookings in the app, publish the fee above or mark the seva free.');
+                                }
+                            }),
+
+                        Toggle::make('fee_per_person')
+                            ->label('Fee is per person')
+                            ->helperText('On: ₹100 × 3 people = ₹300. Off: one fee for the booking however many come.')
+                            ->default(true)
+                            ->visible(fn (Get $get): bool => (bool) $get('app_booking_enabled')),
+
+                        TextInput::make('max_people_per_booking')
+                            ->label('People per booking, at most')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(500)
+                            ->default(10)
+                            ->visible(fn (Get $get): bool => (bool) $get('app_booking_enabled')),
+
+                        TextInput::make('booking_advance_days')
+                            ->label('Book up to (days ahead)')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(365)
+                            ->default(30)
+                            ->visible(fn (Get $get): bool => (bool) $get('app_booking_enabled')),
+
+                        TextInput::make('booking_capacity_per_day')
+                            ->label('Bookings per day, at most')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(10000)
+                            ->placeholder('No limit')
+                            ->helperText('Leave blank for no limit.')
+                            ->visible(fn (Get $get): bool => (bool) $get('app_booking_enabled')),
+
+                        Textarea::make('booking_instructions')
+                            ->label('Instructions for the devotee')
+                            ->rows(3)
+                            ->maxLength(2000)
+                            ->placeholder('Report at the seva counter 30 minutes before, with this code. Bring a coconut and flowers.')
+                            ->helperText('Shown after they book, and in their booking.')
+                            ->columnSpanFull()
+                            ->visible(fn (Get $get): bool => (bool) $get('app_booking_enabled')),
                     ]),
 
                 Section::make('Publishing')

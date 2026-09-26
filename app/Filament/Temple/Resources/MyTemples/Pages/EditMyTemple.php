@@ -2,6 +2,7 @@
 
 namespace App\Filament\Temple\Resources\MyTemples\Pages;
 
+use App\Filament\Temple\Pages\ScanBooking;
 use App\Filament\Temple\Pages\ScanPassport;
 use App\Filament\Temple\Resources\MyTemples\MyTempleResource;
 use Filament\Actions\Action;
@@ -38,7 +39,12 @@ class EditMyTemple extends EditRecord
             Action::make('scanPassport')
                 ->label('Scan a passport')
                 ->icon('heroicon-o-identification')
+                ->color('gray')
                 ->url(ScanPassport::getUrl()),
+            Action::make('scanBooking')
+                ->label('Scan a booking')
+                ->icon('heroicon-o-ticket')
+                ->url(ScanBooking::getUrl()),
         ];
     }
 

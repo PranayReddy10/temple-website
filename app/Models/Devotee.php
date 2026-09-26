@@ -145,6 +145,12 @@ class Devotee extends Authenticatable
         return $this->hasMany(SevaDrive::class)->latest();
     }
 
+    /** Pujas and sevas booked through the app. */
+    public function pujaBookings(): HasMany
+    {
+        return $this->hasMany(PujaBooking::class)->latest();
+    }
+
     public function supportTickets(): HasMany
     {
         return $this->hasMany(SupportTicket::class);

@@ -1,8 +1,8 @@
 @extends('pay.layout')
-@section('title', $payment->plan?->name ?? 'Payment')
+@section('title', $payment->description() ?? 'Payment')
 @section('body')
 <main class="card">
-    <h1>{{ $payment->plan?->name }}</h1>
+    <h1>{{ $payment->description() }}</h1>
     <p class="amount">{{ $payment->amountLabel() }}</p>
     <p class="muted">Secure payment by Razorpay: UPI, cards, net banking and wallets.</p>
     <div class="spinner" id="wait"></div>
@@ -23,7 +23,7 @@
             amount: {{ $payment->amount_paise }},
             currency: {{ \Illuminate\Support\Js::from($payment->currency) }},
             name: {{ \Illuminate\Support\Js::from(config('brand.name')) }},
-            description: {{ \Illuminate\Support\Js::from($payment->plan?->name) }},
+            description: {{ \Illuminate\Support\Js::from($payment->description()) }},
             prefill: { name: {{ \Illuminate\Support\Js::from($devotee->name) }}, email: {{ \Illuminate\Support\Js::from($devotee->email) }}, contact: {{ \Illuminate\Support\Js::from($devotee->phone) }} },
             theme: { color: {{ \Illuminate\Support\Js::from(config('brand.colors.kumkum.hex')) }} },
             handler: function (r) {

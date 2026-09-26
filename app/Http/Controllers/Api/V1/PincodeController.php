@@ -11,12 +11,18 @@ class PincodeController extends Controller
 {
     public function show(string $pincode): JsonResponse
     {
-        $found = PincodeLookup::find($pincode);
+        $lookup = PincodeLookup::resolve($pincode);
 
-        if ($found === null) {
+        if ($lookup['found'] === null) {
+            // A directory we could not reach is not a verdict on the code.
+            // The app says so, and offers the pin on the map instead.
+            if (! $lookup['reachable']) {
+                return response()->json(['message' => 'The PIN code directory could not be reached. Drop a pin where you are, or fill in the address yourself.'], 503);
+            }
+
             return response()->json(['message' => 'No post office has that PIN code.'], 404);
         }
 
-        return response()->json(['data' => $found]);
+        return response()->json(['data' => $lookup['found']]);
     }
 }
