@@ -43,9 +43,12 @@ class DevoteeAuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        // Emails match whatever case they were typed in: a phone keyboard
+        // that capitalised the first letter must not lock anyone out.
+        $identifier = trim($validated['identifier']);
         $devotee = Devotee::query()
-            ->where('email', $validated['identifier'])
-            ->orWhere('phone', $validated['identifier'])
+            ->whereRaw('LOWER(email) = ?', [mb_strtolower($identifier)])
+            ->orWhere('phone', $identifier)
             ->first();
 
         // One message for both "no such account" and "wrong password", so the
