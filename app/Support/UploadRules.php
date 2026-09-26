@@ -84,6 +84,20 @@ final class UploadRules
                 'max_kb' => 12288,
                 'note' => 'The devotee\'s original and the generated card are stored separately.',
             ],
+            'seva_photo' => [
+                'label' => 'Seva drive photos',
+                'where' => 'Uploaded from the app, reviewed under Community → Seva Drives',
+                'types' => self::IMAGE_TYPES,
+                'max_kb' => 12288,
+                'note' => 'Before and after photographs of the place, up to '.\App\Models\SevaDriveMedia::MAX_PER_STAGE.' of each.',
+            ],
+            'seva_video' => [
+                'label' => 'Seva drive videos',
+                'where' => 'Uploaded from the app, reviewed under Community → Seva Drives',
+                'types' => [...self::VIDEO_TYPES, 'video/quicktime'],
+                'max_kb' => 51200,
+                'note' => 'The server\'s own PHP upload limit must be at least this large. A YouTube or Instagram link costs no storage and is offered alongside.',
+            ],
         ];
     }
 
@@ -107,6 +121,7 @@ final class UploadRules
                 'image/jpeg' => 'jpeg,jpg',
                 'audio/mpeg' => 'mp3',
                 'audio/mp4' => 'm4a',
+                'video/quicktime' => 'mov',
                 default => str($type)->afterLast('/')->toString(),
             })
             ->flatMap(fn (string $extensions): array => explode(',', $extensions))
@@ -134,6 +149,7 @@ final class UploadRules
                 'audio/wav' => 'WAV',
                 'video/mp4' => 'MP4',
                 'video/webm' => 'WebM',
+                'video/quicktime' => 'MOV',
                 default => strtoupper(str($type)->afterLast('/')->toString()),
             })
             ->unique()

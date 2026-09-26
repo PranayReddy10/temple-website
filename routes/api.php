@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\MemoryController;
 use App\Http\Controllers\Api\V1\PassportController;
 use App\Http\Controllers\Api\V1\PassportShareController;
+use App\Http\Controllers\Api\V1\SevaDriveController;
 use App\Http\Controllers\Api\V1\StateController;
 use App\Http\Controllers\Api\V1\SupportController;
 use App\Http\Controllers\Api\V1\TempleCategoryController;
@@ -86,6 +87,22 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         ->name('passports.show');
 
     Route::get('events', [EventController::class, 'index'])->name('events.index');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Seva drives
+    |--------------------------------------------------------------------------
+    |
+    | Devotees organising the care of old temples and heritage places. Reading
+    | is open, like the temple listing; only approved drives are ever listed,
+    | and a drive's UPI ID is served only once staff have verified the work.
+    |
+    */
+    Route::get('seva-drives/options', [SevaDriveController::class, 'options'])->name('seva.options');
+    Route::get('seva-drives', [SevaDriveController::class, 'index'])->name('seva.index');
+    Route::get('seva-drives/{drive}', [SevaDriveController::class, 'show'])
+        ->whereNumber('drive')
+        ->name('seva.show');
 
     /*
     |--------------------------------------------------------------------------
@@ -215,6 +232,39 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('me/support/{reference}/replies', [SupportController::class, 'reply'])
             ->middleware('throttle:20,1')
             ->name('me.support.reply');
+
+        /*
+        |----------------------------------------------------------------------
+        | Seva drives
+        |----------------------------------------------------------------------
+        |
+        | Raising one costs a moderator's attention and storage, so it is
+        | throttled like a photo upload. Everything under me/ is the
+        | organiser's, checked against the drive in the controller.
+        |
+        */
+        Route::get('me/seva-drives', [SevaDriveController::class, 'mine'])->name('me.seva.index');
+        Route::post('me/seva-drives', [SevaDriveController::class, 'store'])
+            ->middleware('throttle:6,1')
+            ->name('me.seva.store');
+        Route::patch('me/seva-drives/{drive}', [SevaDriveController::class, 'update'])->name('me.seva.update');
+        Route::post('me/seva-drives/{drive}/media', [SevaDriveController::class, 'addMedia'])
+            ->middleware('throttle:20,1')
+            ->name('me.seva.media.store');
+        Route::delete('me/seva-drives/{drive}/media/{media}', [SevaDriveController::class, 'destroyMedia'])->name('me.seva.media.destroy');
+        Route::post('me/seva-drives/{drive}/complete', [SevaDriveController::class, 'complete'])->name('me.seva.complete');
+        Route::post('me/seva-drives/{drive}/cancel', [SevaDriveController::class, 'cancel'])->name('me.seva.cancel');
+        Route::get('me/seva-drives/{drive}/volunteers', [SevaDriveController::class, 'volunteers'])->name('me.seva.volunteers');
+        Route::get('me/seva-drives/{drive}/donations', [SevaDriveController::class, 'donations'])->name('me.seva.donations');
+        Route::post('me/seva-drives/{drive}/donations/{donation}/confirm', [SevaDriveController::class, 'confirmDonation'])->name('me.seva.donations.confirm');
+
+        Route::post('seva-drives/{drive}/join', [SevaDriveController::class, 'join'])
+            ->middleware('throttle:20,1')
+            ->name('seva.join');
+        Route::delete('seva-drives/{drive}/join', [SevaDriveController::class, 'leave'])->name('seva.leave');
+        Route::post('seva-drives/{drive}/donations', [SevaDriveController::class, 'donate'])
+            ->middleware('throttle:10,1')
+            ->name('seva.donate');
 
         Route::get('me/yatras', [YatraController::class, 'index'])->name('me.yatras.index');
         Route::post('me/yatras', [YatraController::class, 'store'])->name('me.yatras.store');

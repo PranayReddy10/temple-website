@@ -188,6 +188,7 @@ See `docs/MONETISATION.md` for the store rules and the next phase.
 | **Reviews and ratings** | A devotee's account of a visit, moderated like photos are. The hard part is not the schema — it is that a place of worship is not a restaurant, and the product has to decide what it is asking people to rate | ⬜ |
 | **Devotee photos on a temple** | Approved Photo Stamps promoted into a temple's own gallery, credited to the devotee, with the temple able to object | ⬜ |
 | **Notifications** | Festival and event reminders for followed temples; the first thing here that can annoy people, so it starts opt-in and per-temple | ⬜ |
+| **Seva drives** | Devotees raise a clean-up or care drive for an old temple or heritage place with before photos and video; staff approve it; volunteers join; after photos are verified by staff, and only then is the organiser's UPI ID shown for donations. Admin under **Community → Seva Drives** | ✅ |
 
 The open question for reviews, worth settling before any of it is built: a
 one-to-five star average is how restaurants are ranked, and applying it to

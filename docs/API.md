@@ -355,6 +355,70 @@ POST /api/v1/me/support/{reference}/replies      20/min
 relation and cannot reach this response. Replying reopens a resolved ticket,
 because a resolution the reporter did not accept is not one.
 
+## Seva drives
+
+Devotees organising the care of old temples and heritage places — cleaning a
+shrine, desilting a temple tank, whitewashing a mandapam — and others joining
+them. Admin: **Community → Seva Drives**.
+
+```
+raised (pending) ─ staff approve ─▶ approved ─ organiser adds after-photos,
+                                     │          marks done ─▶ completed ─ staff verify ─▶ verified
+                                     └─ volunteers join                                   └─ UPI ID served
+```
+
+Reading is open, like the temple listing. Only `approved`, `completed` and
+`verified` drives are ever listed or shown to anybody but their organiser.
+
+```
+GET  /api/v1/seva-drives/options      causes, media limits
+GET  /api/v1/seva-drives              ?when=upcoming|done|all  &cause= &temple={slug} &state_id= &q=
+GET  /api/v1/seva-drives/{id}
+```
+
+Signed in:
+
+```
+GET    /api/v1/me/seva-drives                          mine; ?scope=joined for the ones I'm going to
+POST   /api/v1/me/seva-drives                          multipart, 6/min
+PATCH  /api/v1/me/seva-drives/{id}
+POST   /api/v1/me/seva-drives/{id}/media               multipart: stage=before|after, 20/min
+DELETE /api/v1/me/seva-drives/{id}/media/{media}
+POST   /api/v1/me/seva-drives/{id}/complete            completion_note
+POST   /api/v1/me/seva-drives/{id}/cancel
+GET    /api/v1/me/seva-drives/{id}/volunteers
+GET    /api/v1/me/seva-drives/{id}/donations
+POST   /api/v1/me/seva-drives/{id}/donations/{d}/confirm    received=true|false
+POST   /api/v1/seva-drives/{id}/join                   party_size, note
+DELETE /api/v1/seva-drives/{id}/join
+POST   /api/v1/seva-drives/{id}/donations              amount, upi_ref, message, is_anonymous
+```
+
+Raising one takes `title`, `cause`, `place_name`, `problem`, `plan`,
+`starts_at`, and at least one of `photos[]`, `video` or `video_url`; optional
+are `temple` (a published temple's slug), `address`, `city`, `state_id`,
+`latitude`, `longitude`, `meeting_point`, `what_to_bring`, `ends_at`,
+`volunteers_needed`, `contact_phone`, `upi_id`, `upi_name`, `donation_goal`
+and `donation_purpose`. Up to 8 photos and videos per stage.
+
+Rules the server holds, whatever the request says:
+
+- **Status is never taken from the request.** Approval and verification are
+  staff actions in the admin.
+- **The UPI ID is served only once staff have verified the work**, and not
+  while staff have paused donations. Before that `donations.upi_id` and
+  `donations.upi_link` are `null` for everybody but the organiser (`mine`).
+- **Once approved, only the arrangements can change** — meeting point, what
+  to bring, end time, volunteers wanted, phone and donation details. The
+  place, cause and plan are what volunteers signed up for.
+- Editing a drive staff turned down sends it back for review.
+- The organiser's `contact_phone` is shown only to people who have joined.
+- Money goes straight to the organiser's UPI; the platform never holds it.
+  Donors report what they sent and the organiser confirms each one;
+  `donations.raised` counts **confirmed** amounts only.
+- Adding after-photos to a verified drive puts it back to `completed`, so
+  new pictures are verified too.
+
 ## Mantras and devotional media
 
 `GET /api/v1/temples/{slug}`:

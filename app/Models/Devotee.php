@@ -139,6 +139,12 @@ class Devotee extends Authenticatable
         return $this->hasMany(Yatra::class)->latest();
     }
 
+    /** Seva drives this devotee organised. */
+    public function sevaDrives(): HasMany
+    {
+        return $this->hasMany(SevaDrive::class)->latest();
+    }
+
     public function supportTickets(): HasMany
     {
         return $this->hasMany(SupportTicket::class);
