@@ -62,6 +62,9 @@ class SubscriptionController extends Controller
             'plan' => ['required', 'string', Rule::exists('subscription_plans', 'code')->where('is_active', true)],
             'gateway' => ['nullable', 'string', Rule::in(array_keys(Payment::GATEWAYS))],
             'platform' => ['nullable', Rule::in(['android', 'ios', 'web'])],
+            // "sdk": the app pays through the gateway's own native SDK where
+            // it has one, and only falls back to the web checkout otherwise.
+            'mode' => ['nullable', Rule::in(['sdk', 'web'])],
         ]);
 
         $config = AppConfig::payments($validated['platform'] ?? 'android');
@@ -76,12 +79,96 @@ class SubscriptionController extends Controller
             abort(422, $e->getMessage());
         }
 
+        $sdk = null;
+
+        if (($validated['mode'] ?? 'web') === 'sdk' && in_array($payment->gateway, self::NATIVE_SDK, true)) {
+            try {
+                $sdk = $this->sdk($payment->load('plan', 'devotee'));
+            } catch (Throwable $e) {
+                // The web checkout below still works; the app uses it.
+                Log::warning('Native checkout could not start', ['payment' => $payment->uuid, 'error' => $e->getMessage()]);
+            }
+        }
+
         return response()->json(['data' => [
             'payment' => $this->paymentArray($payment->load('plan')),
+            // Present when the app should open the gateway's SDK; null means
+            // use checkout_url in the system browser tab.
+            'sdk' => $sdk,
             'checkout_url' => URL::temporarySignedRoute('pay.show', now()->addMinutes(30), ['payment' => $payment]),
             // The in-app browser closes when it reaches this page.
             'done_url' => route('pay.done', ['payment' => $payment]),
         ]], 201);
+    }
+
+    /** Gateways the app pays through natively rather than a web page. */
+    protected const NATIVE_SDK = ['razorpay', 'cashfree'];
+
+    /**
+     * What the gateway's SDK needs to open its payment sheet.
+     *
+     * @return array<string, mixed>
+     */
+    protected function sdk(Payment $payment): array
+    {
+        $start = $this->payments->gateway($payment->gateway)->start($payment)['data'] ?? [];
+        $devotee = $payment->devotee;
+
+        return match ($payment->gateway) {
+            'razorpay' => [
+                'gateway' => 'razorpay',
+                'key' => $start['key'],
+                'order_id' => $start['order_id'],
+                'amount_paise' => $payment->amount_paise,
+                'currency' => $payment->currency,
+                'name' => config('brand.name'),
+                'description' => $payment->plan?->name,
+                'prefill' => array_filter([
+                    'name' => $devotee?->name,
+                    'email' => $devotee?->email,
+                    'contact' => $devotee?->phone,
+                ]),
+                'theme_color' => config('brand.colors.saffron.hex'),
+            ],
+            'cashfree' => [
+                'gateway' => 'cashfree',
+                'order_id' => $payment->gateway_order_id,
+                'session_id' => $start['session_id'],
+                'environment' => ($start['mode'] ?? 'sandbox') === 'production' ? 'production' : 'sandbox',
+            ],
+        };
+    }
+
+    /**
+     * The app reports how its SDK checkout ended. Nothing here is trusted on
+     * its own: Razorpay's result is checked by its signature, and every
+     * gateway is asked directly when there is no signature to check.
+     */
+    public function confirm(Request $request, string $uuid): JsonResponse
+    {
+        $request->validate([
+            'razorpay_payment_id' => ['nullable', 'string', 'max:64'],
+            'razorpay_order_id' => ['nullable', 'string', 'max:64'],
+            'razorpay_signature' => ['nullable', 'string', 'max:128'],
+        ]);
+
+        $payment = $request->user()->payments()->where('uuid', $uuid)->with('plan')->first()
+            ?? throw new NotFoundHttpException();
+
+        // A signature for a different order is not this payment's.
+        if ($request->filled('razorpay_order_id') && $request->input('razorpay_order_id') !== $payment->gateway_order_id) {
+            abort(422, 'That result belongs to another order.');
+        }
+
+        try {
+            $payment = $this->payments->reconcile($payment, $request->filled('razorpay_signature') ? $request : null)->load('plan');
+        } catch (Throwable $e) {
+            Log::warning('Payment confirm failed', ['payment' => $payment->uuid, 'error' => $e->getMessage()]);
+        }
+
+        return response()->json(['data' => $this->paymentArray($payment) + [
+            'entitlements' => $request->user()->entitlements(),
+        ]]);
     }
 
     /** How a payment stands, asking the gateway if it is still open. */

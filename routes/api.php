@@ -186,6 +186,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('me/subscription', [SubscriptionController::class, 'show'])->name('me.subscription');
         Route::post('me/checkout', [SubscriptionController::class, 'checkout'])->middleware('throttle:10,1')->name('me.checkout');
         Route::get('me/payments/{uuid}', [SubscriptionController::class, 'status'])->name('me.payments.show');
+        Route::post('me/payments/{uuid}/confirm', [SubscriptionController::class, 'confirm'])->middleware('throttle:20,1')->name('me.payments.confirm');
         Route::post('me/passport/qr/reset', [PassportShareController::class, 'reset'])
             ->middleware('throttle:6,1')
             ->name('me.passport.qr.reset');
