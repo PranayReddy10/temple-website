@@ -59,7 +59,13 @@ class ManageSettings extends Page
         'community_submissions_enabled' => ['boolean', null],
         'temple_self_publish_enabled' => ['boolean', null],
         'seva_requires_approval' => ['boolean', null],
+        'reviews_require_approval' => ['boolean', null],
         'maintenance_notice' => ['string', null],
+    ];
+
+    /** Switches that are on until someone turns them off. */
+    protected const BOOLEAN_DEFAULTS = [
+        'reviews_require_approval' => true,
     ];
 
     /** Only a super admin may change site-wide configuration. */
@@ -77,7 +83,7 @@ class ManageSettings extends Page
 
             $values[$key] = match (true) {
                 $stored !== null => $stored,
-                $type === 'boolean' => false,
+                $type === 'boolean' => self::BOOLEAN_DEFAULTS[$key] ?? false,
                 $configKey !== null => config($configKey),
                 default => null,
             };
@@ -147,6 +153,10 @@ class ManageSettings extends Page
                         Toggle::make('seva_requires_approval')
                             ->label('Seva drives need approval before they are listed')
                             ->helperText('Off: a drive a devotee raises is listed at once, marked "not verified". On: it waits under Community → Seva Drives → To approve.'),
+
+                        Toggle::make('reviews_require_approval')
+                            ->label('Reviews need approval before they are published')
+                            ->helperText('On: a devotee\'s review waits under Reviews until a moderator approves it. Off: it is published on the temple page as soon as it is sent (and after every edit); moderators can still reject one afterwards.'),
 
                         Toggle::make('temple_self_publish_enabled')
                             ->label('Verified temples may publish without review')

@@ -41,7 +41,7 @@ class ReviewApiTest extends TestCase
 
     protected function approve(TempleReview $review): TempleReview
     {
-        $review->update(['status' => ReviewStatus::Approved, 'moderated_at' => now()]);
+        $review->update(['status' => ReviewStatus::Approved, 'moderated_at' => now(), 'moderated_by' => User::factory()->create()->id]);
 
         return $review;
     }
@@ -225,5 +225,38 @@ class ReviewApiTest extends TestCase
 
         $this->assertSame(ReviewStatus::Rejected, $review->fresh()->status);
         $this->getJson('/api/v1/me/reviews')->assertJsonPath('data.0.status.value', 'rejected')->assertJsonPath('data.0.moderation_note', 'Speaks about people, not the visit.');
+    }
+
+    public function test_with_approval_switched_off_a_review_is_published_as_it_is_sent(): void
+    {
+        \App\Models\Setting::set('reviews_require_approval', '0', 'boolean');
+        $this->signIn();
+
+        $this->postJson('/api/v1/temples/review-temple/reviews', ['queue_rating' => 4, 'body' => 'Short queue at dawn.'])
+            ->assertCreated()->assertJsonPath('data.status.value', 'approved');
+        $this->getJson('/api/v1/temples/review-temple/reviews')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('meta.summary.count', 1);
+
+        // An edit stays published too, and the author gets no message about
+        // their own review going up.
+        $this->postJson('/api/v1/temples/review-temple/reviews', ['queue_rating' => 2])
+            ->assertOk()->assertJsonPath('data.status.value', 'approved');
+        $this->getJson('/api/v1/notifications?platform=android')->assertOk()->assertJsonCount(0, 'data');
+
+        // Moderators can still take one down afterwards.
+        $review = TempleReview::query()->firstOrFail();
+        $review->update(['status' => ReviewStatus::Rejected, 'moderated_by' => User::factory()->create()->id]);
+        $this->getJson('/api/v1/temples/review-temple/reviews')->assertOk()->assertJsonCount(0, 'data');
+    }
+
+    public function test_the_review_approval_switch_is_in_settings_and_on_until_turned_off(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => UserRole::SuperAdmin, 'is_active' => true]), 'web');
+
+        Livewire::test(\App\Filament\Pages\ManageSettings::class)
+            ->assertFormSet(['reviews_require_approval' => true])
+            ->fillForm(['reviews_require_approval' => false])
+            ->call('save');
+
+        $this->assertFalse(\App\Http\Controllers\Api\V1\ReviewController::requiresApproval());
     }
 }

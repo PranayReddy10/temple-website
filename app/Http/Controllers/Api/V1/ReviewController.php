@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\ReviewStatus;
 use App\Enums\TempleStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\ReviewResource;
 use App\Models\DevoteeVisit;
+use App\Models\Setting;
 use App\Models\Temple;
 use App\Models\TempleReview;
 use App\Support\DevotionalClock;
@@ -18,9 +20,11 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 /**
  * Accounts of visits: reading a temple's, writing one's own.
  *
- * Nothing here is published on arrival. A review reaches other devotees
- * once a moderator has read it, the same way a photo does; the author sees
- * theirs, and where it stands, straight away.
+ * By default nothing here is published on arrival: a review reaches other
+ * devotees once a moderator has read it, the same way a photo does. The
+ * "Reviews need approval" setting turns that off, and a review is then
+ * published as it is sent. Either way the author sees theirs, and where it
+ * stands, straight away.
  */
 class ReviewController extends Controller
 {
@@ -89,8 +93,8 @@ class ReviewController extends Controller
 
         $visitedOn = $validated['visited_on'] ?? $visit?->visited_on?->toDateString() ?? DevotionalClock::now()->toDateString();
 
-        // One account per temple per devotee: writing again edits it (and
-        // sends it back for review), whatever day it is about, rather than
+        // One account per temple per devotee: writing again edits it (and,
+        // while reviews need approval, sends it back for review), whatever day it is about, rather than
         // stacking a second one under the same name.
         $review = TempleReview::query()
             ->where('devotee_id', $request->user()->getKey())
@@ -108,7 +112,7 @@ class ReviewController extends Controller
             $review->{$field} = $validated[$field] ?? null;
         }
         $review->devotee_visit_id = $visit?->getKey() ?? $review->devotee_visit_id;
-        $review->status = \App\Enums\ReviewStatus::Pending;
+        $review->status = self::requiresApproval() ? ReviewStatus::Pending : ReviewStatus::Approved;
         $review->moderated_at = null;
         $review->moderated_by = null;
         $review->moderation_note = null;
@@ -117,6 +121,12 @@ class ReviewController extends Controller
         return (new ReviewResource($review->load(['temple:id,slug,name,city', 'devotee:id,name,avatar_path,avatar_disk,home_state_id'])))
             ->response()
             ->setStatusCode($created ? 201 : 200);
+    }
+
+    /** On unless an admin has switched it off under Settings → Features. */
+    public static function requiresApproval(): bool
+    {
+        return (bool) Setting::get('reviews_require_approval', '1');
     }
 
     public function destroy(Request $request, TempleReview $review): JsonResponse
