@@ -66,7 +66,12 @@ class SevaDriveForm
                             ->required()
                             ->native(false)
                             ->default(SevaDriveStatus::Approved->value)
-                            ->helperText('A drive the team creates can go straight to "Open for volunteers".'),
+                            ->helperText('Open for volunteers lists it at once. It moves to Completed by itself after its last day.'),
+
+                        \Filament\Forms\Components\Toggle::make('verified')
+                            ->label('Verified by the team')
+                            ->helperText('Shows a Verified badge and, with a UPI ID, opens donations. Does not end the drive.')
+                            ->afterStateHydrated(fn (\Filament\Forms\Components\Toggle $component, ?SevaDrive $record) => $component->state($record?->verified_at !== null)),
 
                         Textarea::make('problem')->label('The place now — what is wrong')->required()->rows(4)->columnSpanFull(),
                         Textarea::make('plan')->label('The plan — what will be done')->required()->rows(4)->columnSpanFull(),
@@ -162,17 +167,18 @@ class SevaDriveForm
      */
     public static function fill(SevaDrive $drive, array $data): SevaDrive
     {
-        unset($data['before_photos']);
+        $verified = (bool) ($data['verified'] ?? false);
+        unset($data['before_photos'], $data['verified']);
 
         $drive->forceFill($data);
 
-        // Choosing "Verified" in the form is verifying it: record who and
-        // when, as the Verify button does. Moving it away clears both.
-        if ($drive->status === SevaDriveStatus::Verified) {
-            $drive->verified_at ??= now();
-            $drive->verified_by ??= \Illuminate\Support\Facades\Auth::id();
-            $drive->completed_at ??= now();
-        } elseif ($drive->isDirty('status')) {
+        // The switch is the badge: record who and when, as the Verify
+        // button does; switching it off takes the badge away.
+        if ($verified && $drive->verified_at === null) {
+            $drive->verified_at = now();
+            $drive->verified_by = \Illuminate\Support\Facades\Auth::id();
+            $drive->verification_requested_at = null;
+        } elseif (! $verified) {
             $drive->verified_at = null;
             $drive->verified_by = null;
         }

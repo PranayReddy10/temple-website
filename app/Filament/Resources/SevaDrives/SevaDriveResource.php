@@ -109,7 +109,19 @@ class SevaDriveResource extends Resource
                         ? 'of '.$record->volunteers_needed
                         : null),
 
-                TextColumn::make('status')->badge()->sortable(),
+                TextColumn::make('status')
+                    ->badge()
+                    ->state(fn (SevaDrive $record) => $record->effectiveStatus())
+                    ->sortable(),
+
+                IconColumn::make('verified_at')
+                    ->label('Verified')
+                    ->state(fn (SevaDrive $record): bool => $record->isVerified())
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-badge')
+                    ->falseIcon(fn (SevaDrive $record): string => $record->verificationPending() ? 'heroicon-o-clock' : 'heroicon-o-minus')
+                    ->falseColor(fn (SevaDrive $record): string => $record->verificationPending() ? 'warning' : 'gray')
+                    ->tooltip(fn (SevaDrive $record): string => $record->isVerified() ? 'Verified' : ($record->verificationPending() ? 'Organiser asked for verification' : 'Not verified')),
 
                 IconColumn::make('is_misleading')
                     ->label('Misleading')
@@ -136,6 +148,10 @@ class SevaDriveResource extends Resource
                     ->toggle(),
                 SelectFilter::make('status')->options(SevaDriveStatus::class)->multiple(),
                 SelectFilter::make('cause')->options(SevaCause::class)->multiple(),
+                Filter::make('verification_requested')
+                    ->label('Verification requested')
+                    ->query(fn (Builder $query): Builder => $query->verificationRequested())
+                    ->toggle(),
                 Filter::make('reported')
                     ->label('Has open reports')
                     ->query(fn (Builder $query): Builder => $query->whereHas('reports', fn ($q) => $q->open()))

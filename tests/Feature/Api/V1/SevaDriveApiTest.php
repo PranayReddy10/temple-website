@@ -64,21 +64,37 @@ class SevaDriveApiTest extends TestCase
         return SevaDrive::findOrFail($id);
     }
 
-    public function test_a_devotee_raises_a_drive_that_waits_for_review(): void
+    public function test_a_new_drive_is_listed_at_once_as_not_verified(): void
     {
         $organiser = Devotee::factory()->create();
 
         $drive = $this->raise($organiser, ['video_url' => 'https://youtu.be/abc123']);
 
-        $this->assertSame(SevaDriveStatus::Pending, $drive->status);
+        $this->assertSame(SevaDriveStatus::Approved, $drive->status);
         $this->assertSame(2, $drive->media()->where('stage', 'before')->count());
         $this->assertSame($organiser->id, $drive->devotee_id);
 
-        // Not listed, and not visible to anybody else, until approved.
-        $this->getJson('/api/v1/seva-drives')->assertOk()->assertJsonCount(0, 'data');
+        Sanctum::actingAs(Devotee::factory()->create(), guard: 'devotee');
+        $this->getJson('/api/v1/seva-drives')->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson("/api/v1/seva-drives/{$drive->id}")
+            ->assertOk()
+            ->assertJsonPath('data.is_verified', false)
+            ->assertJsonPath('data.status.value', 'approved')
+            ->assertJsonPath('data.viewer.can_join', true);
+    }
+
+    public function test_with_approval_switched_on_a_new_drive_waits_for_review(): void
+    {
+        \App\Models\Setting::set('seva_requires_approval', '1', 'boolean');
+
+        $drive = $this->raise(Devotee::factory()->create());
+
+        $this->assertSame(SevaDriveStatus::Pending, $drive->status);
 
         Sanctum::actingAs(Devotee::factory()->create(), guard: 'devotee');
+        $this->getJson('/api/v1/seva-drives')->assertJsonCount(0, 'data');
         $this->getJson("/api/v1/seva-drives/{$drive->id}")->assertNotFound();
+        $this->postJson("/api/v1/seva-drives/{$drive->id}/join")->assertNotFound();
     }
 
     public function test_a_drive_needs_a_photograph_of_the_place(): void
@@ -92,9 +108,10 @@ class SevaDriveApiTest extends TestCase
 
     public function test_a_devotee_cannot_approve_their_own_drive(): void
     {
-        $drive = $this->raise(Devotee::factory()->create(), ['status' => 'verified', 'donations_enabled' => true]);
+        $drive = $this->raise(Devotee::factory()->create(), ['status' => 'completed', 'verified_at' => now()->toIso8601String(), 'donations_enabled' => true]);
 
-        $this->assertSame(SevaDriveStatus::Pending, $drive->status);
+        $this->assertSame(SevaDriveStatus::Approved, $drive->status);
+        $this->assertFalse($drive->isVerified());
     }
 
     public function test_the_upi_id_is_served_only_once_the_work_is_verified(): void
@@ -108,7 +125,7 @@ class SevaDriveApiTest extends TestCase
             ->assertJsonPath('data.donations.open', false)
             ->assertJsonPath('data.donations.upi_id', null);
 
-        $drive->forceFill(['status' => SevaDriveStatus::Verified])->save();
+        $drive->forceFill(['status' => SevaDriveStatus::Completed, 'verified_at' => now()])->save();
 
         $this->getJson("/api/v1/seva-drives/{$drive->id}")
             ->assertJsonPath('data.donations.open', true)
@@ -153,13 +170,58 @@ class SevaDriveApiTest extends TestCase
             ->assertJsonPath('data.volunteers_joined', 0);
     }
 
-    public function test_a_pending_drive_cannot_be_joined(): void
+    public function test_a_drive_whose_last_day_is_over_is_completed_and_closed_to_joining(): void
     {
         $drive = $this->raise(Devotee::factory()->create());
 
         Sanctum::actingAs(Devotee::factory()->create(), guard: 'devotee');
+        $this->travelTo(now()->addWeeks(2));
 
-        $this->postJson("/api/v1/seva-drives/{$drive->id}/join")->assertNotFound();
+        $this->getJson("/api/v1/seva-drives/{$drive->id}")
+            ->assertJsonPath('data.status.value', 'completed')
+            ->assertJsonPath('data.viewer.can_join', false);
+        $this->postJson("/api/v1/seva-drives/{$drive->id}/join")->assertUnprocessable();
+
+        $this->getJson('/api/v1/seva-drives')->assertJsonCount(0, 'data');
+        $this->getJson('/api/v1/seva-drives?when=done')->assertJsonCount(1, 'data');
+    }
+
+    public function test_verifying_does_not_end_a_drive(): void
+    {
+        $drive = $this->raise(Devotee::factory()->create());
+        $drive->verify(null);
+
+        $volunteer = Devotee::factory()->create();
+        Sanctum::actingAs($volunteer, guard: 'devotee');
+
+        $this->postJson("/api/v1/seva-drives/{$drive->id}/join")
+            ->assertOk()
+            ->assertJsonPath('data.status.value', 'approved')
+            ->assertJsonPath('data.is_verified', true)
+            ->assertJsonPath('data.donations.open', true)
+            // Verified and open: a volunteer can still back out.
+            ->assertJsonPath('data.viewer.can_leave', true);
+
+        $this->getJson('/api/v1/seva-drives')->assertJsonCount(1, 'data');
+    }
+
+    public function test_the_organiser_asks_for_verification(): void
+    {
+        $organiser = Devotee::factory()->create();
+        $drive = $this->raise($organiser);
+
+        $this->getJson("/api/v1/seva-drives/{$drive->id}")->assertJsonPath('data.viewer.can_request_verification', true);
+
+        $this->postJson("/api/v1/me/seva-drives/{$drive->id}/request-verification", ['note' => 'The temple trust can confirm.'])
+            ->assertOk()
+            ->assertJsonPath('data.verification.requested', true)
+            ->assertJsonPath('data.viewer.can_request_verification', false);
+
+        $this->assertSame(1, SevaDrive::query()->verificationRequested()->count());
+        $this->assertSame('The temple trust can confirm.', $drive->fresh()->verification_note);
+
+        Sanctum::actingAs(Devotee::factory()->create(), guard: 'devotee');
+        $this->postJson("/api/v1/me/seva-drives/{$drive->id}/request-verification")->assertNotFound();
     }
 
     public function test_the_organiser_closes_the_drive_with_after_photographs(): void
@@ -175,10 +237,6 @@ class SevaDriveApiTest extends TestCase
         ], self::JSON)->assertUnprocessable()->assertJsonValidationErrors('stage');
 
         $this->travelTo(now()->addWeeks(2));
-
-        $this->postJson("/api/v1/me/seva-drives/{$drive->id}/complete", [
-            'completion_note' => 'Twenty-two of us cleared the steps and filled fourteen bags.',
-        ])->assertUnprocessable()->assertJsonValidationErrors('media');
 
         $this->post("/api/v1/me/seva-drives/{$drive->id}/media", [
             'stage' => 'after',
@@ -242,14 +300,25 @@ class SevaDriveApiTest extends TestCase
         $donor = Devotee::factory()->create();
         Sanctum::actingAs($donor, guard: 'devotee');
 
-        $this->postJson("/api/v1/seva-drives/{$drive->id}/donations", ['amount' => 500])->assertNotFound();
+        // Not verified: no donations.
+        $this->postJson("/api/v1/seva-drives/{$drive->id}/donations", ['amount' => 500])->assertUnprocessable();
 
-        $drive->forceFill(['status' => SevaDriveStatus::Verified])->save();
+        $drive->forceFill(['status' => SevaDriveStatus::Completed, 'verified_at' => now()])->save();
 
         $donationId = $this->postJson("/api/v1/seva-drives/{$drive->id}/donations", [
             'amount' => 500,
             'upi_ref' => '425312345678',
-        ])->assertCreated()->json('data.id');
+            'payment_app' => 'phonepe',
+            'paid_on' => now()->subDay()->toDateString(),
+        ])->assertCreated()
+            ->assertJsonPath('data.payment_app_label', 'PhonePe')
+            ->assertJsonPath('data.paid_on', now()->subDay()->toDateString())
+            ->json('data.id');
+
+        $this->postJson("/api/v1/seva-drives/{$drive->id}/donations", ['amount' => 100, 'paid_on' => now()->addDay()->toDateString()])
+            ->assertUnprocessable()->assertJsonValidationErrors('paid_on');
+        $this->postJson("/api/v1/seva-drives/{$drive->id}/donations", ['amount' => 100, 'payment_app' => 'bitcoin'])
+            ->assertUnprocessable()->assertJsonValidationErrors('payment_app');
 
         $this->getJson("/api/v1/seva-drives/{$drive->id}")->assertJsonPath('data.donations.raised', 0);
 
@@ -265,7 +334,7 @@ class SevaDriveApiTest extends TestCase
         $upcoming->forceFill(['status' => SevaDriveStatus::Approved])->save();
 
         $done = $this->raise(Devotee::factory()->create(), ['title' => 'Finished whitewash drive']);
-        $done->forceFill(['status' => SevaDriveStatus::Verified, 'completed_at' => now()])->save();
+        $done->forceFill(['status' => SevaDriveStatus::Completed, 'verified_at' => now(), 'completed_at' => now()])->save();
 
         $this->getJson('/api/v1/seva-drives')
             ->assertJsonCount(1, 'data')
@@ -305,7 +374,7 @@ class SevaDriveApiTest extends TestCase
     public function test_anyone_sees_how_many_are_coming_and_how_much_was_raised(): void
     {
         $drive = $this->raise(Devotee::factory()->create());
-        $drive->forceFill(['status' => SevaDriveStatus::Verified])->save();
+        $drive->forceFill(['status' => SevaDriveStatus::Completed, 'verified_at' => now()])->save();
         $drive->volunteers()->create(['devotee_id' => Devotee::factory()->create()->id, 'party_size' => 4]);
         $drive->donations()->create(['amount' => 300])->forceFill(['confirmed_at' => now()])->save();
         $drive->donations()->create(['amount' => 900]); // not confirmed: does not count
@@ -369,7 +438,7 @@ class SevaDriveApiTest extends TestCase
     public function test_the_finished_list_can_show_only_verified_drives(): void
     {
         $verified = $this->raise(Devotee::factory()->create(), ['title' => 'Verified tank clean-up']);
-        $verified->forceFill(['status' => SevaDriveStatus::Verified, 'completed_at' => now()])->save();
+        $verified->forceFill(['status' => SevaDriveStatus::Completed, 'verified_at' => now(), 'completed_at' => now()])->save();
         $done = $this->raise(Devotee::factory()->create(), ['title' => 'Done, not yet verified']);
         $done->forceFill(['status' => SevaDriveStatus::Completed, 'completed_at' => now()])->save();
 
@@ -387,5 +456,17 @@ class SevaDriveApiTest extends TestCase
         $this->getJson("/api/v1/seva-drives/{$drive->id}")
             ->assertJsonPath('data.place.pincode', '508101')
             ->assertJsonPath('data.place.district', 'Yadadri Bhuvanagiri');
+    }
+
+    public function test_drives_verified_under_the_old_rules_become_completed_and_keep_the_badge(): void
+    {
+        $drive = $this->raise(Devotee::factory()->create());
+        \Illuminate\Support\Facades\DB::table('seva_drives')->where('id', $drive->id)->update(['status' => 'verified', 'verified_at' => null]);
+
+        (require database_path('migrations/2026_10_02_000001_separate_seva_verification_from_status.php'))->up();
+
+        $drive->refresh();
+        $this->assertSame(SevaDriveStatus::Completed, $drive->status);
+        $this->assertTrue($drive->isVerified());
     }
 }

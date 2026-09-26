@@ -99,7 +99,8 @@ class SevaDriveAdminTest extends TestCase
             ->callAction('verify');
 
         $drive->refresh();
-        $this->assertSame(SevaDriveStatus::Verified, $drive->status);
+        $this->assertTrue($drive->isVerified());
+        $this->assertSame(SevaDriveStatus::Completed, $drive->status);
         $this->assertSame($staff->id, $drive->verified_by);
         $this->assertTrue($drive->acceptsDonations());
         $this->assertStringStartsWith('upi://pay?pa=stepwell@okicici', $drive->upiLink());
@@ -108,7 +109,7 @@ class SevaDriveAdminTest extends TestCase
     public function test_pausing_donations_hides_the_upi_id(): void
     {
         $this->actingAs($this->staff());
-        $drive = $this->drive(['status' => SevaDriveStatus::Verified]);
+        $drive = $this->drive(['status' => SevaDriveStatus::Completed, 'verified_at' => now()]);
 
         Livewire::test(ViewSevaDrive::class, ['record' => $drive->getRouteKey()])
             ->callAction('toggle_donations');
@@ -189,7 +190,7 @@ class SevaDriveAdminTest extends TestCase
     public function test_marking_misleading_warns_everybody_and_closes_joining_and_donations(): void
     {
         $this->actingAs($this->staff());
-        $drive = $this->drive(['status' => SevaDriveStatus::Verified]);
+        $drive = $this->drive(['status' => SevaDriveStatus::Completed, 'verified_at' => now()]);
         $this->assertTrue($drive->acceptsDonations());
 
         Livewire::test(ViewSevaDrive::class, ['record' => $drive->getRouteKey()])
@@ -256,24 +257,55 @@ class SevaDriveAdminTest extends TestCase
             ->callAction('verify');
 
         $drive->refresh();
-        $this->assertSame(SevaDriveStatus::Verified, $drive->status);
-        $this->assertNotNull($drive->completed_at);
+        $this->assertTrue($drive->isVerified());
+        // Verifying is a badge: the drive is still open, not finished.
+        $this->assertSame(SevaDriveStatus::Approved, $drive->status);
+        $this->assertNull($drive->completed_at);
         $this->assertSame($staff->id, $drive->verified_by);
     }
 
-    public function test_choosing_verified_in_the_form_records_who_verified_it(): void
+    public function test_a_verification_request_can_be_declined_with_a_reason(): void
+    {
+        $this->actingAs($this->staff());
+        $drive = $this->drive(['status' => SevaDriveStatus::Approved]);
+        $drive->requestVerification('Please check');
+
+        Livewire::test(ViewSevaDrive::class, ['record' => $drive->getRouteKey()])
+            ->assertActionVisible('decline_verification')
+            ->callAction('decline_verification', data: ['reason' => 'Add after photographs of the tank.']);
+
+        $drive->refresh();
+        $this->assertFalse($drive->isVerified());
+        $this->assertFalse($drive->verificationPending());
+        $this->assertSame('Add after photographs of the tank.', $drive->moderation_note);
+    }
+
+    public function test_the_approval_switch_is_in_settings(): void
+    {
+        $this->actingAs($this->staff());
+
+        Livewire::test(\App\Filament\Pages\ManageSettings::class)
+            ->fillForm(['seva_requires_approval' => true])
+            ->call('save');
+
+        $this->assertTrue((bool) \App\Models\Setting::get('seva_requires_approval'));
+    }
+
+    public function test_the_verified_switch_in_the_form_records_who_verified_it(): void
     {
         $staff = $this->staff();
         $this->actingAs($staff);
         $drive = $this->drive(['status' => SevaDriveStatus::Completed]);
 
         Livewire::test(EditSevaDrive::class, ['record' => $drive->getRouteKey()])
-            ->fillForm(['status' => SevaDriveStatus::Verified->value])
+            ->assertFormSet(['verified' => false])
+            ->fillForm(['verified' => true])
             ->call('save')
             ->assertHasNoFormErrors();
 
         $drive->refresh();
-        $this->assertSame(SevaDriveStatus::Verified, $drive->status);
+        $this->assertSame(SevaDriveStatus::Completed, $drive->status);
+        $this->assertTrue($drive->isVerified());
         $this->assertSame($staff->id, $drive->verified_by);
         $this->assertTrue($drive->acceptsDonations());
     }

@@ -21,7 +21,7 @@ class ListSevaDrives extends ListRecords
 
     public function getSubheading(): ?string
     {
-        return 'Devotees organising the care of old temples and heritage places. Approve a drive before it is listed; verify the before and after before it may ask for donations. Block or mark misleading anything reported.';
+        return 'Devotees organising the care of old temples and heritage places. New drives are listed at once as "not verified" (switch on approval in Settings to review them first). Verify a drive to give it a badge and open donations. Block or mark misleading anything reported.';
     }
 
     protected function getHeaderActions(): array
@@ -40,19 +40,27 @@ class ListSevaDrives extends ListRecords
                 ->badge(fn (): int => $count(SevaDriveStatus::Pending))
                 ->badgeColor('warning'),
 
-            'verify' => Tab::make('To verify')
-                ->icon('heroicon-m-camera')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', SevaDriveStatus::Completed))
-                ->badge(fn (): int => $count(SevaDriveStatus::Completed))
+            'verify' => Tab::make('Verification requested')
+                ->icon('heroicon-m-check-badge')
+                ->modifyQueryUsing(fn (Builder $query) => $query->verificationRequested())
+                ->badge(fn (): int => SevaDrive::query()->verificationRequested()->count())
                 ->badgeColor('warning'),
 
-            'live' => Tab::make('Open for volunteers')
+            'live' => Tab::make('Upcoming')
                 ->icon('heroicon-m-user-group')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', SevaDriveStatus::Approved)),
+                ->modifyQueryUsing(fn (Builder $query) => $query->upcoming()),
+
+            'completed' => Tab::make('Completed')
+                ->icon('heroicon-m-flag')
+                ->modifyQueryUsing(fn (Builder $query) => $query->finished()),
+
+            'unverified' => Tab::make('Not verified')
+                ->icon('heroicon-m-question-mark-circle')
+                ->modifyQueryUsing(fn (Builder $query) => $query->publiclyVisible()->whereNull('verified_at')),
 
             'verified' => Tab::make('Verified')
                 ->icon('heroicon-m-check-badge')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', SevaDriveStatus::Verified)),
+                ->modifyQueryUsing(fn (Builder $query) => $query->verified()),
 
             'reported' => Tab::make('Reported')
                 ->icon('heroicon-m-flag')
@@ -70,6 +78,10 @@ class ListSevaDrives extends ListRecords
 
     public function getDefaultActiveTab(): string|int|null
     {
-        return SevaDrive::query()->where('status', SevaDriveStatus::Pending)->exists() ? 'review' : 'verify';
+        return match (true) {
+            SevaDrive::query()->where('status', SevaDriveStatus::Pending)->exists() => 'review',
+            SevaDrive::query()->verificationRequested()->exists() => 'verify',
+            default => 'live',
+        };
     }
 }

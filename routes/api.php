@@ -261,6 +261,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->name('me.seva.media.store');
         Route::delete('me/seva-drives/{drive}/media/{media}', [SevaDriveController::class, 'destroyMedia'])->name('me.seva.media.destroy');
         Route::post('me/seva-drives/{drive}/complete', [SevaDriveController::class, 'complete'])->name('me.seva.complete');
+        Route::post('me/seva-drives/{drive}/request-verification', [SevaDriveController::class, 'requestVerification'])
+            ->middleware('throttle:6,1')
+            ->name('me.seva.verification');
         Route::post('me/seva-drives/{drive}/cancel', [SevaDriveController::class, 'cancel'])->name('me.seva.cancel');
         Route::get('me/seva-drives/{drive}/volunteers', [SevaDriveController::class, 'volunteers'])->name('me.seva.volunteers');
         Route::get('me/seva-drives/{drive}/donations', [SevaDriveController::class, 'donations'])->name('me.seva.donations');

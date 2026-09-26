@@ -34,7 +34,8 @@ class ViewSevaDrive extends ViewRecord
     {
         $record = $this->record;
 
-        return $record->status?->getLabel().' · '.$record->place_name
+        return $record->effectiveStatus()?->getLabel().' · '.$record->place_name
+            .' · '.($record->isVerified() ? 'Verified' : 'Not verified')
             .' · '.$record->dateLabel()
             .' · organised by '.$record->organiserName();
     }
@@ -46,8 +47,8 @@ class ViewSevaDrive extends ViewRecord
         // The two that come up most stay out in the open; the rest in a menu.
         return [
             EditAction::make(),
-            ...array_slice($decisions, 0, 3),
-            ActionGroup::make([...array_slice($decisions, 3), DeleteAction::make()])
+            ...array_slice($decisions, 0, 4),
+            ActionGroup::make([...array_slice($decisions, 4), DeleteAction::make()])
                 ->label('More')
                 ->icon('heroicon-m-ellipsis-vertical')
                 ->button()
@@ -75,6 +76,17 @@ class ViewSevaDrive extends ViewRecord
                 ->visible(fn (SevaDrive $record): bool => $record->is_misleading)
                 ->schema([
                     TextEntry::make('misleading_note')->hiddenLabel()->helperText('Shown on the drive in the app. Joining and donations are closed.'),
+                ]),
+
+            Section::make('Verification requested')
+                ->icon('heroicon-o-check-badge')
+                ->iconColor('warning')
+                ->description('The organiser asked the team to verify this drive. Verify it, or decline with what is missing.')
+                ->visible(fn (SevaDrive $record): bool => $record->verificationPending())
+                ->columns(3)
+                ->schema([
+                    TextEntry::make('verification_note')->label('Their note')->placeholder('No note')->columnSpan(2),
+                    TextEntry::make('verification_requested_at')->label('Asked')->since(),
                 ]),
 
             Section::make('At a glance')

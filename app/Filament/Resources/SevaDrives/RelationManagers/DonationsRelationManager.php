@@ -29,7 +29,11 @@ class DonationsRelationManager extends RelationManager
                 TextColumn::make('devotee.name')->label('Donor')->placeholder('Deleted account')
                     ->description(fn ($record): ?string => $record->is_anonymous ? 'Asked to stay anonymous' : null),
                 TextColumn::make('amount')->money('INR')->sortable(),
-                TextColumn::make('upi_ref')->label('UPI ref')->placeholder('—')->copyable(),
+                TextColumn::make('payment_app')->label('Paid with')
+                    ->state(fn ($record): ?string => $record->paymentAppLabel())
+                    ->placeholder('—'),
+                TextColumn::make('paid_on')->label('Paid on')->date('d M Y')->placeholder('—'),
+                TextColumn::make('upi_ref')->label('Reference')->placeholder('—')->copyable(),
                 TextColumn::make('message')->placeholder('—')->limit(50),
                 IconColumn::make('confirmed_at')->label('Organiser confirmed')->boolean()
                     ->state(fn ($record): bool => $record->confirmed_at !== null),

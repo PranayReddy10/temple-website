@@ -13,7 +13,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class SevaDriveDonation extends Model
 {
-    protected $fillable = ['devotee_id', 'amount', 'upi_ref', 'message', 'is_anonymous'];
+    protected $fillable = ['devotee_id', 'amount', 'upi_ref', 'payment_app', 'paid_on', 'message', 'is_anonymous'];
+
+    /** How the donor paid, as they pick it in the app. */
+    public const PAYMENT_APPS = [
+        'phonepe' => 'PhonePe',
+        'gpay' => 'Google Pay',
+        'paytm' => 'Paytm',
+        'bhim' => 'BHIM',
+        'amazonpay' => 'Amazon Pay',
+        'other_upi' => 'Another UPI app',
+        'bank' => 'Bank transfer',
+        'cash' => 'Cash',
+    ];
 
     protected function casts(): array
     {
@@ -21,6 +33,7 @@ class SevaDriveDonation extends Model
             'amount' => 'integer',
             'is_anonymous' => 'boolean',
             'confirmed_at' => 'datetime',
+            'paid_on' => 'date',
         ];
     }
 
@@ -45,5 +58,10 @@ class SevaDriveDonation extends Model
         return $this->is_anonymous || $this->devotee === null
             ? 'A devotee'
             : $this->devotee->name;
+    }
+
+    public function paymentAppLabel(): ?string
+    {
+        return self::PAYMENT_APPS[$this->payment_app] ?? null;
     }
 }
