@@ -498,13 +498,17 @@ checkout, the gateway returns to `/pay/{id}/return/{gateway}`, the server
 confirms with the gateway and lands on `done_url`, where the browser closes.
 The app then polls `me/payments/{id}`.
 
-With `mode: "sdk"`, Razorpay and Cashfree also answer with `sdk`: what the
+With `mode: "sdk"`, Razorpay, Cashfree and PhonePe also answer with `sdk`: what the
 gateway's native SDK needs to open its own payment sheet in the app (Razorpay:
 `key`, `order_id`, `amount_paise`, `prefill`; Cashfree: `session_id`,
-`order_id`, `environment`). The app hands the SDK's result to `confirm`:
+`order_id`, `environment`; PhonePe: `merchant_id`, `order_id`, `token`,
+`environment`, from PhonePe's SDK-order API, which needs the merchant id set
+in Settings → Payments). When a native gateway cannot start, `sdk` is null
+and `sdk_error` says why, and the app shows that instead of a web page. The
+app hands the SDK's result to `confirm`:
 Razorpay's is checked by its signature (and must be for this payment's
-order), Cashfree's by asking Cashfree. `sdk` is null for PhonePe and PayU,
-and `checkout_url` stays the fallback either way; a Cashfree order started
+order), Cashfree's and PhonePe's by asking the gateway. `sdk` is null for
+PayU, which pays at `checkout_url`; a Cashfree order started
 by the SDK is reused by the web page rather than created twice.
 
 The price is always the plan's, set on

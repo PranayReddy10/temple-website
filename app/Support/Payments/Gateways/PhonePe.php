@@ -90,6 +90,54 @@ class PhonePe implements PaymentGateway
         return ['redirect' => $response->json('redirectUrl')];
     }
 
+    public function merchantId(): ?string
+    {
+        return filled(setting('payments_phonepe_merchant_id')) ? (string) setting('payments_phonepe_merchant_id') : null;
+    }
+
+    public function environment(): string
+    {
+        return $this->production() ? 'PRODUCTION' : 'SANDBOX';
+    }
+
+    /**
+     * An order for PhonePe's app SDK: answers with PhonePe's order id and
+     * the token the SDK opens its payment sheet with. The same
+     * merchantOrderId, and the same status call, as the web checkout.
+     *
+     * @return array{order_id: string, token: string}
+     */
+    public function sdkOrder(Payment $payment): array
+    {
+        $meta = (array) $payment->meta;
+
+        // Already created (a retry): PhonePe refuses a second order with the
+        // same merchantOrderId, and the token lasts as long as the order.
+        if (filled($meta['phonepe_sdk_token'] ?? null) && filled($meta['phonepe_order_id'] ?? null)) {
+            return ['order_id' => $meta['phonepe_order_id'], 'token' => $meta['phonepe_sdk_token']];
+        }
+
+        $response = Http::withHeaders(['Authorization' => 'O-Bearer '.$this->token()])->timeout(15)
+            ->post($this->pgBase().'/checkout/v2/sdk/order', [
+                'merchantOrderId' => $this->merchantOrderId($payment),
+                'amount' => $payment->amount_paise,
+                'expireAfter' => 1800,
+                'paymentFlow' => ['type' => 'PG_CHECKOUT', 'message' => $payment->plan?->name],
+            ]);
+
+        if (! $response->successful() || blank($response->json('token')) || blank($response->json('orderId'))) {
+            throw new RuntimeException('PhonePe could not create the order: '.($response->json('message') ?? $response->status()));
+        }
+
+        $payment->forceFill([
+            'gateway_order_id' => $this->merchantOrderId($payment),
+            'status' => Payment::PENDING,
+            'meta' => array_merge($meta, ['phonepe_order_id' => $response->json('orderId'), 'phonepe_sdk_token' => $response->json('token')]),
+        ])->save();
+
+        return ['order_id' => $response->json('orderId'), 'token' => $response->json('token')];
+    }
+
     public function confirm(Payment $payment, ?Request $request = null): string
     {
         $response = Http::withHeaders(['Authorization' => 'O-Bearer '.$this->token()])->timeout(15)

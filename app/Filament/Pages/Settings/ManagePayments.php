@@ -46,6 +46,7 @@ class ManagePayments extends SettingsPage
             'payments_phonepe_enabled' => ['boolean', false],
             'payments_phonepe_env' => ['string', 'sandbox'],
             'payments_phonepe_client_id' => ['string', null],
+            'payments_phonepe_merchant_id' => ['string', null],
             'payments_phonepe_client_version' => ['integer', 1],
             'payments_phonepe_client_secret' => ['secret', null],
 
@@ -98,6 +99,8 @@ class ManagePayments extends SettingsPage
                     Toggle::make('payments_phonepe_enabled')->label('Enabled')->columnSpanFull(),
                     Radio::make('payments_phonepe_env')->label('Environment')->inline()->options(['sandbox' => 'Sandbox', 'production' => 'Production'])->columnSpanFull(),
                     TextInput::make('payments_phonepe_client_id')->label('Client id'),
+                    TextInput::make('payments_phonepe_merchant_id')->label('Merchant id')
+                        ->helperText('Needed for the app to open PhonePe\'s own payment sheet. From PhonePe\'s business dashboard.'),
                     TextInput::make('payments_phonepe_client_version')->label('Client version')->numeric(),
                     static::secretInput('payments_phonepe_client_secret', 'Client secret'),
                 ]),
