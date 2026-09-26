@@ -14,6 +14,18 @@ class RegisterDevoteeRequest extends FormRequest
         return true;
     }
 
+    /** Stored lower-cased and trimmed, so sign-in finds it however it is typed. */
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('email'))) {
+            $this->merge(['email' => mb_strtolower(trim($this->input('email')))]);
+        }
+
+        if (is_string($this->input('phone'))) {
+            $this->merge(['phone' => preg_replace('/[\s-]/', '', $this->input('phone'))]);
+        }
+    }
+
     public function rules(): array
     {
         return [

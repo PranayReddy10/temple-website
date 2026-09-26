@@ -7,6 +7,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 /**
@@ -35,6 +36,9 @@ class ManageSignIn extends SettingsPage
             'auth_google_client_ids' => ['string', null],
             'auth_apple_enabled' => ['boolean', false],
             'auth_apple_client_ids' => ['string', null],
+            'password_reset_enabled' => ['boolean', true],
+            'password_reset_minutes' => ['integer', 15],
+            'password_reset_subject' => ['string', null],
         ];
     }
 
@@ -55,11 +59,26 @@ class ManageSignIn extends SettingsPage
                     Toggle::make('auth_google_enabled')->label('Show "Continue with Google"'),
                     TextInput::make('auth_google_server_client_id')->label('Web client id (server client id)')
                         ->placeholder('1234567890-abc.apps.googleusercontent.com')
-                        ->helperText('The app asks Google for a token addressed to this id, and the server checks it.'),
+                        // The button only appears in the app once this is set:
+                        // without it Google has nobody to address the token to.
+                        ->required(fn (Get $get): bool => (bool) $get('auth_google_enabled'))
+                        ->validationMessages(['required' => 'The Google button stays hidden in the app until the Web client id is set.'])
+                        ->helperText('Required for the button to show. The app asks Google for a token addressed to this id, and the server checks it. On Android, the Android OAuth client must list the SHA-1 of the key the installed app was signed with (debug and Play signing keys differ).'),
                     TextInput::make('auth_google_ios_client_id')->label('iOS client id')
                         ->helperText('Also add its reversed id as a URL scheme in ios/Runner/Info.plist.'),
                     Textarea::make('auth_google_client_ids')->label('Other accepted client ids (optional)')->rows(2)
                         ->helperText('One per line or comma separated. The web and iOS ids above are always accepted.'),
+                ]),
+
+            Section::make('Forgot password')
+                ->description('Devotees who signed up with an email get a 6-digit code by email to set a new password. Needs outgoing email: App → Email.')
+                ->icon('heroicon-o-lifebuoy')
+                ->schema([
+                    Toggle::make('password_reset_enabled')->label('Show "Forgot password?" in the app'),
+                    TextInput::make('password_reset_minutes')->label('Code is valid for (minutes)')
+                        ->numeric()->minValue(5)->maxValue(120)->default(15),
+                    TextInput::make('password_reset_subject')->label('Email subject')
+                        ->placeholder('Your password reset code'),
                 ]),
 
             Section::make('Apple')

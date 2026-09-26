@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Models\Devotee;
 use App\Models\Payment;
 use App\Models\Setting;
@@ -37,6 +38,7 @@ final class AppConfig
                 ],
                 // Apple sign-in is an iPhone thing; the app shows it there only.
                 'apple' => ['enabled' => (bool) setting('auth_apple_enabled', null, false)],
+                'password_reset' => DevoteePasswordReset::enabled(),
             ],
             'push' => self::push($platform),
             'ads' => self::ads($platform, $devotee),
@@ -155,7 +157,7 @@ final class AppConfig
                 'code' => $g,
                 'name' => Payment::GATEWAYS[$g],
                 // Paid through the gateway's own SDK in the app.
-                'native' => in_array($g, \App\Http\Controllers\Api\V1\SubscriptionController::NATIVE_SDK, true),
+                'native' => in_array($g, SubscriptionController::NATIVE_SDK, true),
             ], $gateways),
             'default_gateway' => in_array(setting('payments_default_gateway'), $gateways, true) ? setting('payments_default_gateway') : ($gateways[0] ?? null),
         ];

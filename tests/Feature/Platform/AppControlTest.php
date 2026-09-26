@@ -6,6 +6,7 @@ use App\Enums\TempleStatus;
 use App\Enums\UserRole;
 use App\Filament\Pages\Settings\ManageAds;
 use App\Filament\Pages\Settings\ManageAppControl;
+use App\Filament\Pages\Settings\ManageEmail;
 use App\Filament\Pages\Settings\ManagePayments;
 use App\Filament\Pages\Settings\ManagePush;
 use App\Filament\Pages\Settings\ManageSignIn;
@@ -148,7 +149,7 @@ class AppControlTest extends TestCase
         $this->actingAs($admin);
 
         foreach ([ManageAppControl::class, ManageSignIn::class, ManagePush::class, ManageAds::class, ManagePayments::class,
-            ManageAppNotifications::class, ManageSubscriptionPlans::class, ListPayments::class, ManageDevoteeSubscriptions::class] as $page) {
+            ManageAppNotifications::class, ManageSubscriptionPlans::class, ListPayments::class, ManageDevoteeSubscriptions::class, ManageEmail::class] as $page) {
             Livewire::test($page)->assertOk();
         }
 

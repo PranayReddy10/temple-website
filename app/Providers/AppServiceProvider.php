@@ -14,6 +14,7 @@ use App\Observers\TempleObserver;
 use App\Observers\TemplePhotoObserver;
 use App\Observers\TemplePujaObserver;
 use App\Support\LoginRecorder;
+use App\Support\MailSettings;
 use App\Support\MediaStorage;
 use App\Support\Pwa;
 use App\Support\TempleTheme;
@@ -22,8 +23,11 @@ use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -48,6 +52,15 @@ class AppServiceProvider extends ServiceProvider
          * still boots.
          */
         MediaStorage::apply();
+
+        // Outgoing mail (password reset codes) is configured in the admin
+        // panel; folded over config the same way, and as safe on a fresh
+        // database.
+        MailSettings::apply();
+
+        // The API-wide limit: 60 requests a minute per devotee, or per address
+        // before sign-in.
+        RateLimiter::for('api', fn (Request $request) => Limit::perMinute(60)->by($request->user()?->getAuthIdentifier() ?: $request->ip()));
 
         $this->registerPanelHead();
 

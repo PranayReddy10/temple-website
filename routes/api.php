@@ -2,9 +2,8 @@
 
 use App\Http\Controllers\Api\V1\AppConfigController;
 use App\Http\Controllers\Api\V1\Auth\DevoteeAuthController;
+use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\SocialAuthController;
-use App\Http\Controllers\Api\V1\NotificationController;
-use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\DeityController;
 use App\Http\Controllers\Api\V1\DevoteeProfileController;
 use App\Http\Controllers\Api\V1\DevotionalDayController;
@@ -14,13 +13,15 @@ use App\Http\Controllers\Api\V1\FacilityController;
 use App\Http\Controllers\Api\V1\GeocodeController;
 use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\MemoryController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PassportController;
+use App\Http\Controllers\Api\V1\PassportShareController;
 use App\Http\Controllers\Api\V1\PincodeController;
 use App\Http\Controllers\Api\V1\PujaBookingController;
 use App\Http\Controllers\Api\V1\ReviewController;
-use App\Http\Controllers\Api\V1\PassportShareController;
 use App\Http\Controllers\Api\V1\SevaDriveController;
 use App\Http\Controllers\Api\V1\StateController;
+use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\SupportController;
 use App\Http\Controllers\Api\V1\TempleCategoryController;
 use App\Http\Controllers\Api\V1\TempleController;
@@ -179,8 +180,16 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->name('register');
 
         Route::post('login', [DevoteeAuthController::class, 'login'])
-            ->middleware('throttle:6,1')
+            ->middleware('throttle:10,1')
             ->name('login');
+
+        // Forgot password: a code by email, then a new password with it.
+        Route::post('password/forgot', [PasswordResetController::class, 'forgot'])
+            ->middleware('throttle:3,1')
+            ->name('password.forgot');
+        Route::post('password/reset', [PasswordResetController::class, 'reset'])
+            ->middleware('throttle:10,1')
+            ->name('password.reset');
 
         // "Continue with Google" / "Sign in with Apple": the identity token the
         // app obtained on the device, verified here.

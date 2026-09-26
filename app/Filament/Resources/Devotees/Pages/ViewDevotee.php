@@ -4,17 +4,21 @@ namespace App\Filament\Resources\Devotees\Pages;
 
 use App\Filament\Resources\Devotees\DevoteeResource;
 use App\Models\Devotee;
+use App\Support\DevoteePasswordReset;
 use App\Support\InitialsAvatarProvider;
 use App\Support\Locales;
 use Filament\Actions\Action;
+use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Auth;
+use Throwable;
 
 /**
  * One devotee, in full.
@@ -43,6 +47,40 @@ class ViewDevotee extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            // "I forgot my password", arriving as a support message.
+            Action::make('send_reset_code')
+                ->label('Send reset code')
+                ->icon('heroicon-o-envelope')
+                ->color('gray')
+                ->visible(fn (): bool => filled($this->record->email)
+                    && (Auth::user()?->canManageUsers() ?? false))
+                ->requiresConfirmation()
+                ->modalDescription(fn (): string => 'Emails a 6-digit code to '.$this->record->email.' that they type into the app to choose a new password.')
+                ->action(function (): void {
+                    try {
+                        DevoteePasswordReset::send($this->record);
+                        Notification::make()->title('Code sent to '.$this->record->email)->success()->send();
+                    } catch (Throwable $e) {
+                        Notification::make()->title('Could not send the email')
+                            ->body('Check App → Email (SMTP). '.$e->getMessage())->danger()->persistent()->send();
+                    }
+                }),
+
+            Action::make('set_password')
+                ->label('Set new password')
+                ->icon('heroicon-o-key')
+                ->color('gray')
+                ->visible(fn (): bool => Auth::user()?->canManageUsers() ?? false)
+                ->modalDescription('For when they cannot receive email. Tell them the password privately; they are signed out on every device.')
+                ->schema([
+                    TextInput::make('password')->label('New password')->password()->revealable()
+                        ->required()->minLength(8)->autocomplete('new-password'),
+                ])
+                ->action(function (array $data): void {
+                    DevoteePasswordReset::setPassword($this->record, $data['password']);
+                    Notification::make()->title('Password changed')->success()->send();
+                }),
+
             Action::make('deactivate')
                 ->label('Suspend account')
                 ->icon('heroicon-o-no-symbol')
