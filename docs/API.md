@@ -670,7 +670,10 @@ this temple), any of the five ratings, `wait_minutes` and `body`; at least
 one of them. There is **one account per devotee per temple**: writing again,
 about any day, edits it (a rating left out is taken back) and sends it back
 for review. The author gets an inbox notice (and a push, when set up) when
-it is published or not published.
+a moderator publishes it or does not. With **Settings → Features → Reviews
+need approval** switched off (it is on by default), a review — and every
+edit — comes back `approved` and is on the temple page at once; moderators
+can still reject it afterwards.
 
 `engagement.reviews.latest` on `GET /temples/{slug}` (and on every like and
 follow answer) carries the three newest published accounts, and

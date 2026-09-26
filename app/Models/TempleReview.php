@@ -64,6 +64,12 @@ class TempleReview extends Model
                 return;
             }
 
+            // Published by its author's own edit (approval switched off): they
+            // know already, and need no message about it.
+            if ($review->status === ReviewStatus::Approved && $review->moderated_by === null) {
+                return;
+            }
+
             $temple = $review->temple;
             $published = $review->status === ReviewStatus::Approved;
 
