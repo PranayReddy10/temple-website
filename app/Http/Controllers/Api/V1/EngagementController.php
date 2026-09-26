@@ -110,10 +110,29 @@ class EngagementController extends Controller
         $devotee = $request->user('devotee');
         $follow = $devotee === null ? null : TempleFollow::query()->where('devotee_id', $devotee->getKey())->where('temple_id', $temple->getKey())->first();
 
+        $mine = $devotee === null ? null : \App\Models\TempleReview::query()
+            ->where('devotee_id', $devotee->getKey())
+            ->where('temple_id', $temple->getKey())
+            ->with(['devotee:id,name,avatar_path,avatar_disk,home_state_id', 'devotee.homeState:id,name'])
+            ->first();
+
         return [
             'likes_count' => $temple->likes()->count(),
             'follows_count' => $temple->follows()->count(),
+            // The summary per dimension, and the newest published accounts
+            // to show on the page itself. Served with every like and follow
+            // too, so a tap never blanks the reviews section.
+            'reviews' => \App\Models\TempleReview::summaryFor($temple) + [
+                'latest' => \App\Http\Resources\V1\ReviewResource::collection(
+                    $temple->reviews()->approved()
+                        ->with(['devotee:id,name,avatar_path,avatar_disk,home_state_id', 'devotee.homeState:id,name'])
+                        ->limit(3)->get()
+                )->resolve($request),
+            ],
             'viewer' => $devotee === null ? null : [
+                // Their own account of this temple, whatever its status, so
+                // the page offers to edit it rather than write a second.
+                'my_review' => $mine === null ? null : (new \App\Http\Resources\V1\ReviewResource($mine))->resolve($request),
                 'liked' => TempleLike::query()->where('devotee_id', $devotee->getKey())->where('temple_id', $temple->getKey())->exists(),
                 'following' => $follow !== null,
                 'notify_festivals' => $follow?->notify_festivals ?? false,
