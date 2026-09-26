@@ -74,7 +74,7 @@ class ReviewApiTest extends TestCase
         $this->approve(TempleReview::create(['devotee_id' => $a->id, 'temple_id' => $this->temple->id, 'visited_on' => '2026-09-01', 'queue_rating' => 2, 'cleanliness_rating' => 5, 'wait_minutes' => 60, 'body' => 'Crowded.']));
         $this->approve(TempleReview::create(['devotee_id' => $b->id, 'temple_id' => $this->temple->id, 'visited_on' => '2026-09-02', 'queue_rating' => 4, 'wait_minutes' => 20]));
         // Pending: counted nowhere.
-        TempleReview::create(['devotee_id' => $a->id, 'temple_id' => $this->temple->id, 'visited_on' => '2026-09-03', 'queue_rating' => 1]);
+        TempleReview::create(['devotee_id' => Devotee::factory()->create()->id, 'temple_id' => $this->temple->id, 'visited_on' => '2026-09-03', 'queue_rating' => 1]);
 
         $response = $this->getJson('/api/v1/temples/review-temple/reviews')->assertOk()->assertJsonCount(2, 'data')
             ->assertJsonPath('meta.summary.count', 2)
@@ -95,17 +95,69 @@ class ReviewApiTest extends TestCase
             ->assertJsonPath('data.engagement.reviews.dimensions.queue_rating.average', 3);
     }
 
-    public function test_writing_again_about_the_same_day_edits_and_sends_it_back_for_review(): void
+    public function test_writing_again_edits_the_one_account_of_that_temple_and_sends_it_back(): void
     {
         $this->signIn();
-        $this->postJson('/api/v1/temples/review-temple/reviews', ['visited_on' => '2026-09-20', 'queue_rating' => 2])->assertCreated();
+        $this->postJson('/api/v1/temples/review-temple/reviews', ['visited_on' => '2026-09-20', 'queue_rating' => 2, 'cleanliness_rating' => 4])->assertCreated();
         $this->approve(TempleReview::query()->firstOrFail());
 
-        $this->postJson('/api/v1/temples/review-temple/reviews', ['visited_on' => '2026-09-20', 'queue_rating' => 3, 'body' => 'On reflection, not so bad.'])
+        // Another day, another visit: still the same account, edited.
+        $this->postJson('/api/v1/temples/review-temple/reviews', ['visited_on' => '2026-09-25', 'queue_rating' => 3, 'body' => 'On reflection, not so bad.'])
             ->assertOk()->assertJsonPath('data.status.value', 'pending');
 
         $this->assertSame(1, TempleReview::query()->count());
-        $this->assertSame(3, TempleReview::query()->firstOrFail()->queue_rating);
+        $review = TempleReview::query()->firstOrFail();
+        $this->assertSame(3, $review->queue_rating);
+        $this->assertSame('2026-09-25', $review->visited_on->toDateString());
+        // A rating left out of the edit is taken back, not kept from before.
+        $this->assertNull($review->cleanliness_rating);
+    }
+
+    public function test_the_temple_page_shows_the_latest_accounts_and_the_devotees_own(): void
+    {
+        $other = Devotee::factory()->create(['name' => 'Ravi Kumar']);
+        $this->approve(TempleReview::create(['devotee_id' => $other->id, 'temple_id' => $this->temple->id, 'visited_on' => '2026-09-01', 'queue_rating' => 4, 'body' => 'Quiet on a weekday.']));
+
+        $this->getJson('/api/v1/temples/review-temple')->assertOk()
+            ->assertJsonPath('data.engagement.reviews.count', 1)
+            ->assertJsonPath('data.engagement.reviews.latest.0.body', 'Quiet on a weekday.')
+            ->assertJsonPath('data.engagement.reviews.latest.0.devotee.name', 'Ravi K.')
+            ->assertJsonPath('data.engagement.viewer', null);
+
+        $me = $this->signIn();
+        $this->postJson('/api/v1/temples/review-temple/reviews', ['queue_rating' => 2, 'body' => 'Long queue.'])->assertCreated();
+
+        // Mine, pending, is offered back to me to edit; nobody else sees it yet.
+        $this->getJson('/api/v1/temples/review-temple')->assertOk()
+            ->assertJsonPath('data.engagement.viewer.my_review.body', 'Long queue.')
+            ->assertJsonPath('data.engagement.viewer.my_review.status.value', 'pending')
+            ->assertJsonCount(1, 'data.engagement.reviews.latest');
+
+        // A like answers with the same block, reviews included.
+        $this->putJson('/api/v1/me/likes/review-temple')->assertCreated()
+            ->assertJsonPath('data.reviews.count', 1)
+            ->assertJsonPath('data.reviews.latest.0.body', 'Quiet on a weekday.');
+    }
+
+    public function test_the_author_is_told_when_their_account_is_published_or_not(): void
+    {
+        $me = $this->signIn();
+        $this->postJson('/api/v1/temples/review-temple/reviews', ['queue_rating' => 3])->assertCreated();
+        $review = TempleReview::query()->firstOrFail();
+
+        $this->approve($review);
+        $this->getJson('/api/v1/notifications?platform=android')->assertOk()
+            ->assertJsonPath('data.0.title', 'Your review is published')
+            ->assertJsonPath('data.0.link.type', 'temple')
+            ->assertJsonPath('data.0.link.value', 'review-temple');
+
+        $review->update(['status' => ReviewStatus::Rejected, 'moderation_note' => 'Please describe the visit.']);
+        $this->getJson('/api/v1/notifications?platform=android')->assertOk()
+            ->assertJsonPath('data.0.title', 'Your review was not published');
+
+        // Nobody else hears about it.
+        Sanctum::actingAs(Devotee::factory()->create(), guard: 'devotee');
+        $this->getJson('/api/v1/notifications?platform=android')->assertOk()->assertJsonCount(0, 'data');
     }
 
     public function test_an_empty_review_a_future_visit_and_a_guest_are_refused(): void

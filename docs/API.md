@@ -667,8 +667,15 @@ and averaged on its own in `meta.summary.dimensions[key].average` with the
 count that said so, plus `average_wait_minutes`. `POST` takes `visited_on`
 (default today; not in the future), `visit_id` (one of the devotee's own at
 this temple), any of the five ratings, `wait_minutes` and `body`; at least
-one of them. Writing again about the same day edits that account and sends
-it back for review. A review is `pending` until staff publish it under
+one of them. There is **one account per devotee per temple**: writing again,
+about any day, edits it (a rating left out is taken back) and sends it back
+for review. The author gets an inbox notice (and a push, when set up) when
+it is published or not published.
+
+`engagement.reviews.latest` on `GET /temples/{slug}` (and on every like and
+follow answer) carries the three newest published accounts, and
+`engagement.viewer.my_review` the caller's own, whatever its status, so the
+page offers to edit it rather than to write a second. A review is `pending` until staff publish it under
 **Devotees → Visit reviews**; `status` and `moderation_note` are returned
 only to the author (`is_mine`). Names are shortened to a first name and an
 initial. The temple's team reads published accounts in its portal and may

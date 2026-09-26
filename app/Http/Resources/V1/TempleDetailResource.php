@@ -130,9 +130,7 @@ class TempleDetailResource extends JsonResource
              * because a place of worship is not ranked. `viewer` is where
              * the signed-in caller stands, null for a guest.
              */
-            'engagement' => \App\Http\Controllers\Api\V1\EngagementController::state($request, $this->resource) + [
-                'reviews' => \App\Models\TempleReview::summaryFor($this->resource),
-            ],
+            'engagement' => \App\Http\Controllers\Api\V1\EngagementController::state($request, $this->resource),
 
             'published_at' => $this->published_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

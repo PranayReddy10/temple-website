@@ -50,7 +50,7 @@ class ReviewController extends Controller
     public function mine(Request $request): AnonymousResourceCollection
     {
         return ReviewResource::collection(
-            $request->user()->reviews()->with(['temple:id,slug,name,city', 'devotee:id,name,avatar_path,avatar_disk,home_state_id'])->paginate(50)
+            $request->user()->reviews()->with(['temple:id,slug,name,city,deity_id', 'temple.deity:id,slug', 'devotee:id,name,avatar_path,avatar_disk,home_state_id'])->paginate(50)
         );
     }
 
@@ -89,20 +89,24 @@ class ReviewController extends Controller
 
         $visitedOn = $validated['visited_on'] ?? $visit?->visited_on?->toDateString() ?? DevotionalClock::now()->toDateString();
 
-        // One account per visit: writing again about the same day edits it
-        // (and sends it back for review), rather than stacking duplicates.
+        // One account per temple per devotee: writing again edits it (and
+        // sends it back for review), whatever day it is about, rather than
+        // stacking a second one under the same name.
         $review = TempleReview::query()
             ->where('devotee_id', $request->user()->getKey())
             ->where('temple_id', $temple->getKey())
-            ->whereDate('visited_on', $visitedOn)
             ->first() ?? new TempleReview([
                 'devotee_id' => $request->user()->getKey(),
                 'temple_id' => $temple->getKey(),
-                'visited_on' => $visitedOn,
             ]);
         $created = ! $review->exists;
+        $review->visited_on = $visitedOn;
 
-        $review->fill(collect($validated)->except(['visit_id', 'visited_on'])->all());
+        // An edit is the whole account again: a rating left out now is a
+        // rating taken back, not one kept from before.
+        foreach ([...array_keys(TempleReview::DIMENSIONS), 'wait_minutes', 'body'] as $field) {
+            $review->{$field} = $validated[$field] ?? null;
+        }
         $review->devotee_visit_id = $visit?->getKey() ?? $review->devotee_visit_id;
         $review->status = \App\Enums\ReviewStatus::Pending;
         $review->moderated_at = null;

@@ -55,6 +55,35 @@ class TempleReview extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        // The author hears the decision, in the inbox (and as a push when set
+        // up): silence after writing reads as the account having vanished.
+        static::updated(function (TempleReview $review): void {
+            if (! $review->wasChanged('status') || $review->status === ReviewStatus::Pending) {
+                return;
+            }
+
+            $temple = $review->temple;
+            $published = $review->status === ReviewStatus::Approved;
+
+            $notification = AppNotification::create([
+                'title' => $published ? 'Your review is published' : 'Your review was not published',
+                'body' => $published
+                    ? 'What you wrote about visiting '.($temple?->name ?? 'the temple').' is now on its page.'
+                    : 'Your review of '.($temple?->name ?? 'the temple').' was not published'.(filled($review->moderation_note) ? ': '.$review->moderation_note : '.').' You can edit it and send it again.',
+                'link_type' => $temple === null ? 'none' : 'temple',
+                'link_value' => $temple?->slug,
+                'audience' => 'devotee',
+                'audience_id' => $review->devotee_id,
+                'status' => 'scheduled',
+                'scheduled_at' => now(),
+            ]);
+
+            app(\App\Support\Push\NotificationSender::class)->send($notification);
+        });
+    }
+
     public function devotee(): BelongsTo
     {
         return $this->belongsTo(Devotee::class);
