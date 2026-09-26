@@ -433,6 +433,21 @@ Anybody can report a drive through Support: `POST /api/v1/support` with
 `about_type=seva_drive` and `about_id`. Reports appear on the drive in the
 admin, under its Reports tab and the Seva Drives "Reported" tab.
 
+## PIN codes
+
+```
+GET /api/v1/pincode/{6 digits}      30/min
+```
+
+The state (matched to our `states`, with `state_id`), district and the
+villages and towns (`places[].name`) a PIN code covers, from India Post's
+directory via api.postalpincode.in. Cached for 30 days; an unknown code for a
+day. `404` for a code with no post office, or when the directory cannot be
+reached. The server must be allowed outbound HTTPS to api.postalpincode.in.
+
+Seva drives take `pincode` and `district` too, and `GET /seva-drives`
+accepts `verified=1` to list only verified drives.
+
 ## Mantras and devotional media
 
 `GET /api/v1/temples/{slug}`:

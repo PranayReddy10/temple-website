@@ -65,6 +65,8 @@ class SevaDriveResource extends JsonResource
                 'name' => $this->place_name,
                 'address' => $this->address,
                 'city' => $this->city,
+                'district' => $this->district,
+                'pincode' => $this->pincode,
                 'state' => $this->whenLoaded('state', fn () => $this->state?->name),
                 'latitude' => $this->latitude,
                 'longitude' => $this->longitude,
