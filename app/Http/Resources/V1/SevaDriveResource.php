@@ -43,6 +43,9 @@ class SevaDriveResource extends JsonResource
 
         $acceptsDonations = $this->acceptsDonations();
 
+        // Lists leave out the per-drive donation rows; a drive's own page has them.
+        $isList = $request->routeIs('api.v1.seva.index', 'api.v1.me.seva.index');
+
         return [
             'id' => $this->id,
             'title' => $this->title,
@@ -132,6 +135,39 @@ class SevaDriveResource extends JsonResource
                 'raised' => (int) ($this->donations_raised ?? $this->confirmedDonationTotal()),
                 'donors' => (int) ($this->donors_count ?? $this->donations()->whereNotNull('confirmed_at')->count()),
             ],
+
+            /*
+             * The signed-in devotee's own donations, each marked paid once
+             * the organiser has confirmed receiving it — so a donor can see
+             * their money arrived, not just that they reported sending it.
+             */
+            'my_donations' => $this->when(! $isList, fn () => $viewer === null ? [] : $this->donations()
+                ->where('devotee_id', $viewer->getKey())
+                ->latest('id')
+                ->get()
+                ->map(fn (\App\Models\SevaDriveDonation $d): array => [
+                    'id' => $d->id,
+                    'amount' => $d->amount,
+                    'payment_app_label' => $d->paymentAppLabel(),
+                    'paid_on' => $d->paid_on?->toDateString(),
+                    'upi_ref' => $d->upi_ref,
+                    'confirmed' => $d->isConfirmed(),
+                    'confirmed_at' => $d->confirmed_at?->toIso8601String(),
+                ])->all()),
+
+            // Confirmed donations, for everyone: who has supported it. The
+            // name is withheld for donors who asked to stay anonymous.
+            'supporters' => $this->when(! $isList, fn () => $this->donations()
+                ->whereNotNull('confirmed_at')
+                ->with('devotee:id,name')
+                ->latest('confirmed_at')
+                ->limit(10)
+                ->get()
+                ->map(fn (\App\Models\SevaDriveDonation $d): array => [
+                    'name' => $d->donorName(),
+                    'amount' => $d->amount,
+                    'paid_on' => ($d->paid_on ?? $d->confirmed_at)?->toDateString(),
+                ])->all()),
 
             'viewer' => [
                 'is_organiser' => $isOrganiser,
