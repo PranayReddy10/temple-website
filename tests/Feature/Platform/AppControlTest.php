@@ -71,9 +71,10 @@ class AppControlTest extends TestCase
 
     public function test_the_inbox_holds_what_is_addressed_to_the_reader(): void
     {
-        $temple = Temple::create(['name' => 'Saved Temple', 'status' => TempleStatus::Published]);
+        $temple = Temple::create(['name' => 'Followed Temple', 'status' => TempleStatus::Published]);
         $devotee = Devotee::factory()->create(['created_at' => now()->subYear()]);
-        $devotee->savedTemples()->attach($temple);
+        // Following is what asks to be told about a temple; saving is a bookmark.
+        $devotee->follows()->create(['temple_id' => $temple->id]);
         $other = Devotee::factory()->create();
 
         $send = fn (array $a) => AppNotification::create($a + ['title' => $a['title'], 'body' => 'b'])->forceFill(['status' => 'sent', 'sent_at' => now()])->save();

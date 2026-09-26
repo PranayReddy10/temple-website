@@ -42,7 +42,7 @@ class VisitPhotoResource extends Resource
             // Memory photos are private to the devotee and never published,
             // so they are not this queue's business.
             ->modifyQueryUsing(fn (Builder $query) => $query->stamps()->with([
-                'devotee:id,name', 'temple:id,name', 'moderator:id,name',
+                'devotee:id,name', 'temple:id,name', 'moderator:id,name', 'promotedPhoto:id,visit_photo_id,temple_objected_at',
             ]))
             ->columns(PhotoModeration::columns())
             ->filters(PhotoModeration::filters())

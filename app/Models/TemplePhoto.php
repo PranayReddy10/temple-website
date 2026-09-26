@@ -19,6 +19,7 @@ class TemplePhoto extends Model
         'category', 'caption', 'credit', 'source_url', 'license',
         'is_primary', 'is_published', 'sort_order',
         'width', 'height', 'size_bytes', 'mime_type', 'uploaded_by',
+        'devotee_id', 'visit_photo_id', 'temple_objected_at', 'temple_objection',
     ];
 
     protected function casts(): array
@@ -31,7 +32,30 @@ class TemplePhoto extends Model
             'width' => 'integer',
             'height' => 'integer',
             'size_bytes' => 'integer',
+            'temple_objected_at' => 'datetime',
         ];
+    }
+
+    /** The devotee whose Photo Stamp this was promoted from, if any. */
+    public function devotee(): BelongsTo
+    {
+        return $this->belongsTo(Devotee::class);
+    }
+
+    public function visitPhoto(): BelongsTo
+    {
+        return $this->belongsTo(VisitPhoto::class);
+    }
+
+    /** Came from a devotee rather than the editors or the temple. */
+    public function isDevoteePhoto(): bool
+    {
+        return $this->visit_photo_id !== null || $this->devotee_id !== null;
+    }
+
+    public function templeObjected(): bool
+    {
+        return $this->temple_objected_at !== null;
     }
 
     public function temple(): BelongsTo

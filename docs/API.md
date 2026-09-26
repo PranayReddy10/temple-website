@@ -622,6 +622,68 @@ for a token that is expired, forged or issued to another app.
 `entitlements` (`no_ads`, `memory_photos_per_visit`, `premium_passport`) and
 `subscription` (`plan`, `ends_at`) while one is active.
 
+## Likes, follows and accounts of visits
+
+```
+GET    /api/v1/me/likes                        temples the devotee liked
+PUT    /api/v1/me/likes/{slug}                 idempotent
+DELETE /api/v1/me/likes/{slug}
+GET    /api/v1/me/follows                      with notify_festivals / notify_events per temple
+PUT    /api/v1/me/follows/{slug}  { notify_festivals?, notify_events? }
+DELETE /api/v1/me/follows/{slug}
+GET    /api/v1/temples/{slug}/reviews          open; published accounts + meta.summary
+POST   /api/v1/temples/{slug}/reviews          10/min
+GET    /api/v1/me/reviews
+DELETE /api/v1/me/reviews/{id}
+```
+
+Three signals, kept apart. A **like** is the lightest and implies nothing
+else. A **save** (`/me/saved-temples`) is a bookmark. A **follow** asks to
+be told about the temple, and carries what to be told: a first follow turns
+both reminders on; a later `PUT` changes only the flags it names, so the app
+syncing a follow never resets a devotee's choices. Only published temples;
+all three puts and deletes are idempotent.
+
+`GET /temples/{slug}` carries `engagement`: `likes_count`, `follows_count`,
+`reviews` (the summary below) and `viewer` (`liked`, `following`,
+`notify_festivals`, `notify_events`, `saved`; null for a guest). Every
+like/follow call answers with the same block so the page updates without a
+second request.
+
+### Reviews rate the visit, never the temple
+
+```json
+"ratings": [
+  {"key": "queue_rating", "label": "Queue and waiting", "value": 2},
+  {"key": "cleanliness_rating", ...}, {"key": "facilities_rating", ...},
+  {"key": "accessibility_rating", ...}, {"key": "accuracy_rating", "label": "Our listing was accurate", "value": 5}
+],
+"wait_minutes": 90, "body": "...", "temple_reply": null
+```
+
+A place of worship is not a restaurant. There is no star rating of the
+temple and no overall score anywhere; each dimension is 1 to 5, optional,
+and averaged on its own in `meta.summary.dimensions[key].average` with the
+count that said so, plus `average_wait_minutes`. `POST` takes `visited_on`
+(default today; not in the future), `visit_id` (one of the devotee's own at
+this temple), any of the five ratings, `wait_minutes` and `body`; at least
+one of them. Writing again about the same day edits that account and sends
+it back for review. A review is `pending` until staff publish it under
+**Devotees → Visit reviews**; `status` and `moderation_note` are returned
+only to the author (`is_mine`). Names are shortened to a first name and an
+initial. The temple's team reads published accounts in its portal and may
+reply (`temple_reply`); it cannot publish or remove one.
+
+### Devotee photos in a temple's gallery
+
+Staff can add an approved, shared Photo Stamp to the temple's own gallery
+from the moderation queue. A copy of the file is made under the temple, so
+the devotee deleting theirs later does not pull it from the gallery, and it
+carries `is_devotee_photo: true` and `devotee.name` (shortened) on
+`GET /temples/{slug}` photos. The temple's team can **Object** from its
+portal, which unpublishes it at once. `is_in_temple_gallery` on the
+devotee's own photos says whether this happened.
+
 ## Notifications
 
 ```
@@ -634,9 +696,19 @@ POST /api/v1/me/notifications/read-all   { platform? }
 
 Sent from **App → Notifications** to everyone, one platform, followers of a
 temple, a home state or one devotee. Push goes through Firebase topics the
-app subscribes to — `all`, `android`/`ios`, `temple-{id}`, `state-{id}` — or
-to one devotee's registered tokens. A push carries `notification_id`,
-`link_type` (`none`, `temple`, `day`, `screen`, `url`) and `link_value`.
+app subscribes to — `all`, `android`/`ios`, `temple-{id}` (subscribed on
+follow, not on save), `state-{id}` — or to one devotee's registered tokens.
+A push carries `notification_id`, `link_type` (`none`, `temple`, `day`,
+`screen`, `url`) and `link_value`.
+
+**Festival and event reminders** are automatic: the evening before a
+published event at a published temple, `notifications:event-reminders`
+(scheduled daily at 18:00 devotional time) creates one notification per
+event with audience `temple_festival` or `temple_event`, and delivers it
+only to followers whose `notify_festivals` / `notify_events` is on for that
+temple, to their device tokens directly rather than the temple's topic. Never
+twice (`source_key`), and not at all while the switch under Settings → Push is
+off. Guests receive none.
 
 ## Plans and payments
 

@@ -114,6 +114,9 @@ class PhotosRelationManager extends RelationManager
 
                 TextColumn::make('credit')
                     ->placeholder('Own photo')
+                    ->description(fn (TemplePhoto $record): ?string => $record->isDevoteePhoto()
+                        ? ($record->templeObjected() ? 'Devotee photo · objected: '.$record->temple_objection : 'Devotee photo, from the app')
+                        : null)
                     ->toggleable(),
 
                 TextColumn::make('dimensions')
@@ -139,6 +142,25 @@ class PhotosRelationManager extends RelationManager
             ])
             ->recordActions([
                 EditAction::make(),
+                // A devotee's photo the temple does not want shown. Only for
+                // those: the temple's own uploads it simply edits or deletes.
+                \Filament\Actions\Action::make('object')
+                    ->label('Object')
+                    ->icon('heroicon-o-hand-raised')
+                    ->color('warning')
+                    ->visible(fn (TemplePhoto $record): bool => $record->isDevoteePhoto() && ! $record->templeObjected())
+                    ->schema([
+                        \Filament\Forms\Components\Textarea::make('reason')
+                            ->label('Why it should not be shown')
+                            ->rows(2)
+                            ->maxLength(255)
+                            ->required()
+                            ->helperText('Seen by the editorial team; the photo comes down at once.'),
+                    ])
+                    ->action(function (TemplePhoto $record, array $data): void {
+                        \App\Support\PhotoPromotion::object($record, $data['reason']);
+                        \Filament\Notifications\Notification::make()->title('Taken down. The editors have been told why.')->success()->send();
+                    }),
                 DeleteAction::make(),
             ])
             ->toolbarActions([

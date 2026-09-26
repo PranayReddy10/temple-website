@@ -4,6 +4,7 @@ namespace App\Support\Push;
 
 use App\Models\AppNotification;
 use App\Models\DevoteeDevice;
+use App\Models\TempleFollow;
 use Throwable;
 
 /**
@@ -53,17 +54,17 @@ class NotificationSender
         ], fn ($v) => $v !== '');
 
         if ($n->audience === 'devotee') {
-            $sent = 0;
+            return $this->pushToDevices(DevoteeDevice::query()->where('devotee_id', $n->audience_id), $n, $data);
+        }
 
-            DevoteeDevice::query()->where('devotee_id', $n->audience_id)->each(function (DevoteeDevice $device) use ($n, $data, &$sent): void {
-                if ($this->fcm->send(['token' => $device->token], $n->title, $n->body, $n->image_url, $data)) {
-                    $sent++;
-                } else {
-                    $device->delete(); // uninstalled or signed out
-                }
-            });
+        // A reminder goes only to followers who asked for that kind, so it
+        // cannot ride the temple's topic (every follower is on that): each
+        // opted-in follower's devices are addressed directly.
+        if ($n->isReminder()) {
+            $column = AppNotification::REMINDER_AUDIENCES[$n->audience];
+            $devotees = TempleFollow::query()->where('temple_id', $n->audience_id)->where($column, true)->select('devotee_id');
 
-            return $sent;
+            return $this->pushToDevices(DevoteeDevice::query()->whereIn('devotee_id', $devotees), $n, $data);
         }
 
         $target = match ($n->audience) {
@@ -76,5 +77,26 @@ class NotificationSender
         $this->fcm->send($target, $n->title, $n->body, $n->image_url, $data);
 
         return 1;
+    }
+
+    /**
+     * One message per device token. A token Firebase says is gone is
+     * forgotten, so the list cleans itself.
+     *
+     * @param  array<string, string>  $data
+     */
+    protected function pushToDevices(\Illuminate\Database\Eloquent\Builder $devices, AppNotification $n, array $data): int
+    {
+        $sent = 0;
+
+        $devices->each(function (DevoteeDevice $device) use ($n, $data, &$sent): void {
+            if ($this->fcm->send(['token' => $device->token], $n->title, $n->body, $n->image_url, $data)) {
+                $sent++;
+            } else {
+                $device->delete(); // uninstalled or signed out
+            }
+        });
+
+        return $sent;
     }
 }

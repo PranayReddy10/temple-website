@@ -124,6 +124,16 @@ class TempleDetailResource extends JsonResource
             // get it subtly wrong for someone standing at the gate.
             'is_closed_today' => $this->whenLoaded('closures', fn (): bool => $this->isClosedOn()),
 
+            /*
+             * What devotees added. Likes and follows are counts; the review
+             * summary is per dimension of the visit, with no overall score,
+             * because a place of worship is not ranked. `viewer` is where
+             * the signed-in caller stands, null for a guest.
+             */
+            'engagement' => \App\Http\Controllers\Api\V1\EngagementController::state($request, $this->resource) + [
+                'reviews' => \App\Models\TempleReview::summaryFor($this->resource),
+            ],
+
             'published_at' => $this->published_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
 

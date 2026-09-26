@@ -56,6 +56,17 @@ class PhotoModeration
                 ->boolean()
                 ->tooltip('Approved and shared: both are required'),
 
+            IconColumn::make('in_gallery')
+                ->label('In gallery')
+                ->state(fn (VisitPhoto $record): bool => $record->promotedPhoto !== null)
+                ->boolean()
+                ->trueIcon('heroicon-o-building-library')
+                ->falseIcon('heroicon-o-minus')
+                ->falseColor('gray')
+                ->tooltip(fn (VisitPhoto $record): string => $record->promotedPhoto !== null
+                    ? ($record->promotedPhoto->templeObjected() ? 'The temple objected; it is unpublished' : 'In the temple\'s own gallery, credited to the devotee')
+                    : 'Not offered to the temple\'s gallery'),
+
             TextColumn::make('moderator.name')->label('Decided by')->placeholder('—')
                 ->toggleable(isToggledHiddenByDefault: true),
 
@@ -107,6 +118,22 @@ class PhotoModeration
                     'moderated_at' => now(),
                     'moderation_note' => null,
                 ])),
+
+            Action::make('promote')
+                ->label('Add to temple gallery')
+                ->icon('heroicon-o-building-library')
+                ->color('primary')
+                ->visible(fn (VisitPhoto $record): bool => $record->canBePromoted() && self::canModerate())
+                ->requiresConfirmation()
+                ->modalDescription(fn (VisitPhoto $record): string => 'A copy goes into '.($record->temple?->name ?? 'the temple').'\'s gallery in the app, credited to '.($record->devotee?->name ?? 'the devotee').'. The temple\'s team can object from its portal, which takes it down.')
+                ->action(function (VisitPhoto $record): void {
+                    try {
+                        \App\Support\PhotoPromotion::promote($record, Auth::user());
+                        \Filament\Notifications\Notification::make()->title('Added to the temple\'s gallery.')->success()->send();
+                    } catch (\Throwable $e) {
+                        \Filament\Notifications\Notification::make()->title($e->getMessage())->danger()->send();
+                    }
+                }),
 
             Action::make('reject')
                 ->label('Reject')

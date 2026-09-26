@@ -12,6 +12,7 @@ use App\Filament\Resources\Temples\RelationManagers\ClosuresRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\EventsRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\PhotosRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\PujasRelationManager;
+use App\Filament\Resources\Temples\RelationManagers\ReviewsRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\TimingsRelationManager;
 use App\Filament\RelationManagers\TranslationsRelationManager;
 use App\Filament\Resources\Temples\Schemas\TempleForm;
@@ -88,6 +89,7 @@ class TempleResource extends Resource
             TimingsRelationManager::class,
             PujasRelationManager::class,
             BookingsRelationManager::class,
+            ReviewsRelationManager::class,
             ClosuresRelationManager::class,
             EventsRelationManager::class,
             // This temple's own songs. Tirumala's Suprabhatam is sung at
