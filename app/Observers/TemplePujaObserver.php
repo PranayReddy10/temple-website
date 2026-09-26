@@ -42,5 +42,16 @@ class TemplePujaObserver
         if ($puja->is_free) {
             $puja->fee_amount = null;
         }
+
+        // Booking in the app charges the published fee. With no published
+        // fee and no "free", there is nothing to charge and nothing to
+        // confirm, so the switch cannot stay on.
+        if ($puja->app_booking_enabled && ! $puja->is_free && $puja->fee_amount === null) {
+            $puja->app_booking_enabled = false;
+        }
+
+        if ($puja->booking_capacity_per_day !== null && (int) $puja->booking_capacity_per_day < 1) {
+            $puja->booking_capacity_per_day = null;
+        }
     }
 }

@@ -38,17 +38,32 @@ class Payments
 
     public function begin(Devotee $devotee, SubscriptionPlan $plan, string $gateway): Payment
     {
+        // Priced from the plan here, never from anything the app sent.
+        $payment = $this->beginFor($devotee, $plan->price_paise, Payment::SUBSCRIPTION, $gateway, currency: $plan->currency);
+        $payment->forceFill(['subscription_plan_id' => $plan->getKey()])->save();
+
+        return $payment;
+    }
+
+    /**
+     * A payment for anything: a plan, a seva booking. The amount is always
+     * decided on the server by whatever is being paid for.
+     *
+     * @param  array<string, mixed>  $meta
+     */
+    public function beginFor(Devotee $devotee, int $amountPaise, string $purpose, string $gateway, array $meta = [], string $currency = 'INR'): Payment
+    {
         if (! in_array($gateway, AppConfig::enabledGateways(), true)) {
             throw new InvalidArgumentException('That payment method is not available.');
         }
 
-        // Priced from the plan here, never from anything the app sent.
         return Payment::create([
             'devotee_id' => $devotee->getKey(),
-            'subscription_plan_id' => $plan->getKey(),
+            'purpose' => $purpose,
             'gateway' => $gateway,
-            'amount_paise' => $plan->price_paise,
-            'currency' => $plan->currency,
+            'amount_paise' => $amountPaise,
+            'currency' => $currency,
+            'meta' => $meta === [] ? null : $meta,
         ]);
     }
 
@@ -76,6 +91,11 @@ class Payments
             if ($status === Payment::FAILED) {
                 if ($locked->status !== Payment::FAILED) {
                     $locked->forceFill(['status' => Payment::FAILED, 'failure_reason' => $reason ?? 'Payment was not completed.'])->save();
+                    // A booking waiting on this money is off; the slot goes
+                    // back to whoever books next.
+                    if ($locked->booking !== null) {
+                        app(\App\Support\Bookings\PujaBookings::class)->paymentFailed($locked->booking, $locked->failure_reason);
+                    }
                 }
 
                 return $locked;
@@ -90,6 +110,12 @@ class Payments
 
             if ($locked->plan !== null) {
                 $this->startSubscription($locked->devotee, $locked->plan, $locked);
+            }
+
+            // The one place a booking becomes confirmed: the gateway said
+            // the money arrived, not the app.
+            if ($locked->booking !== null) {
+                app(\App\Support\Bookings\PujaBookings::class)->confirm($locked->booking);
             }
 
             return $locked;
@@ -122,6 +148,10 @@ class Payments
         DB::transaction(function () use ($payment): void {
             $payment->forceFill(['status' => Payment::REFUNDED])->save();
             $payment->subscription?->forceFill(['cancelled_at' => now()])->save();
+
+            if ($payment->booking !== null) {
+                app(\App\Support\Bookings\PujaBookings::class)->refunded($payment->booking);
+            }
         });
     }
 }

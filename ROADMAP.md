@@ -205,10 +205,33 @@ staff) and phone. Those people are who this phase hands each temple to.
 
 | Slice | Scope | Status |
 | --- | --- | --- |
-| **Add a temple from the app** | "My temple is not listed": full form with name, PIN-code address, deity, history, festivals, timings, contact, photos and who is sending it; duplicate check against listed temples; staff create a draft temple from it, match it to an existing one, or turn it down with a note the sender sees | ✅ |
+| **Add a temple from the app** | "My temple is not listed": full form with name, PIN-code address, deity, history, festivals, timings, contact, photos and who is sending it; duplicate check against listed temples; staff create a draft temple from it, match it to an existing one, or turn it down with a note the sender sees. "I'm here" reads the PIN code, village, district and state off the map, and a PIN code India Post does not know is checked against the map before anyone is told it is wrong | ✅ |
 | **Temple member app** | A separate app for trustees, priests and temple offices: sign in by phone, claim a listed temple (starting from the members who added or were named on it), and manage timings, closures, pujas, events and photos — the work the `/temple` web portal does today | ⬜ |
-| **Puja & seva booking** | Book and pay for pujas, sevas and prasadam through the temple's own listing, with the temple confirming each booking from its app | ⬜ |
+| **Puja & seva booking** | Opt-in per seva: a temple switches "Devotees can book this in the app" on for the sevas it can receive, and the listing stays information-only for the rest. Devotees pick a day and party, pay the published fee through the same gateways as plans (free sevas book at once), and get a reference and a QR code. The temple portal lists who booked what and paid how much, and its **Scan booking** counter verifies a code once and refuses it the second time. Admin sees every temple's bookings and records refunds. Pujas, sevas and prasadam are filed by kind | ✅ |
+| **Prasadam by post** | Prasadam is listed and booked today for collection at the counter. Next: quantity pricing, home delivery with an address and shipping charge, and the temple marking it dispatched | ⬜ |
 | **Stay & travel near a temple** | Hotels, dharmashalas and transport near each temple, with the temple able to recommend its own accommodation | ⬜ |
+
+### Notes on the Phase 6 slices
+
+#### Puja & seva booking — opt-in, confirmed by the money, verified once
+
+Three decisions carry this slice. Booking is switched on per seva by the
+temple, never by us: a temple that lists its sevas so devotees know what
+exists has done nothing wrong, and its page must not sprout a "Book" button it
+cannot honour. A booking is confirmed by the gateway confirming the payment,
+through the same `Payments::apply()` that switches a plan on, so the app's
+word alone confirms nothing and a webhook delivered twice confirms nothing
+twice. And a code is verified once: the counter's first scan records who
+received the devotee and when, and the second scan of the same code is
+refused with that record, because a screenshot of a QR is trivially shared.
+
+Two identifiers, neither the row id: a short reference with no 0/O or 1/I to
+read out over a counter, and a long random code for the QR. Neither can be
+guessed from the other.
+
+Refunds are deliberately manual. The temple refunds in its own gateway
+dashboard and records it here; the app never promises money back on its own,
+because the money went to the temple's account, not ours.
 
 ### Later phases
 

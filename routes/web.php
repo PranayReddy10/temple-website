@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BookingPageController;
 use App\Http\Controllers\MediaFileController;
 use App\Http\Controllers\PassportPageController;
 use App\Http\Controllers\PayController;
@@ -64,6 +65,14 @@ Route::get('/passport/{code}', PassportPageController::class)
     ->where('code', '[A-Za-z0-9]{16,32}')
     ->middleware('throttle:60,1')
     ->name('passport.show');
+
+/*
+| A seva booking's code, opened by a phone camera rather than the portal.
+*/
+Route::get('/bookings/{code}', BookingPageController::class)
+    ->where('code', '[A-Za-z0-9]{20,40}')
+    ->middleware('throttle:60,1')
+    ->name('bookings.show');
 
 /*
 | A temple's check-in code as a printable poster. Signed-in panel users only

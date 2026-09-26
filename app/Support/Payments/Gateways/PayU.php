@@ -40,7 +40,7 @@ class PayU implements PaymentGateway
             'key' => $this->key(),
             'txnid' => $this->txnId($payment),
             'amount' => number_format($payment->amount_paise / 100, 2, '.', ''),
-            'productinfo' => $payment->plan?->code ?? 'subscription',
+            'productinfo' => $payment->plan?->code ?? $payment->purpose,
             'firstname' => preg_replace('/[^A-Za-z ]/', '', $devotee->name) ?: 'Devotee',
             'email' => $devotee->email ?? 'devotee'.$devotee->getKey().'@example.com',
             'phone' => preg_replace('/\D/', '', (string) $devotee->phone) ?: '9999999999',

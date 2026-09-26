@@ -129,6 +129,12 @@ class Temple extends Model
         return $this->hasMany(TemplePuja::class)->orderBy('sort_order')->orderBy('id');
     }
 
+    /** Sevas booked through the app, for the temple's counter to receive. */
+    public function pujaBookings(): HasMany
+    {
+        return $this->hasMany(PujaBooking::class);
+    }
+
     public function facilities(): BelongsToMany
     {
         return $this->belongsToMany(Facility::class)

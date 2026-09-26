@@ -109,6 +109,26 @@ A URL that merely looks official is not. `is_official` is the single field that
 decides whether the app may present a link as the temple's own booking route,
 and it is only ever true when an editor has explicitly confirmed it.
 
+### 3. `app_booking.enabled` is the temple's choice, per seva
+
+```json
+"kind": "puja",
+"app_booking": {
+  "enabled": true, "requires_payment": true, "fee_per_person": true,
+  "amount_paise": 10000, "max_people": 10, "advance_days": 30,
+  "capacity_per_day": null, "instructions": "Report at the seva counter 30 minutes before."
+}
+```
+
+Booking in the app is opt-in per puja, seva or prasadam. `enabled: false`
+(the default, and what a server older than this field implies) means the
+listing is information only: the client shows the fee and the `booking` link
+exactly as before and nothing else. Only when `enabled` is true may the client
+offer to book; `requires_payment` says whether the published fee is charged
+in the app (a free seva is booked without paying), and `fee_per_person`
+whether `amount_paise` is multiplied by the party size. `kind` (`puja` |
+`seva` | `prasadam`) groups the list.
+
 ### Trust levels travel with every record
 
 `trust.level` is one of `unverified`, `community`, `verified`, `official`.
@@ -467,9 +487,27 @@ GET /api/v1/pincode/{6 digits}      30/min
 
 The state (matched to our `states`, with `state_id`), district and the
 villages and towns (`places[].name`) a PIN code covers, from India Post's
-directory via api.postalpincode.in. Cached for 30 days; an unknown code for a
-day. `404` for a code with no post office, or when the directory cannot be
-reached. The server must be allowed outbound HTTPS to api.postalpincode.in.
+directory via api.postalpincode.in. When that directory does not know the
+code, or cannot be reached, the map (OpenStreetMap's Nominatim) is asked
+before anyone is told the code is wrong. Cached for 30 days; a code neither
+source knows for a day.
+
+`404` only when both sources say no post office has the code. `503` when
+neither could be reached, with a message the app shows as it is; that is not
+a verdict on the code, and the app offers the pin on the map instead. The
+server must be allowed outbound HTTPS to api.postalpincode.in and
+nominatim.openstreetmap.org.
+
+```
+GET /api/v1/geocode/reverse?lat=17.6&lng=79.0      30/min
+```
+
+The address under a dropped pin, in the same shape plus `city` (the village
+or town at the pin), `address` (street and landmark) and the coordinates.
+This is what "I'm here" fills the add-a-temple and seva-drive forms from,
+so a devotee standing at a temple never has to type a PIN code the directory
+may not know. `404` when the map has nothing there; `503` when it cannot be
+reached. Cached by position to about eleven metres.
 
 Seva drives take `pincode` and `district` too, and `GET /seva-drives`
 accepts `verified=1` to list only verified drives.
@@ -633,3 +671,45 @@ by the SDK is reused by the web page rather than created twice.
 The price is always the plan's, set on
 the server; a plan switches on only when the gateway itself confirms, once,
 however many times the return and the webhook arrive.
+
+## Puja & seva booking
+
+```
+POST /api/v1/temples/{slug}/pujas/{id}/bookings   10/min
+GET  /api/v1/me/bookings
+GET  /api/v1/me/bookings/{reference}              asks the gateway if still open
+POST /api/v1/me/bookings/{reference}/cancel
+```
+
+Only a puja with `app_booking.enabled` at a published temple can be booked;
+anything else is `422` (`puja`), and a puja under another temple's URL is
+`404`. Fields: `booked_for` (`YYYY-MM-DD`, today up to `advance_days`
+ahead), `people` (1 to `max_people`), and optionally `devotee_name`,
+`devotee_phone`, `gotram`, `nakshatram`, `note` (the sankalpam details the
+priest reads), `gateway`, `platform`, `mode`. When the temple set
+`capacity_per_day`, a full day is `422` (`booked_for`); the check and the
+insert happen under one lock.
+
+The answer is `data` (the booking) and `checkout`. For a free seva `checkout`
+is null and the booking is already `confirmed`. For a priced one the booking
+is `pending_payment` and `checkout` is exactly what `POST /me/checkout`
+answers for a plan (`payment`, `sdk`, `sdk_error`, `checkout_url`,
+`done_url`), with `payment.purpose = puja_booking`; the app pays the same way
+and confirms through the same `me/payments/{id}/confirm`. The booking becomes
+`confirmed` only when the gateway confirms the money, once, however many
+times the return and the webhook arrive; a failed or abandoned payment
+cancels it and frees the slot.
+
+A booking carries two identifiers, neither of them the row id: `reference`
+(`SV` and eight characters with no 0/O or 1/I, read out at the counter) and
+`code` (random, what the QR carries as `qr_url`). The temple's counter scans
+the code in its portal (**Scan booking**) and marks the booking `verified`
+with the staff member's name; a second scan of the same code is refused as
+already verified, so a screenshot cannot be used twice. `/bookings/{code}` on
+the web shows a phone camera what the booking is, and verifies nothing.
+
+Status is one of `pending_payment`, `confirmed`, `verified`, `cancelled`,
+`refunded`. `can_cancel` is true while the booking is ahead and not yet
+received; cancelling a paid booking does not refund it. Refunds are made by
+the temple in its gateway and recorded from the admin, which moves the
+booking to `refunded`.

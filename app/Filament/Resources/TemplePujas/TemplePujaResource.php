@@ -108,6 +108,18 @@ class TemplePujaResource extends Resource
                         : 'Not confirmed as official. A link that looks official is not.')
                     ->toggleable(),
 
+                IconColumn::make('app_booking_enabled')
+                    ->label('In app')
+                    ->state(fn (TemplePuja $record): bool => $record->isBookableInApp())
+                    ->boolean()
+                    ->trueIcon('heroicon-o-device-phone-mobile')
+                    ->falseIcon('heroicon-o-minus')
+                    ->falseColor('gray')
+                    ->tooltip(fn (TemplePuja $record): string => $record->isBookableInApp()
+                        ? 'Devotees book this in the app'
+                        : 'Information only; booking in the app is off')
+                    ->toggleable(),
+
                 IconColumn::make('is_published')->label('Published')->boolean()->sortable(),
 
                 TextColumn::make('updated_at')->label('Updated')->since()->sortable()
@@ -130,6 +142,11 @@ class TemplePujaResource extends Resource
                     ->query(fn (Builder $query): Builder => $query
                         ->where('is_free', false)
                         ->whereNull('fee_amount'))
+                    ->toggle(),
+
+                Filter::make('bookable_in_app')
+                    ->label('Bookable in the app')
+                    ->query(fn (Builder $query): Builder => $query->where('app_booking_enabled', true))
                     ->toggle(),
 
                 Filter::make('unconfirmed_booking')

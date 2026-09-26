@@ -1,8 +1,8 @@
 @extends('pay.layout')
-@section('title', $payment->plan?->name ?? 'Payment')
+@section('title', $payment->description() ?? 'Payment')
 @section('body')
 <main class="card">
-    <h1>{{ $payment->plan?->name }}</h1>
+    <h1>{{ $payment->description() }}</h1>
     <p class="amount">{{ $payment->amountLabel() }}</p>
     <p class="muted">Secure payment by Cashfree.</p>
     <div class="spinner"></div>

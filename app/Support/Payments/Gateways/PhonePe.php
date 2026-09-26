@@ -72,7 +72,7 @@ class PhonePe implements PaymentGateway
                 'expireAfter' => 1800,
                 'paymentFlow' => [
                     'type' => 'PG_CHECKOUT',
-                    'message' => $payment->plan?->name,
+                    'message' => $payment->description(),
                     'merchantUrls' => ['redirectUrl' => route('pay.return', ['payment' => $payment, 'gateway' => 'phonepe'])],
                 ],
             ]);
@@ -122,7 +122,7 @@ class PhonePe implements PaymentGateway
                 'merchantOrderId' => $this->merchantOrderId($payment),
                 'amount' => $payment->amount_paise,
                 'expireAfter' => 1800,
-                'paymentFlow' => ['type' => 'PG_CHECKOUT', 'message' => $payment->plan?->name],
+                'paymentFlow' => ['type' => 'PG_CHECKOUT', 'message' => $payment->description()],
             ]);
 
         if (! $response->successful() || blank($response->json('token')) || blank($response->json('orderId'))) {

@@ -26,6 +26,11 @@ class Payment extends Model
 
     public const REFUNDED = 'refunded';
 
+    /** What a payment is for. */
+    public const SUBSCRIPTION = 'subscription';
+
+    public const PUJA_BOOKING = 'puja_booking';
+
     public const GATEWAYS = [
         'razorpay' => 'Razorpay',
         'phonepe' => 'PhonePe',
@@ -78,6 +83,34 @@ class Payment extends Model
     public function subscription(): HasOne
     {
         return $this->hasOne(DevoteeSubscription::class);
+    }
+
+    /** The seva booking this payment confirms, when that is what it is for. */
+    public function booking(): HasOne
+    {
+        return $this->hasOne(PujaBooking::class);
+    }
+
+    public function isForBooking(): bool
+    {
+        return $this->purpose === self::PUJA_BOOKING;
+    }
+
+    /**
+     * What the devotee is paying for, in the words the gateway shows them:
+     * the plan's name, or the seva and the temple.
+     */
+    public function description(): string
+    {
+        if ($this->isForBooking()) {
+            $booking = $this->booking;
+
+            return $booking === null
+                ? 'Seva booking'
+                : trim(($booking->puja?->name ?? 'Seva').' · '.($booking->temple?->name ?? ''), ' ·');
+        }
+
+        return $this->plan?->name ?? config('brand.name');
     }
 
     public function scopePaid(Builder $query): Builder

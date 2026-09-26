@@ -41,7 +41,7 @@ class Razorpay implements PaymentGateway
                     'amount' => $payment->amount_paise,
                     'currency' => $payment->currency,
                     'receipt' => substr($payment->uuid, 0, 40),
-                    'notes' => ['payment' => $payment->uuid, 'plan' => $payment->plan?->code],
+                    'notes' => ['payment' => $payment->uuid, 'plan' => $payment->plan?->code, 'purpose' => $payment->purpose],
                 ]);
 
             // An answer without an order id is no order: sending on would open
