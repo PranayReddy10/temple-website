@@ -4,10 +4,14 @@ namespace App\Filament\Resources\SevaDrives;
 
 use App\Enums\SevaCause;
 use App\Enums\SevaDriveStatus;
+use App\Filament\Resources\SevaDrives\Pages\CreateSevaDrive;
+use App\Filament\Resources\SevaDrives\Pages\EditSevaDrive;
 use App\Filament\Resources\SevaDrives\Pages\ListSevaDrives;
 use App\Filament\Resources\SevaDrives\Pages\ViewSevaDrive;
 use App\Filament\Resources\SevaDrives\RelationManagers\DonationsRelationManager;
 use App\Filament\Resources\SevaDrives\RelationManagers\MediaRelationManager;
+use App\Filament\Resources\SevaDrives\RelationManagers\ReportsRelationManager;
+use App\Filament\Resources\SevaDrives\Schemas\SevaDriveForm;
 use App\Filament\Resources\SevaDrives\RelationManagers\VolunteersRelationManager;
 use App\Filament\Support\MediaColumn;
 use App\Filament\Support\SevaDriveDecisions;
@@ -15,8 +19,14 @@ use App\Models\SevaDrive;
 use App\Models\SevaDriveMedia;
 use BackedEnum;
 use Filament\Actions\ActionGroup;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -49,12 +59,18 @@ class SevaDriveResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'title';
 
+    public static function form(Schema $schema): Schema
+    {
+        return SevaDriveForm::configure($schema);
+    }
+
     public static function table(Table $table): Table
     {
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query
                 ->with(['organiser:id,name', 'temple:id,name', 'media'])
-                ->withSum('volunteers', 'party_size'))
+                ->withSum('volunteers', 'party_size')
+                ->withCount(['reports as open_reports_count' => fn (Builder $q) => $q->open()]))
             ->columns([
                 MediaColumn::make('cover', fn (SevaDrive $record): ?string => $record->media
                     ->first(fn (SevaDriveMedia $m): bool => $m->type === SevaDriveMedia::TYPE_PHOTO && filled($m->path))?->path)
@@ -71,9 +87,19 @@ class SevaDriveResource extends Resource
 
                 TextColumn::make('cause')->badge()->color('gray')->toggleable(),
 
-                TextColumn::make('organiser.name')->label('Organiser')->searchable(),
+                TextColumn::make('organiser_display')
+                    ->label('Organiser')
+                    ->state(fn (SevaDrive $record): string => $record->organiserName())
+                    ->description(fn (SevaDrive $record): ?string => $record->devotee_id === null ? 'Team drive' : null)
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query
+                        ->where('organiser_name', 'like', "%{$search}%")
+                        ->orWhereHas('organiser', fn ($q) => $q->where('name', 'like', "%{$search}%"))),
 
-                TextColumn::make('starts_at')->label('On')->dateTime('d M Y, H:i')->sortable(),
+                TextColumn::make('starts_at')
+                    ->label('Dates')
+                    ->state(fn (SevaDrive $record): string => $record->dateLabel())
+                    ->description(fn (SevaDrive $record): string => $record->isMultiDay() ? $record->dayCount().' days' : 'One day')
+                    ->sortable(),
 
                 TextColumn::make('volunteers_sum_party_size')
                     ->label('Coming')
@@ -84,6 +110,20 @@ class SevaDriveResource extends Resource
                         : null),
 
                 TextColumn::make('status')->badge()->sortable(),
+
+                IconColumn::make('is_misleading')
+                    ->label('Misleading')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-exclamation-triangle')
+                    ->trueColor('warning')
+                    ->falseIcon('')
+                    ->toggleable(),
+
+                TextColumn::make('open_reports_count')
+                    ->label('Reports')
+                    ->badge()
+                    ->color(fn (int $state): string => $state > 0 ? 'danger' : 'gray')
+                    ->sortable(),
 
                 TextColumn::make('upi_id')->label('UPI')->placeholder('—')->toggleable(isToggledHiddenByDefault: true),
 
@@ -96,11 +136,21 @@ class SevaDriveResource extends Resource
                     ->toggle(),
                 SelectFilter::make('status')->options(SevaDriveStatus::class)->multiple(),
                 SelectFilter::make('cause')->options(SevaCause::class)->multiple(),
+                Filter::make('reported')
+                    ->label('Has open reports')
+                    ->query(fn (Builder $query): Builder => $query->whereHas('reports', fn ($q) => $q->open()))
+                    ->toggle(),
+                Filter::make('misleading')
+                    ->label('Marked misleading')
+                    ->query(fn (Builder $query): Builder => $query->where('is_misleading', true))
+                    ->toggle(),
             ])
             ->recordActions([
                 ViewAction::make()->label('Open'),
-                ActionGroup::make(SevaDriveDecisions::actions()),
+                EditAction::make(),
+                ActionGroup::make([...SevaDriveDecisions::actions(), DeleteAction::make()]),
             ])
+            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])])
             // Oldest first, like every queue here.
             ->defaultSort('created_at', 'asc')
             ->persistFiltersInSession()
@@ -113,6 +163,7 @@ class SevaDriveResource extends Resource
     {
         return [
             MediaRelationManager::class,
+            ReportsRelationManager::class,
             VolunteersRelationManager::class,
             DonationsRelationManager::class,
         ];
@@ -122,13 +173,17 @@ class SevaDriveResource extends Resource
     {
         return [
             'index' => ListSevaDrives::route('/'),
+            'create' => CreateSevaDrive::route('/create'),
             'view' => ViewSevaDrive::route('/{record}'),
+            'edit' => EditSevaDrive::route('/{record}/edit'),
         ];
     }
 
     public static function getNavigationBadge(): ?string
     {
-        $waiting = SevaDrive::query()->needsStaff()->count();
+        $waiting = SevaDrive::query()
+            ->where(fn (Builder $q) => $q->needsStaff()->orWhereHas('reports', fn ($r) => $r->open()))
+            ->count();
 
         return $waiting > 0 ? (string) $waiting : null;
     }
@@ -143,9 +198,9 @@ class SevaDriveResource extends Resource
         return Auth::user()?->role?->isStaff() ?? false;
     }
 
-    /** Drives are raised by devotees, from the app. */
+    /** Staff can run a drive themselves, or raise one for a devotee. */
     public static function canCreate(): bool
     {
-        return false;
+        return self::canAccess();
     }
 }

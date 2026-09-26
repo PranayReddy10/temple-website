@@ -230,6 +230,7 @@ class ViewSupportTicket extends ViewRecord
             \App\Models\TempleEvent::class => \App\Filament\Resources\TempleEvents\TempleEventResource::getUrl('edit', ['record' => $subject]),
             \App\Models\Devotee::class => \App\Filament\Resources\Devotees\DevoteeResource::getUrl('view', ['record' => $subject]),
             \App\Models\TemplePuja::class => \App\Filament\Resources\TemplePujas\TemplePujaResource::getUrl('edit', ['record' => $subject]),
+            \App\Models\SevaDrive::class => \App\Filament\Resources\SevaDrives\SevaDriveResource::getUrl('view', ['record' => $subject]),
             default => null,
         };
     }

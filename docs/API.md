@@ -418,6 +418,20 @@ Rules the server holds, whatever the request says:
   `donations.raised` counts **confirmed** amounts only.
 - Adding after-photos to a verified drive puts it back to `completed`, so
   new pictures are verified too.
+- `organiser.name` is always set: the name staff gave, else the devotee's,
+  else the team. `organiser.is_team` is true for drives staff run themselves.
+- `date_label` and `is_multi_day` describe the dates: one day
+  (`starts_at`, optionally `ends_at` the same day) or several days.
+- `volunteers_joined` (people, counting each party), `signups`,
+  `donations.raised` and `donations.donors` (confirmed only) are public.
+- **Blocked** drives (`status.value = blocked`) are hidden from everybody but
+  the organiser, who sees `mine.block_reason`. **Misleading** drives stay
+  visible with `is_misleading` and `misleading_note`; joining and donations
+  close.
+
+Anybody can report a drive through Support: `POST /api/v1/support` with
+`about_type=seva_drive` and `about_id`. Reports appear on the drive in the
+admin, under its Reports tab and the Seva Drives "Reported" tab.
 
 ## Mantras and devotional media
 

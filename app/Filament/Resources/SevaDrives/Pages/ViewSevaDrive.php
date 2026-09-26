@@ -2,10 +2,15 @@
 
 namespace App\Filament\Resources\SevaDrives\Pages;
 
+use App\Enums\SevaDriveStatus;
+use App\Filament\Resources\Devotees\DevoteeResource;
 use App\Filament\Resources\SevaDrives\SevaDriveResource;
 use App\Filament\Support\SevaDriveDecisions;
 use App\Models\SevaDrive;
 use App\Models\SevaDriveMedia;
+use Filament\Actions\ActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\ViewRecord;
@@ -30,18 +35,85 @@ class ViewSevaDrive extends ViewRecord
         $record = $this->record;
 
         return $record->status?->getLabel().' · '.$record->place_name
-            .' · '.$record->starts_at?->format('d M Y, H:i')
-            .' · raised by '.($record->organiser?->name ?? 'a deleted account');
+            .' · '.$record->dateLabel()
+            .' · organised by '.$record->organiserName();
     }
 
     protected function getHeaderActions(): array
     {
-        return SevaDriveDecisions::actions();
+        $decisions = SevaDriveDecisions::actions();
+
+        // The two that come up most stay out in the open; the rest in a menu.
+        return [
+            EditAction::make(),
+            ...array_slice($decisions, 0, 3),
+            ActionGroup::make([...array_slice($decisions, 3), DeleteAction::make()])
+                ->label('More')
+                ->icon('heroicon-m-ellipsis-vertical')
+                ->button()
+                ->color('gray'),
+        ];
     }
 
     public function infolist(Schema $schema): Schema
     {
         return $schema->components([
+            Section::make('Blocked')
+                ->icon('heroicon-o-shield-exclamation')
+                ->iconColor('danger')
+                ->visible(fn (SevaDrive $record): bool => $record->status === SevaDriveStatus::Blocked)
+                ->columns(3)
+                ->schema([
+                    TextEntry::make('block_reason')->label('Reason (the organiser sees this)')->columnSpan(2),
+                    TextEntry::make('blocker.name')->label('Blocked by')
+                        ->state(fn (SevaDrive $record): string => ($record->blocker?->name ?? 'Staff').' · '.$record->blocked_at?->format('d M Y, H:i')),
+                ]),
+
+            Section::make('Marked misleading')
+                ->icon('heroicon-o-exclamation-triangle')
+                ->iconColor('warning')
+                ->visible(fn (SevaDrive $record): bool => $record->is_misleading)
+                ->schema([
+                    TextEntry::make('misleading_note')->hiddenLabel()->helperText('Shown on the drive in the app. Joining and donations are closed.'),
+                ]),
+
+            Section::make('At a glance')
+                ->columns(6)
+                ->schema([
+                    TextEntry::make('coming')->label('Coming')
+                        ->state(fn (SevaDrive $record): string => $record->headcount().($record->volunteers_needed ? ' of '.$record->volunteers_needed : '')),
+                    TextEntry::make('signups')->label('Sign-ups')->state(fn (SevaDrive $record): int => $record->volunteers()->count()),
+                    TextEntry::make('raised_total')->label('Raised (confirmed)')->state(fn (SevaDrive $record): int => $record->confirmedDonationTotal())->money('INR'),
+                    TextEntry::make('donors')->label('Donors')->state(fn (SevaDrive $record): int => $record->donations()->whereNotNull('confirmed_at')->count()),
+                    TextEntry::make('reports_open')->label('Open reports')
+                        ->state(fn (SevaDrive $record): int => $record->reports()->open()->count())
+                        ->badge()
+                        ->color(fn (int $state): string => $state > 0 ? 'danger' : 'gray'),
+                    TextEntry::make('days')->label('Length')
+                        ->state(fn (SevaDrive $record): string => $record->isMultiDay() ? $record->dayCount().' days' : 'One day'),
+                ]),
+
+            Section::make('Organiser')
+                ->columns(4)
+                ->schema([
+                    TextEntry::make('organiser_shown')->label('Shown as')->state(fn (SevaDrive $record): string => $record->organiserName())->weight('bold'),
+                    TextEntry::make('organiser.name')
+                        ->label('Devotee account')
+                        ->placeholder('None — a team drive')
+                        ->url(fn (SevaDrive $record): ?string => $record->organiser ? DevoteeResource::getUrl('view', ['record' => $record->organiser]) : null)
+                        ->color('primary'),
+                    TextEntry::make('organiser.email')->label('Email')->copyable()->placeholder('—'),
+                    TextEntry::make('organiser.phone')->label('Account phone')->copyable()->placeholder('—'),
+                    TextEntry::make('organiser_history')
+                        ->label('Drives they organised')
+                        ->state(fn (SevaDrive $record): string => $record->devotee_id === null ? '—' : (string) SevaDrive::query()->where('devotee_id', $record->devotee_id)->count()),
+                    TextEntry::make('organiser_blocked')
+                        ->label('Of those, blocked')
+                        ->state(fn (SevaDrive $record): string => $record->devotee_id === null ? '—' : (string) SevaDrive::query()->where('devotee_id', $record->devotee_id)->where('status', SevaDriveStatus::Blocked)->count()),
+                    TextEntry::make('creator.name')->label('Created in the admin by')->placeholder('Raised from the app'),
+                    TextEntry::make('created_at')->label('Raised')->dateTime('d M Y, H:i'),
+                ]),
+
             Section::make('What is wrong, and the plan')
                 ->columns(2)
                 ->schema([
@@ -67,6 +139,7 @@ class ViewSevaDrive extends ViewRecord
                             ? 'https://www.google.com/maps?q='.$record->latitude.','.$record->longitude
                             : null, shouldOpenInNewTab: true)
                         ->color(fn (SevaDrive $record): ?string => $record->latitude !== null ? 'primary' : null),
+                    TextEntry::make('date_label')->label('Dates')->state(fn (SevaDrive $record): string => $record->dateLabel())->columnSpan(2),
                     TextEntry::make('starts_at')->label('Starts')->dateTime('d M Y, H:i'),
                     TextEntry::make('ends_at')->label('Ends')->dateTime('d M Y, H:i')->placeholder('—'),
                     TextEntry::make('volunteers_needed')->label('Volunteers wanted')->placeholder('Any number'),

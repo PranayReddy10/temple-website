@@ -56,6 +56,11 @@ class SevaDriveResource extends JsonResource
             ],
             'is_verified' => $this->status === SevaDriveStatus::Verified,
 
+            // Staff flagged it: still shown, with this warning, and closed to
+            // joining and donations.
+            'is_misleading' => (bool) $this->is_misleading,
+            'misleading_note' => $this->is_misleading ? $this->misleading_note : null,
+
             'place' => [
                 'name' => $this->place_name,
                 'address' => $this->address,
@@ -76,15 +81,19 @@ class SevaDriveResource extends JsonResource
             'what_to_bring' => $this->what_to_bring,
             'starts_at' => $this->starts_at?->toIso8601String(),
             'ends_at' => $this->ends_at?->toIso8601String(),
+            'is_multi_day' => $this->isMultiDay(),
+            'date_label' => $this->dateLabel(),
 
             'volunteers_needed' => $this->volunteers_needed,
             'volunteers_joined' => (int) $headcount,
             'signups' => (int) ($this->volunteers_count ?? $this->volunteers()->count()),
 
-            'organiser' => $this->whenLoaded('organiser', fn () => [
-                'name' => $this->organiser?->name,
-                'avatar_url' => $this->organiser?->avatarUrl(),
-            ]),
+            'organiser' => [
+                'name' => $this->organiserName(),
+                'avatar_url' => $this->relationLoaded('organiser') ? $this->organiser?->avatarUrl() : null,
+                // Run by staff rather than a devotee.
+                'is_team' => $this->devotee_id === null,
+            ],
             // The organiser's phone is for the people who are coming.
             'contact_phone' => $isOrganiser || $hasJoined ? $this->contact_phone : null,
 
@@ -105,14 +114,18 @@ class SevaDriveResource extends JsonResource
                 'upi_link' => $this->upiLink(),
                 'goal' => $this->donation_goal,
                 'purpose' => $this->donation_purpose,
-                'raised' => $acceptsDonations || $isOrganiser ? (int) ($this->donations_raised ?? $this->confirmedDonationTotal()) : null,
+                // Confirmed amounts only, for everybody: how much a drive has
+                // raised is not a secret, and it is the answer to "is anyone
+                // supporting this?".
+                'raised' => (int) ($this->donations_raised ?? $this->confirmedDonationTotal()),
+                'donors' => (int) ($this->donors_count ?? $this->donations()->whereNotNull('confirmed_at')->count()),
             ],
 
             'viewer' => [
                 'is_organiser' => $isOrganiser,
                 'has_joined' => $hasJoined,
                 'can_join' => $viewer !== null && ! $isOrganiser && ! $hasJoined
-                    && $this->status?->acceptsVolunteers() === true,
+                    && $this->acceptsVolunteers(),
                 'can_edit' => $isOrganiser && $this->status?->isEditableByOrganiser() === true,
                 'can_complete' => $isOrganiser && $this->status === SevaDriveStatus::Approved
                     && $this->starts_at?->isPast() === true,
@@ -124,6 +137,7 @@ class SevaDriveResource extends JsonResource
                 'upi_name' => $this->upi_name,
                 'donations_enabled' => $this->donations_enabled,
                 'moderation_note' => $this->moderation_note,
+                'block_reason' => $this->block_reason,
             ]),
 
             'created_at' => $this->created_at?->toIso8601String(),

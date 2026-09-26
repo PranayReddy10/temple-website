@@ -5,6 +5,7 @@ namespace App\Filament\Resources\SevaDrives\Pages;
 use App\Enums\SevaDriveStatus;
 use App\Filament\Resources\SevaDrives\SevaDriveResource;
 use App\Models\SevaDrive;
+use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
@@ -20,7 +21,12 @@ class ListSevaDrives extends ListRecords
 
     public function getSubheading(): ?string
     {
-        return 'Devotees organising the care of old temples and heritage places. Approve a drive before it is listed; verify the before and after before it may ask for donations.';
+        return 'Devotees organising the care of old temples and heritage places. Approve a drive before it is listed; verify the before and after before it may ask for donations. Block or mark misleading anything reported.';
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [CreateAction::make()->label('Create a drive')];
     }
 
     public function getTabs(): array
@@ -47,6 +53,16 @@ class ListSevaDrives extends ListRecords
             'verified' => Tab::make('Verified')
                 ->icon('heroicon-m-check-badge')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', SevaDriveStatus::Verified)),
+
+            'reported' => Tab::make('Reported')
+                ->icon('heroicon-m-flag')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereHas('reports', fn ($q) => $q->open()))
+                ->badge(fn (): int => SevaDrive::query()->whereHas('reports', fn ($q) => $q->open())->count())
+                ->badgeColor('danger'),
+
+            'blocked' => Tab::make('Blocked')
+                ->icon('heroicon-m-shield-exclamation')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', SevaDriveStatus::Blocked)),
 
             'all' => Tab::make('Everything'),
         ];

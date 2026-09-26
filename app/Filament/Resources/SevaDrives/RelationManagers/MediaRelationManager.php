@@ -5,8 +5,15 @@ namespace App\Filament\Resources\SevaDrives\RelationManagers;
 use App\Filament\Support\MediaColumn;
 use App\Models\SevaDriveMedia;
 use Filament\Actions\Action;
+use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Schema;
+use App\Support\UploadRules;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -23,6 +30,29 @@ class MediaRelationManager extends RelationManager
     public function isReadOnly(): bool
     {
         return false;
+    }
+
+    public function form(Schema $schema): Schema
+    {
+        return $schema->components([
+            Select::make('stage')->options(['before' => 'Before', 'after' => 'After'])->required()->default('before')->native(false),
+            Select::make('type')->options(['photo' => 'Photo', 'video' => 'Video'])->required()->default('photo')->live()->native(false),
+            FileUpload::make('path')
+                ->label('File')
+                ->disk(fn (): string => config('filesystems.media'))
+                ->directory(fn (): string => 'seva-drives/'.$this->getOwnerRecord()->getKey())
+                ->visibility('public')
+                ->acceptedFileTypes(fn (Get $get): array => UploadRules::typesFor($get('type') === 'video' ? 'seva_video' : 'seva_photo'))
+                ->maxSize(fn (Get $get): int => UploadRules::maxKbFor($get('type') === 'video' ? 'seva_video' : 'seva_photo'))
+                ->requiredWithout('video_url')
+                ->columnSpanFull(),
+            TextInput::make('video_url')
+                ->label('Or a link to the video')
+                ->url()
+                ->visible(fn (Get $get): bool => $get('type') === 'video')
+                ->columnSpanFull(),
+            TextInput::make('caption')->maxLength(255)->columnSpanFull(),
+        ])->columns(2);
     }
 
     public function table(Table $table): Table
@@ -55,6 +85,14 @@ class MediaRelationManager extends RelationManager
                         $record->save();
                     }),
                 DeleteAction::make(),
+            ])
+            ->headerActions([
+                CreateAction::make()
+                    ->label('Add photo or video')
+                    ->mutateDataUsing(fn (array $data): array => [
+                        ...$data,
+                        'disk' => filled($data['path'] ?? null) ? config('filesystems.media') : null,
+                    ]),
             ])
             ->defaultSort('stage')
             ->emptyStateHeading('Nothing uploaded');

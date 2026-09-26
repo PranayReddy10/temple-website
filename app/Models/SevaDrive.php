@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * A devotee-organised drive to care for a temple or heritage place.
@@ -35,6 +37,7 @@ class SevaDrive extends Model
         'status' => 'pending',
         'cause' => 'cleaning',
         'donations_enabled' => true,
+        'is_misleading' => false,
     ];
 
     protected function casts(): array
@@ -52,6 +55,8 @@ class SevaDrive extends Model
             'volunteers_needed' => 'integer',
             'donation_goal' => 'integer',
             'donations_enabled' => 'boolean',
+            'blocked_at' => 'datetime',
+            'is_misleading' => 'boolean',
         ];
     }
 
@@ -104,6 +109,22 @@ class SevaDrive extends Model
         return $this->belongsToMany(Devotee::class, 'seva_drive_volunteers')
             ->withPivot(['party_size', 'note', 'attended'])
             ->withTimestamps();
+    }
+
+    /** Reports people filed about this drive, through Support & Reports. */
+    public function reports(): MorphMany
+    {
+        return $this->morphMany(SupportTicket::class, 'about');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function blocker(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'blocked_by');
     }
 
     public function donations(): HasMany
@@ -159,7 +180,91 @@ class SevaDrive extends Model
     {
         return $this->status?->allowsDonations() === true
             && $this->donations_enabled
+            && ! $this->is_misleading
             && filled($this->upi_id);
+    }
+
+    /** Open, and not flagged: nobody should sign up for a misleading drive. */
+    public function acceptsVolunteers(): bool
+    {
+        return $this->status?->acceptsVolunteers() === true && ! $this->is_misleading;
+    }
+
+    /** Who is shown as running it: the name staff gave, else the devotee's. */
+    public function organiserName(): string
+    {
+        return $this->organiser_name
+            ?: $this->organiser?->name
+            ?: config('brand.name', config('app.name')).' team';
+    }
+
+    /** Runs over more than one calendar day. */
+    public function isMultiDay(): bool
+    {
+        return $this->ends_at !== null && ! $this->ends_at->isSameDay($this->starts_at);
+    }
+
+    /** Calendar days it spans, counting both ends. */
+    public function dayCount(): int
+    {
+        if ($this->starts_at === null || $this->ends_at === null) {
+            return 1;
+        }
+
+        return (int) $this->starts_at->copy()->startOfDay()->diffInDays($this->ends_at->copy()->startOfDay()) + 1;
+    }
+
+    /** "Sat 12 Oct 2026, 7:00 am – 11:00 am" or "12 Oct – 14 Oct 2026". */
+    public function dateLabel(): string
+    {
+        $start = $this->starts_at;
+
+        if ($start === null) {
+            return '';
+        }
+
+        if ($this->ends_at === null) {
+            return $start->format('D j M Y, g:i a');
+        }
+
+        return $this->isMultiDay()
+            ? $start->format('D j M').' – '.$this->ends_at->format('D j M Y')
+            : $start->format('D j M Y, g:i a').' – '.$this->ends_at->format('g:i a');
+    }
+
+    // --- Staff moderation after the fact ---
+
+    public function block(string $reason): void
+    {
+        if ($this->status !== SevaDriveStatus::Blocked) {
+            $this->status_before_block = $this->status?->value;
+        }
+
+        $this->status = SevaDriveStatus::Blocked;
+        $this->blocked_at = now();
+        // The staff guard by name: under an API request the default guard
+        // is the devotee's, and a devotee id is not a user.
+        $this->blocked_by = Auth::guard('web')->id();
+        $this->block_reason = $reason;
+        $this->save();
+    }
+
+    /** Back to where it was before it was blocked. */
+    public function unblock(): void
+    {
+        $this->status = SevaDriveStatus::tryFrom((string) $this->status_before_block) ?? SevaDriveStatus::Pending;
+        $this->status_before_block = null;
+        $this->blocked_at = null;
+        $this->blocked_by = null;
+        $this->block_reason = null;
+        $this->save();
+    }
+
+    public function markMisleading(?string $note): void
+    {
+        $this->is_misleading = $note !== null;
+        $this->misleading_note = $note;
+        $this->save();
     }
 
     public function confirmedDonationTotal(): int
@@ -183,7 +288,7 @@ class SevaDrive extends Model
         // decode %40 there, and then cannot find the payee.
         return 'upi://pay?'.str_replace('%40', '@', http_build_query([
             'pa' => $this->upi_id,
-            'pn' => $this->upi_name ?: $this->organiser?->name,
+            'pn' => $this->upi_name ?: $this->organiserName(),
             'cu' => 'INR',
             'tn' => str('Seva: '.$this->title)->limit(60, '')->toString(),
         ], '', '&', PHP_QUERY_RFC3986));
