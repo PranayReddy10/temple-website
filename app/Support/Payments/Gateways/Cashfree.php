@@ -41,6 +41,20 @@ class Cashfree implements PaymentGateway
 
     public function start(Payment $payment): array
     {
+        // Started once already (the app's SDK, then the web page, or a
+        // retry): Cashfree refuses a second order with the same id, so the
+        // existing order's session is reused.
+        if ($payment->gateway_order_id !== null) {
+            $existing = $this->http()->get('/orders/'.$payment->gateway_order_id);
+
+            if ($existing->successful() && filled($existing->json('payment_session_id'))) {
+                return ['view' => 'pay.cashfree', 'data' => [
+                    'session_id' => $existing->json('payment_session_id'),
+                    'mode' => $this->production() ? 'production' : 'sandbox',
+                ]];
+            }
+        }
+
         $devotee = $payment->devotee;
         $response = $this->http()->post('/orders', [
             'order_id' => $this->orderId($payment),

@@ -87,6 +87,84 @@ class PaymentsTest extends TestCase
         $this->assertSame(1, $devotee->subscriptions()->count());
     }
 
+    public function test_the_app_pays_razorpay_through_its_native_sdk(): void
+    {
+        $devotee = $this->devotee();
+        Http::fake(['api.razorpay.com/v1/orders' => Http::response(['id' => 'order_SDK'])]);
+
+        $checkout = $this->postJson('/api/v1/me/checkout', ['plan' => 'yatri-plus', 'platform' => 'android', 'mode' => 'sdk'])
+            ->assertCreated()
+            ->assertJsonPath('data.sdk.gateway', 'razorpay')
+            ->assertJsonPath('data.sdk.key', 'rzp_test_key')
+            ->assertJsonPath('data.sdk.order_id', 'order_SDK')
+            ->assertJsonPath('data.sdk.amount_paise', 4900);
+        // The web checkout stays available as a fallback.
+        $this->assertNotEmpty($checkout->json('data.checkout_url'));
+        $uuid = $checkout->json('data.payment.id');
+
+        // What Razorpay's SDK hands the app on success, checked by signature.
+        $this->postJson("/api/v1/me/payments/{$uuid}/confirm", [
+            'razorpay_payment_id' => 'pay_SDK', 'razorpay_order_id' => 'order_SDK',
+            'razorpay_signature' => hash_hmac('sha256', 'order_SDK|pay_SDK', 'rzp_secret'),
+        ])->assertOk()->assertJsonPath('data.status', 'paid')->assertJsonPath('data.entitlements.no_ads', true);
+
+        $this->assertSame(1, $devotee->subscriptions()->count());
+    }
+
+    public function test_a_native_result_with_a_forged_signature_or_another_order_does_not_pay(): void
+    {
+        $this->devotee();
+        Http::fake(['api.razorpay.com/v1/orders' => Http::response(['id' => 'order_SDK'])]);
+        $uuid = $this->postJson('/api/v1/me/checkout', ['plan' => 'yatri-plus', 'mode' => 'sdk'])->json('data.payment.id');
+
+        $this->postJson("/api/v1/me/payments/{$uuid}/confirm", [
+            'razorpay_payment_id' => 'pay_SDK', 'razorpay_order_id' => 'order_OTHER', 'razorpay_signature' => 'x',
+        ])->assertStatus(422);
+
+        $this->postJson("/api/v1/me/payments/{$uuid}/confirm", [
+            'razorpay_payment_id' => 'pay_SDK', 'razorpay_order_id' => 'order_SDK', 'razorpay_signature' => 'forged',
+        ])->assertOk()->assertJsonPath('data.status', 'failed');
+
+        $this->assertSame(0, DevoteeSubscription::count());
+    }
+
+    public function test_cashfree_opens_natively_and_is_confirmed_with_cashfree(): void
+    {
+        $devotee = $this->devotee();
+        Setting::set('payments_cashfree_enabled', '1', 'boolean');
+        Setting::set('payments_cashfree_app_id', 'cf');
+        Setting::set('payments_cashfree_secret_key', 'cfs', 'secret');
+        Http::fake([
+            'sandbox.cashfree.com/pg/orders' => Http::response(['payment_session_id' => 'sess_SDK']),
+            'sandbox.cashfree.com/pg/orders/*' => Http::response(['order_status' => 'PAID', 'payment_session_id' => 'sess_SDK']),
+        ]);
+
+        $checkout = $this->postJson('/api/v1/me/checkout', ['plan' => 'yatri-plus', 'gateway' => 'cashfree', 'mode' => 'sdk'])
+            ->assertCreated()
+            ->assertJsonPath('data.sdk.gateway', 'cashfree')
+            ->assertJsonPath('data.sdk.session_id', 'sess_SDK')
+            ->assertJsonPath('data.sdk.environment', 'sandbox');
+
+        // Falling back to the web page reuses the same Cashfree order.
+        $this->get($checkout->json('data.checkout_url'))->assertOk()->assertSee('sess_SDK');
+        Http::assertSentCount(2); // one order created, one looked up
+
+        // Cashfree's SDK only says "verify this order": the server asks Cashfree.
+        $this->postJson('/api/v1/me/payments/'.$checkout->json('data.payment.id').'/confirm')
+            ->assertOk()->assertJsonPath('data.status', 'paid');
+        $this->assertSame(1, $devotee->subscriptions()->count());
+    }
+
+    public function test_one_devotee_cannot_confirm_anothers_payment(): void
+    {
+        $this->devotee();
+        Http::fake(['api.razorpay.com/v1/orders' => Http::response(['id' => 'order_SDK'])]);
+        $uuid = $this->postJson('/api/v1/me/checkout', ['plan' => 'yatri-plus', 'mode' => 'sdk'])->json('data.payment.id');
+
+        $this->devotee();
+        $this->postJson("/api/v1/me/payments/{$uuid}/confirm")->assertNotFound();
+    }
+
     public function test_a_forged_signature_does_not_pay(): void
     {
         $this->devotee();
