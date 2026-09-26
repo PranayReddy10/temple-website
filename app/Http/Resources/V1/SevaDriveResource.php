@@ -50,11 +50,21 @@ class SevaDriveResource extends JsonResource
                 'value' => $this->cause?->value,
                 'label' => $this->cause?->getLabel(),
             ],
+            // Where it is in its life. An open drive whose last day has passed
+            // reads as completed, whether or not the organiser said so.
             'status' => [
-                'value' => $this->status?->value,
-                'label' => $this->status?->getLabel(),
+                'value' => $this->effectiveStatus()?->value,
+                'label' => $this->effectiveStatus()?->getLabel(),
             ],
-            'is_verified' => $this->status === SevaDriveStatus::Verified,
+
+            // A badge, separate from the status: verifying a drive does not
+            // end it, and an unverified drive is still listed.
+            'is_verified' => $this->isVerified(),
+            'verification' => [
+                'verified_at' => $this->verified_at?->toIso8601String(),
+                'requested' => $this->verificationPending(),
+                'requested_at' => $this->verificationPending() ? $this->verification_requested_at?->toIso8601String() : null,
+            ],
 
             // Staff flagged it: still shown, with this warning, and closed to
             // joining and donations.
@@ -131,6 +141,11 @@ class SevaDriveResource extends JsonResource
                 'can_edit' => $isOrganiser && $this->status?->isEditableByOrganiser() === true,
                 'can_complete' => $isOrganiser && $this->status === SevaDriveStatus::Approved
                     && $this->starts_at?->isPast() === true,
+                'can_leave' => $hasJoined && ! $this->hasEnded()
+                    && $this->status === SevaDriveStatus::Approved,
+                'can_request_verification' => $isOrganiser && ! $this->isVerified()
+                    && ! $this->verificationPending()
+                    && $this->status?->isPublic() === true,
             ],
 
             // For the organiser only: what they entered and what staff said.

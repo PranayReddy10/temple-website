@@ -26,7 +26,7 @@ class SevaDriveDecisions
                 ->color('success')
                 ->visible(fn (SevaDrive $record): bool => in_array($record->status, [SevaDriveStatus::Pending, SevaDriveStatus::Rejected], true))
                 ->requiresConfirmation()
-                ->modalHeading('Open this drive to volunteers?')
+                ->modalHeading('List this drive?')
                 ->modalDescription('It will be listed in the app and anybody signed in can join. Check the place, the date and the plan are what they appear to be.')
                 ->action(fn (SevaDrive $record) => self::decide($record, SevaDriveStatus::Approved)),
 
@@ -46,43 +46,61 @@ class SevaDriveDecisions
                 ])
                 ->action(fn (SevaDrive $record, array $data) => self::decide($record, SevaDriveStatus::Rejected, $data['moderation_note'])),
 
+            /*
+             * Verification is a badge, not a stage: it says the team has
+             * checked the drive is genuine. It does not end the drive — that
+             * happens on its last day, or when the organiser says so.
+             */
             Action::make('verify')
-                ->label('Verify the work')
+                ->label('Verify')
                 ->icon('heroicon-o-check-badge')
                 ->color('success')
-                // From "done" as normal, but also straight from "open": staff
-                // who were there, or who have the after photographs another
-                // way, should not have to wait for the organiser to tap Done.
-                ->visible(fn (SevaDrive $record): bool => in_array($record->status, [SevaDriveStatus::Approved, SevaDriveStatus::Completed], true))
+                ->visible(fn (SevaDrive $record): bool => ! $record->isVerified() && $record->status->isPublic())
                 ->requiresConfirmation()
                 ->modalHeading('Verify this drive?')
-                ->modalDescription(fn (SevaDrive $record): string => 'Compare the before and after photographs first. Verifying shows a Verified badge'
-                    .(filled($record->upi_id) ? ' and opens donations to '.$record->upi_id.'.' : '.'))
-                ->action(function (SevaDrive $record): void {
-                    $record->status = SevaDriveStatus::Verified;
-                    $record->completed_at ??= now();
-                    $record->verified_at = now();
-                    $record->verified_by = Auth::id();
-                    $record->save();
-                }),
+                ->modalDescription(fn (SevaDrive $record): string => 'Check the place, the photographs and the organiser are genuine. It gets a Verified badge'
+                    .(filled($record->upi_id) ? ' and opens for donations to '.$record->upi_id : '')
+                    .'. It stays '.mb_strtolower($record->effectiveStatus()?->getLabel() ?? '').'.')
+                ->action(fn (SevaDrive $record) => $record->verify(Auth::id())),
 
-            Action::make('send_back')
-                ->label('Not verified')
-                ->icon('heroicon-o-arrow-uturn-left')
+            Action::make('decline_verification')
+                ->label('Decline verification')
+                ->icon('heroicon-o-x-circle')
                 ->color('warning')
-                ->visible(fn (SevaDrive $record): bool => in_array($record->status, [SevaDriveStatus::Completed, SevaDriveStatus::Verified], true))
+                ->visible(fn (SevaDrive $record): bool => $record->verificationPending())
                 ->form([
-                    Textarea::make('moderation_note')
+                    Textarea::make('reason')
                         ->label('What is missing')
                         ->required()
                         ->rows(3)
-                        ->helperText('The organiser sees this, adds what is asked for, and marks it done again. Donations close meanwhile.'),
+                        ->helperText('The organiser sees this, adds what is asked for, and can ask again. The drive stays listed as not verified.'),
                 ])
-                ->action(function (SevaDrive $record, array $data): void {
-                    $record->status = SevaDriveStatus::Approved;
-                    $record->verified_at = null;
-                    $record->verified_by = null;
-                    $record->moderation_note = $data['moderation_note'];
+                ->action(fn (SevaDrive $record, array $data) => $record->unverify($data['reason'])),
+
+            Action::make('unverify')
+                ->label('Remove verification')
+                ->icon('heroicon-o-arrow-uturn-left')
+                ->color('warning')
+                ->visible(fn (SevaDrive $record): bool => $record->isVerified())
+                ->form([
+                    Textarea::make('reason')
+                        ->label('Why')
+                        ->required()
+                        ->rows(3)
+                        ->helperText('The organiser sees this. The badge goes and donations close; the drive stays listed.'),
+                ])
+                ->action(fn (SevaDrive $record, array $data) => $record->unverify($data['reason'])),
+
+            Action::make('complete')
+                ->label('Mark completed')
+                ->icon('heroicon-o-flag')
+                ->color('gray')
+                ->visible(fn (SevaDrive $record): bool => $record->status === SevaDriveStatus::Approved)
+                ->requiresConfirmation()
+                ->modalDescription('It stops taking volunteers and moves to Completed. Drives also complete by themselves once their last day is over.')
+                ->action(function (SevaDrive $record): void {
+                    $record->status = SevaDriveStatus::Completed;
+                    $record->completed_at = now();
                     $record->save();
                 }),
 

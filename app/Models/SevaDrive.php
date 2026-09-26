@@ -50,6 +50,7 @@ class SevaDrive extends Model
             'moderated_at' => 'datetime',
             'completed_at' => 'datetime',
             'verified_at' => 'datetime',
+            'verification_requested_at' => 'datetime',
             'latitude' => 'float',
             'longitude' => 'float',
             'volunteers_needed' => 'integer',
@@ -136,15 +137,52 @@ class SevaDrive extends Model
 
     public function scopePubliclyVisible(Builder $query): Builder
     {
-        return $query->whereIn('status', [
-            SevaDriveStatus::Approved, SevaDriveStatus::Completed, SevaDriveStatus::Verified,
-        ]);
+        return $query->whereIn('status', [SevaDriveStatus::Approved, SevaDriveStatus::Completed]);
     }
 
-    /** What staff need to look at: new drives, and finished ones to verify. */
+    /** What staff need to look at: drives waiting for approval, and requests to verify. */
     public function scopeNeedsStaff(Builder $query): Builder
     {
-        return $query->whereIn('status', [SevaDriveStatus::Pending, SevaDriveStatus::Completed]);
+        return $query->where(fn (Builder $q) => $q
+            ->where('status', SevaDriveStatus::Pending)
+            ->orWhere(fn (Builder $r) => $r->verificationRequested()));
+    }
+
+    /** The organiser asked, staff have not yet verified, and it is still up. */
+    public function scopeVerificationRequested(Builder $query): Builder
+    {
+        return $query->whereNotNull('verification_requested_at')
+            ->whereNull('verified_at')
+            ->whereIn('status', [SevaDriveStatus::Approved, SevaDriveStatus::Completed]);
+    }
+
+    public function scopeVerified(Builder $query): Builder
+    {
+        return $query->whereNotNull('verified_at');
+    }
+
+    /**
+     * Over: marked done, or open with its last day behind it. A drive with no
+     * end time runs to the end of the day it starts.
+     */
+    public function scopeFinished(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $q) => $q
+            ->where('status', SevaDriveStatus::Completed)
+            ->orWhere(fn (Builder $open) => $open
+                ->where('status', SevaDriveStatus::Approved)
+                ->where(fn (Builder $ended) => $ended
+                    ->where(fn (Builder $e) => $e->whereNotNull('ends_at')->where('ends_at', '<', now()))
+                    ->orWhere(fn (Builder $e) => $e->whereNull('ends_at')->where('starts_at', '<', now()->startOfDay())))));
+    }
+
+    /** Open and not yet over: what can still be joined. */
+    public function scopeUpcoming(Builder $query): Builder
+    {
+        return $query->where('status', SevaDriveStatus::Approved)
+            ->where(fn (Builder $q) => $q
+                ->where(fn (Builder $e) => $e->whereNotNull('ends_at')->where('ends_at', '>=', now()))
+                ->orWhere(fn (Builder $e) => $e->whereNull('ends_at')->where('starts_at', '>=', now()->startOfDay())));
     }
 
     // --- Helpers ---
@@ -178,16 +216,79 @@ class SevaDrive extends Model
      */
     public function acceptsDonations(): bool
     {
-        return $this->status?->allowsDonations() === true
+        return $this->isVerified()
+            && $this->status?->isPublic() === true
             && $this->donations_enabled
             && ! $this->is_misleading
             && filled($this->upi_id);
     }
 
-    /** Open, and not flagged: nobody should sign up for a misleading drive. */
+    /** Open, not over, and not flagged: nobody should sign up for a misleading drive. */
     public function acceptsVolunteers(): bool
     {
-        return $this->status?->acceptsVolunteers() === true && ! $this->is_misleading;
+        return $this->status?->acceptsVolunteers() === true && ! $this->hasEnded() && ! $this->is_misleading;
+    }
+
+    // --- Verification: a badge, not a stage ---
+
+    public function isVerified(): bool
+    {
+        return $this->verified_at !== null;
+    }
+
+    public function verificationPending(): bool
+    {
+        return $this->verification_requested_at !== null && ! $this->isVerified();
+    }
+
+    public function requestVerification(?string $note): void
+    {
+        $this->verification_requested_at = now();
+        $this->verification_note = $note;
+        $this->save();
+    }
+
+    public function verify(?int $by): void
+    {
+        $this->verified_at = now();
+        $this->verified_by = $by;
+        $this->save();
+    }
+
+    /** Take the badge away; a declined request carries the reason. */
+    public function unverify(?string $reason = null): void
+    {
+        $this->verified_at = null;
+        $this->verified_by = null;
+        $this->verification_requested_at = null;
+        if ($reason !== null) {
+            $this->moderation_note = $reason;
+        }
+        $this->save();
+    }
+
+    // --- When it is over ---
+
+    /** The moment it ends: its end time, or the end of the day it starts. */
+    public function endsAtOrEndOfDay(): ?\Carbon\CarbonInterface
+    {
+        return $this->ends_at ?? $this->starts_at?->copy()->endOfDay();
+    }
+
+    public function hasEnded(): bool
+    {
+        return $this->endsAtOrEndOfDay()?->isPast() === true;
+    }
+
+    /**
+     * The status people should see. An open drive whose last day is behind
+     * it is completed, whether or not the organiser came back to say so.
+     */
+    public function effectiveStatus(): ?SevaDriveStatus
+    {
+        return $this->status === SevaDriveStatus::Approved && $this->hasEnded()
+            ? SevaDriveStatus::Completed
+            : $this->status;
     }
 
     /** Who is shown as running it: the name staff gave, else the devotee's. */

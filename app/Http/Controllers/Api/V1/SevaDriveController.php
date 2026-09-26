@@ -12,6 +12,7 @@ use App\Models\Devotee;
 use App\Models\SevaDrive;
 use App\Models\SevaDriveDonation;
 use App\Models\SevaDriveMedia;
+use App\Models\Setting;
 use App\Models\Temple;
 use App\Support\UploadRules;
 use Illuminate\Database\Eloquent\Builder;
@@ -49,6 +50,9 @@ class SevaDriveController extends Controller
                 'label' => $cause->getLabel(),
                 'description' => $cause->description(),
             ])->values(),
+            'payment_apps' => collect(SevaDriveDonation::PAYMENT_APPS)
+                ->map(fn (string $label, string $value): array => ['value' => $value, 'label' => $label])
+                ->values(),
             'max_media_per_stage' => SevaDriveMedia::MAX_PER_STAGE,
             'photo_max_kb' => UploadRules::maxKbFor('seva_photo'),
             'video_max_kb' => UploadRules::maxKbFor('seva_video'),
@@ -73,14 +77,13 @@ class SevaDriveController extends Controller
         $query = $this->withListing(SevaDrive::query()->publiclyVisible());
 
         match ($request->input('when', 'upcoming')) {
-            'upcoming' => $query->where('status', SevaDriveStatus::Approved)
-                // A drive that started this morning can still be joined.
-                ->where(fn (Builder $q) => $q->where('starts_at', '>=', now()->startOfDay())
-                    ->orWhere('ends_at', '>=', now()))
-                ->orderBy('starts_at'),
-            'done' => $query->whereIn('status', [SevaDriveStatus::Completed, SevaDriveStatus::Verified])
-                ->orderByRaw('case when status = ? then 0 else 1 end', [SevaDriveStatus::Verified->value])
-                ->latest('completed_at'),
+            // A drive that started this morning can still be joined.
+            'upcoming' => $query->upcoming()->orderBy('starts_at'),
+            // Over, whether the organiser said so or the calendar did;
+            // verified ones first.
+            'done' => $query->finished()
+                ->orderByRaw('case when verified_at is null then 1 else 0 end')
+                ->latest('starts_at'),
             default => $query->latest('starts_at'),
         };
 
@@ -93,7 +96,7 @@ class SevaDriveController extends Controller
         }
 
         if ($request->boolean('verified')) {
-            $query->where('status', SevaDriveStatus::Verified);
+            $query->verified();
         }
 
         if ($request->filled('state_id')) {
@@ -160,6 +163,12 @@ class SevaDriveController extends Controller
             $drive = new SevaDrive($this->fillableFrom($validated));
             $drive->devotee_id = $devotee->getKey();
             $drive->temple_id = $this->templeId($validated['temple'] ?? null);
+
+            // Listed at once, marked "not verified" — unless the admin has
+            // asked to approve every drive first.
+            $drive->status = Setting::get('seva_requires_approval', false)
+                ? SevaDriveStatus::Pending
+                : SevaDriveStatus::Approved;
             $drive->save();
 
             $this->storeMedia($request, $drive, $devotee, SevaDriveMedia::STAGE_BEFORE);
@@ -244,12 +253,6 @@ class SevaDriveController extends Controller
 
         $added = DB::transaction(fn () => $this->storeMedia($request, $drive, $devotee, $stage));
 
-        // New pictures of a verified drive have not been verified.
-        if ($stage === SevaDriveMedia::STAGE_AFTER && $drive->status === SevaDriveStatus::Verified) {
-            $drive->status = SevaDriveStatus::Completed;
-            $drive->save();
-        }
-
         return response()->json(['data' => SevaDriveMediaResource::collection($added)], 201);
     }
 
@@ -263,7 +266,7 @@ class SevaDriveController extends Controller
 
         // Verified evidence stays; removing it would un-verify the drive
         // without anybody noticing.
-        if ($drive->status === SevaDriveStatus::Verified) {
+        if ($drive->isVerified()) {
             throw ValidationException::withMessages(['media' => 'Photographs of a verified drive cannot be removed. Write to support if one needs to come down.']);
         }
 
@@ -278,25 +281,50 @@ class SevaDriveController extends Controller
         $this->ownedBy($drive, $this->devotee($request));
 
         $validated = $request->validate([
-            'completion_note' => ['required', 'string', 'min:20', 'max:3000'],
+            'completion_note' => ['required', 'string', 'min:10', 'max:3000'],
         ]);
 
         if ($drive->status !== SevaDriveStatus::Approved) {
-            throw ValidationException::withMessages(['status' => 'Only an approved drive can be marked as done.']);
+            throw ValidationException::withMessages(['status' => 'Only an open drive can be marked as completed.']);
         }
 
         if ($drive->starts_at->isFuture()) {
             throw ValidationException::withMessages(['status' => 'The drive has not started yet.']);
         }
 
-        if (! $drive->media()->where('stage', SevaDriveMedia::STAGE_AFTER)->exists()) {
-            throw ValidationException::withMessages(['media' => 'Add at least one photograph of the place afterwards, so the work can be verified.']);
-        }
+        // After photographs are asked for, not required: a drive is over
+        // when it is over. They are what verification is judged on.
 
         $drive->completion_note = $validated['completion_note'];
         $drive->completed_at = now();
         $drive->status = SevaDriveStatus::Completed;
         $drive->save();
+
+        return new SevaDriveResource($this->loadDetail($drive));
+    }
+
+    /**
+     * The organiser asks the team to verify the drive — before it, to show it
+     * is genuine, or after, with the after photographs. Verified drives get a
+     * badge and, with a UPI ID, open for donations.
+     */
+    public function requestVerification(Request $request, SevaDrive $drive): SevaDriveResource
+    {
+        $this->ownedBy($drive, $this->devotee($request));
+
+        $validated = $request->validate([
+            'note' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        if (! $drive->status->isPublic()) {
+            throw ValidationException::withMessages(['status' => 'Only a listed drive can be verified.']);
+        }
+
+        if ($drive->isVerified()) {
+            throw ValidationException::withMessages(['status' => 'This drive is already verified.']);
+        }
+
+        $drive->requestVerification($validated['note'] ?? null);
 
         return new SevaDriveResource($this->loadDetail($drive));
     }
@@ -393,6 +421,8 @@ class SevaDriveController extends Controller
         $validated = $request->validate([
             'amount' => ['required', 'integer', 'min:1', 'max:10000000'],
             'upi_ref' => ['nullable', 'string', 'max:40'],
+            'payment_app' => ['nullable', Rule::in(array_keys(SevaDriveDonation::PAYMENT_APPS))],
+            'paid_on' => ['nullable', 'date', 'before_or_equal:today', 'after:2020-01-01'],
             'message' => ['nullable', 'string', 'max:255'],
             'is_anonymous' => ['nullable', 'boolean'],
         ]);
@@ -401,6 +431,8 @@ class SevaDriveController extends Controller
             'devotee_id' => $devotee->getKey(),
             'amount' => $validated['amount'],
             'upi_ref' => $validated['upi_ref'] ?? null,
+            'payment_app' => $validated['payment_app'] ?? null,
+            'paid_on' => $validated['paid_on'] ?? now()->toDateString(),
             'message' => $validated['message'] ?? null,
             'is_anonymous' => $request->boolean('is_anonymous'),
         ]);
@@ -457,7 +489,7 @@ class SevaDriveController extends Controller
 
     protected function canAddAfter(SevaDrive $drive): bool
     {
-        return in_array($drive->status, [SevaDriveStatus::Approved, SevaDriveStatus::Completed, SevaDriveStatus::Verified], true)
+        return in_array($drive->status, [SevaDriveStatus::Approved, SevaDriveStatus::Completed], true)
             && $drive->starts_at->isPast();
     }
 
@@ -607,6 +639,9 @@ class SevaDriveController extends Controller
             'donor' => $forOrganiser && ! $donation->is_anonymous ? $donation->devotee?->name : $donation->donorName(),
             'is_anonymous' => $donation->is_anonymous,
             'upi_ref' => $forOrganiser ? $donation->upi_ref : null,
+            'payment_app' => $donation->payment_app,
+            'payment_app_label' => $donation->paymentAppLabel(),
+            'paid_on' => $donation->paid_on?->toDateString(),
             'message' => $donation->message,
             'confirmed' => $donation->isConfirmed(),
             'created_at' => $donation->created_at?->toIso8601String(),

@@ -361,18 +361,23 @@ Devotees organising the care of old temples and heritage places — cleaning a
 shrine, desilting a temple tank, whitewashing a mandapam — and others joining
 them. Admin: **Community → Seva Drives**.
 
-```
-raised (pending) ─ staff approve ─▶ approved ─ organiser adds after-photos,
-                                     │          marks done ─▶ completed ─ staff verify ─▶ verified
-                                     └─ volunteers join                                   └─ UPI ID served
-```
+Two separate things describe a drive:
 
-Reading is open, like the temple listing. Only `approved`, `completed` and
-`verified` drives are ever listed or shown to anybody but their organiser.
+- **Status** — where it is in its life: `approved` (open for volunteers) →
+  `completed`. A drive becomes completed when the organiser (or staff) marks
+  it so, **or by itself once its last day is over** (`ends_at`, or the end of
+  the day it starts). `status` in responses is that effective status.
+  `pending` is used only when the admin switches on *Settings → Seva drives
+  need approval*; otherwise a new drive is listed at once. `rejected`,
+  `cancelled` and `blocked` are not listed.
+- **Verified** — a badge (`is_verified`, `verification.*`). The organiser can
+  ask for it; staff verify, decline with a note, or remove it. Verifying does
+  not end a drive. Only a verified drive with a UPI ID serves `upi_id` /
+  `upi_link` and takes donations.
 
 ```
-GET  /api/v1/seva-drives/options      causes, media limits
-GET  /api/v1/seva-drives              ?when=upcoming|done|all  &cause= &temple={slug} &state_id= &q=
+GET  /api/v1/seva-drives/options      causes, payment apps, media limits
+GET  /api/v1/seva-drives              ?when=upcoming|done|all &verified=1 &cause= &temple={slug} &state_id= &q=
 GET  /api/v1/seva-drives/{id}
 ```
 
@@ -385,53 +390,47 @@ PATCH  /api/v1/me/seva-drives/{id}
 POST   /api/v1/me/seva-drives/{id}/media               multipart: stage=before|after, 20/min
 DELETE /api/v1/me/seva-drives/{id}/media/{media}
 POST   /api/v1/me/seva-drives/{id}/complete            completion_note
+POST   /api/v1/me/seva-drives/{id}/request-verification note (optional), 6/min
 POST   /api/v1/me/seva-drives/{id}/cancel
 GET    /api/v1/me/seva-drives/{id}/volunteers
 GET    /api/v1/me/seva-drives/{id}/donations
 POST   /api/v1/me/seva-drives/{id}/donations/{d}/confirm    received=true|false
 POST   /api/v1/seva-drives/{id}/join                   party_size, note
 DELETE /api/v1/seva-drives/{id}/join
-POST   /api/v1/seva-drives/{id}/donations              amount, upi_ref, message, is_anonymous
+POST   /api/v1/seva-drives/{id}/donations              amount, payment_app, upi_ref, paid_on, message, is_anonymous
 ```
+
+`payment_app` is one of `phonepe`, `gpay`, `paytm`, `bhim`, `amazonpay`,
+`other_upi`, `bank`, `cash`; `paid_on` is a date, not in the future
+(defaults to today). Donation rows carry `payment_app_label` and `paid_on`.
+
+`viewer` says what the signed-in devotee may do: `can_join`, `can_leave`
+(joined and still open — verified or not), `can_edit`, `can_complete`,
+`can_request_verification`.
 
 Raising one takes `title`, `cause`, `place_name`, `problem`, `plan`,
 `starts_at`, and at least one of `photos[]`, `video` or `video_url`; optional
-are `temple` (a published temple's slug), `address`, `city`, `state_id`,
-`latitude`, `longitude`, `meeting_point`, `what_to_bring`, `ends_at`,
-`volunteers_needed`, `contact_phone`, `upi_id`, `upi_name`, `donation_goal`
-and `donation_purpose`. Up to 8 photos and videos per stage.
+are `temple` (a published temple's slug), `address`, `pincode`, `city`,
+`district`, `state_id`, `latitude`, `longitude`, `meeting_point`,
+`what_to_bring`, `ends_at`, `volunteers_needed`, `contact_phone`, `upi_id`,
+`upi_name`, `donation_goal` and `donation_purpose`. Up to 8 photos and videos
+per stage.
 
 Rules the server holds, whatever the request says:
 
-- **Status is never taken from the request.** Approval and verification are
-  staff actions in the admin.
-- **The UPI ID is served only once staff have verified the work**, and not
-  while staff have paused donations. Before that `donations.upi_id` and
-  `donations.upi_link` are `null` for everybody but the organiser (`mine`).
-- **Once approved, only the arrangements can change** — meeting point, what
-  to bring, end time, volunteers wanted, phone and donation details. The
-  place, cause and plan are what volunteers signed up for.
-- Editing a drive staff turned down sends it back for review.
+- Status and verification are never taken from the request.
+- Once open, only the arrangements can change — meeting point, what to
+  bring, end time, volunteers wanted, phone and donation details.
 - The organiser's `contact_phone` is shown only to people who have joined.
 - Money goes straight to the organiser's UPI; the platform never holds it.
-  Donors report what they sent and the organiser confirms each one;
-  `donations.raised` counts **confirmed** amounts only.
-- Adding after-photos to a verified drive puts it back to `completed`, so
-  new pictures are verified too.
-- `organiser.name` is always set: the name staff gave, else the devotee's,
-  else the team. `organiser.is_team` is true for drives staff run themselves.
-- `date_label` and `is_multi_day` describe the dates: one day
-  (`starts_at`, optionally `ends_at` the same day) or several days.
-- `volunteers_joined` (people, counting each party), `signups`,
-  `donations.raised` and `donations.donors` (confirmed only) are public.
-- **Blocked** drives (`status.value = blocked`) are hidden from everybody but
-  the organiser, who sees `mine.block_reason`. **Misleading** drives stay
-  visible with `is_misleading` and `misleading_note`; joining and donations
-  close.
+  `donations.raised` and `donations.donors` count **confirmed** donations.
+- `organiser.name` is always set; `organiser.is_team` marks staff-run drives.
+- **Blocked** drives are hidden from everybody but the organiser
+  (`mine.block_reason`). **Misleading** drives stay visible with
+  `is_misleading` / `misleading_note`; joining and donations close.
 
 Anybody can report a drive through Support: `POST /api/v1/support` with
-`about_type=seva_drive` and `about_id`. Reports appear on the drive in the
-admin, under its Reports tab and the Seva Drives "Reported" tab.
+`about_type=seva_drive` and `about_id`.
 
 ## PIN codes
 

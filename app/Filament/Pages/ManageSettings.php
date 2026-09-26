@@ -58,6 +58,7 @@ class ManageSettings extends Page
         'default_locale' => ['string', 'app.locale'],
         'community_submissions_enabled' => ['boolean', null],
         'temple_self_publish_enabled' => ['boolean', null],
+        'seva_requires_approval' => ['boolean', null],
         'maintenance_notice' => ['string', null],
     ];
 
@@ -142,6 +143,10 @@ class ManageSettings extends Page
                         Toggle::make('community_submissions_enabled')
                             ->label('Accept community submissions')
                             ->helperText('Lets devotees suggest temples and corrections. Everything submitted goes to a moderation queue.'),
+
+                        Toggle::make('seva_requires_approval')
+                            ->label('Seva drives need approval before they are listed')
+                            ->helperText('Off: a drive a devotee raises is listed at once, marked "not verified". On: it waits under Community → Seva Drives → To approve.'),
 
                         Toggle::make('temple_self_publish_enabled')
                             ->label('Verified temples may publish without review')

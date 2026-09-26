@@ -7,12 +7,13 @@ use Filament\Support\Contracts\HasIcon;
 use Filament\Support\Contracts\HasLabel;
 
 /**
- * Where a seva drive stands.
+ * Where a seva drive is in its life. Whether staff have verified it is a
+ * separate badge (verified_at), not a stage: verifying a drive must not end it.
  *
- * Pending is the default and cannot be otherwise: a drive is an invitation
- * to strangers to meet at a place on a date, and it reaches nobody until
- * staff have looked at it. Money is asked for only once the result has been
- * verified — not on a promise.
+ * A new drive goes straight to Approved (listed, marked "not verified"),
+ * unless the admin has switched on "Seva drives need approval", when it
+ * waits as Pending. Completed is reached when its last day is over or the
+ * organiser says it is done.
  */
 enum SevaDriveStatus: string implements HasColor, HasIcon, HasLabel
 {
@@ -20,7 +21,6 @@ enum SevaDriveStatus: string implements HasColor, HasIcon, HasLabel
     case Approved = 'approved';
     case Rejected = 'rejected';
     case Completed = 'completed';
-    case Verified = 'verified';
     case Cancelled = 'cancelled';
 
     /** Taken down by staff. Seen only by staff and, with the reason, the organiser. */
@@ -32,8 +32,7 @@ enum SevaDriveStatus: string implements HasColor, HasIcon, HasLabel
             self::Pending => 'Waiting for review',
             self::Approved => 'Open for volunteers',
             self::Rejected => 'Not approved',
-            self::Completed => 'Done — verifying',
-            self::Verified => 'Verified',
+            self::Completed => 'Completed',
             self::Cancelled => 'Cancelled',
             self::Blocked => 'Blocked',
         };
@@ -46,7 +45,6 @@ enum SevaDriveStatus: string implements HasColor, HasIcon, HasLabel
             self::Approved => 'info',
             self::Rejected => 'danger',
             self::Completed => 'primary',
-            self::Verified => 'success',
             self::Cancelled => 'gray',
             self::Blocked => 'danger',
         };
@@ -58,8 +56,7 @@ enum SevaDriveStatus: string implements HasColor, HasIcon, HasLabel
             self::Pending => 'heroicon-m-clock',
             self::Approved => 'heroicon-m-user-group',
             self::Rejected => 'heroicon-m-x-circle',
-            self::Completed => 'heroicon-m-camera',
-            self::Verified => 'heroicon-m-check-badge',
+            self::Completed => 'heroicon-m-flag',
             self::Cancelled => 'heroicon-m-no-symbol',
             self::Blocked => 'heroicon-m-shield-exclamation',
         };
@@ -68,7 +65,7 @@ enum SevaDriveStatus: string implements HasColor, HasIcon, HasLabel
     /** Whether anyone but the organiser and staff may see it. */
     public function isPublic(): bool
     {
-        return in_array($this, [self::Approved, self::Completed, self::Verified], true);
+        return in_array($this, [self::Approved, self::Completed], true);
     }
 
     public function acceptsVolunteers(): bool
@@ -80,11 +77,5 @@ enum SevaDriveStatus: string implements HasColor, HasIcon, HasLabel
     public function isEditableByOrganiser(): bool
     {
         return in_array($this, [self::Pending, self::Rejected, self::Approved], true);
-    }
-
-    /** The only state in which a UPI ID is ever served. */
-    public function allowsDonations(): bool
-    {
-        return $this === self::Verified;
     }
 }
