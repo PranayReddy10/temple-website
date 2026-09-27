@@ -33,6 +33,9 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            // "Forgot password?" on the sign-in page: a reset link by email,
+            // through the mail set up under App → Email.
+            ->passwordReset()
             // A real account page, reached from the user menu. isSimple:
             // false keeps the panel's navigation around it, so it reads as
             // part of the admin rather than a sign-in screen.
