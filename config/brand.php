@@ -18,6 +18,10 @@ return [
     // the devotees' website (the app's web build).
     'url' => env('BRAND_URL', env('APP_URL', 'http://localhost')),
 
+    // The devotees' website (the app's web build), linked from this
+    // server's home page.
+    'website' => env('BRAND_WEBSITE', 'https://darshansaathi.com'),
+
     // The calendar the devotional day follows. The server clock stays UTC;
     // "today's deity" is decided in this zone. See App\Support\DevotionalClock.
     'timezone' => env('DEVOTIONAL_TIMEZONE', 'Asia/Kolkata'),
