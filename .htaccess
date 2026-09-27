@@ -3,9 +3,9 @@
 # This file is a safety net, not the fix. The project root must live OUTSIDE
 # the web root, with only `public/` exposed — see docs/DEPLOY_HOSTINGER.md.
 #
-# When the app is deployed correctly, Apache never reads this file: it only
-# reads .htaccess from the document root downwards, and the document root is
-# `public/`, one level below here. It costs nothing in that case.
+# public/.htaccess grants access again for public/ itself, which is the
+# document root, so the site works whether or not the server applies this
+# parent file to it.
 #
 # When the app has been placed inside a web root by mistake — for example at
 # public_html/temple/ — this is what stands between the internet and .env,

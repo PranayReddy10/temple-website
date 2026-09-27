@@ -9,9 +9,13 @@ use App\Http\Controllers\PwaController;
 use App\Http\Controllers\TempleCheckinController;
 use Illuminate\Support\Facades\Route;
 
+// temple.darshansaathi.com itself: what this server is, and the way in for
+// staff and temples. Devotees are pointed at the website and the app.
 Route::get('/', function () {
-    return view('welcome');
-});
+    return view('home', [
+        'temples' => \App\Models\Temple::query()->where('status', \App\Enums\TempleStatus::Published)->count(),
+    ]);
+})->name('home');
 
 /*
 |--------------------------------------------------------------------------
