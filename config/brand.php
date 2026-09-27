@@ -8,18 +8,21 @@
  * an .env change and a config cache clear, not a find-and-replace.
  */
 return [
-    'name' => env('BRAND_NAME', 'Darshan Diary'),
+    'name' => env('BRAND_NAME', 'Darshan Saathi'),
 
     'tagline' => env('BRAND_TAGLINE', 'Your digital pilgrimage companion'),
 
-    // Temporary domain until the real one is registered.
+    // Where the QR codes point (passport, booking and temple check-in
+    // pages), so it must be this server: temple.darshansaathi.com, which
+    // also serves the admin panel and the API. darshansaathi.com itself is
+    // the devotees' website (the app's web build).
     'url' => env('BRAND_URL', env('APP_URL', 'http://localhost')),
 
     // The calendar the devotional day follows. The server clock stays UTC;
     // "today's deity" is decided in this zone. See App\Support\DevotionalClock.
     'timezone' => env('DEVOTIONAL_TIMEZONE', 'Asia/Kolkata'),
 
-    'support_email' => env('BRAND_SUPPORT_EMAIL', 'support@example.com'),
+    'support_email' => env('BRAND_SUPPORT_EMAIL', 'support@darshansaathi.com'),
 
     // Email for the first admin account, used by the seeder and by
     // `php artisan db:mysql-dump --with-admin`.

@@ -15,6 +15,29 @@ runs locally, so `composer install` on an 8.2 or 8.3 Hostinger plan cannot hit
 a package that secretly needs 8.4. Do not remove the pin without also raising
 the minimum PHP version documented here.
 
+**Domains.** Two sites, one domain:
+
+| Address | What it serves | Document root |
+|---|---|---|
+| `temple.darshansaathi.com` | This Laravel app: admin panel (`/admin`), temple portal (`/temple`), API (`/api/v1`), and the pages the QR codes open | `app/public` (step 5) |
+| `darshansaathi.com` | The devotees' website: the Flutter app's web build | `public_html` |
+
+In hPanel → *Domains → Subdomains*, create `temple` and give it the
+document root `app/public`. In your DNS, the subdomain needs an `A` record
+(or a `CNAME` to `darshansaathi.com`), which hPanel adds for you when the
+domain uses Hostinger's nameservers. Turn on SSL for both under *Security →
+SSL*.
+
+For the devotees' website, build the app for the web and upload the contents
+of `build/web/` into `public_html`:
+
+```bash
+cd temple-app && flutter build web --release
+```
+
+The web build calls the API on `temple.darshansaathi.com`; Laravel's
+default CORS settings already allow that for `/api/*`.
+
 ---
 
 ## 1. Create the database
@@ -63,7 +86,7 @@ Then edit `.env`:
 ```dotenv
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://your-temp-domain.example
+APP_URL=https://temple.darshansaathi.com
 
 DB_CONNECTION=mysql
 DB_HOST=localhost
@@ -71,7 +94,7 @@ DB_DATABASE=u123456789_temple
 DB_USERNAME=u123456789_admin
 DB_PASSWORD=the-password-you-set
 
-BRAND_NAME="Temple Passport"
+BRAND_NAME="Darshan Saathi"
 
 # Set this if the domain is proxied through Cloudflare, otherwise Laravel
 # builds http:// URLs on an https:// site.
@@ -88,15 +111,20 @@ prints environment variables, including the database password, to the visitor.
 
 Laravel serves from `public/`, and only `public/` may be web-reachable.
 
-**Preferred:** in hPanel → *Domains*, set the domain's document root to
-`app/public`.
+**Preferred:** in hPanel → *Domains → Subdomains*, set
+`temple.darshansaathi.com`'s document root to `app/public`. Leave
+`darshansaathi.com` on `public_html` for the devotees' website.
 
-**If your plan will not let you change the document root**, replace
-`public_html` with a symlink:
+**If your plan will not let you change the document root**, replace the
+subdomain's folder (the path hPanel shows for `temple.darshansaathi.com`,
+e.g. `~/domains/darshansaathi.com/public_html/temple`) with a symlink —
+never `darshansaathi.com`'s own `public_html`, which holds the devotees'
+website:
 
 ```bash
-mv ~/public_html ~/public_html_backup
-ln -s ~/app/public ~/public_html
+SUB=~/domains/darshansaathi.com/public_html/temple   # the path hPanel shows
+mv "$SUB" "$SUB"_backup
+ln -s ~/app/public "$SUB"
 ```
 
 Do not copy the contents of `public/` into `public_html` and leave the app

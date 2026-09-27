@@ -1,7 +1,10 @@
 # Temple Website — Backend API + Admin Panel
 
 Laravel backend, Filament admin panel and public web for the temple pilgrimage
-platform (**Darshan Diary**).
+platform (**Darshan Saathi**). This server runs at
+**temple.darshansaathi.com** (admin panel at `/admin`, temple portal at
+`/temple`, API at `/api/v1`); **darshansaathi.com** is the devotees' website,
+the Flutter app's web build.
 
 The companion Flutter app lives in [`temple-app`](https://github.com/PranayReddy10/temple-app).
 
