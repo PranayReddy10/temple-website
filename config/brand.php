@@ -8,7 +8,7 @@
  * an .env change and a config cache clear, not a find-and-replace.
  */
 return [
-    'name' => env('BRAND_NAME', 'Temple Passport'),
+    'name' => env('BRAND_NAME', 'Darshan Diary'),
 
     'tagline' => env('BRAND_TAGLINE', 'Your digital pilgrimage companion'),
 

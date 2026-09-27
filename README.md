@@ -1,7 +1,7 @@
 # Temple Website — Backend API + Admin Panel
 
 Laravel backend, Filament admin panel and public web for the temple pilgrimage
-platform (working name: **Temple Passport** — not finalised).
+platform (**Darshan Diary**).
 
 The companion Flutter app lives in [`temple-app`](https://github.com/PranayReddy10/temple-app).
 
