@@ -1,3 +1,12 @@
+# public/ is the only folder meant to be served. Say so outright: the
+# project root's .htaccess denies everything, and when the project sits
+# inside a web root (Hostinger: public_html/laravel, with the subdomain's
+# document root at public_html/laravel/public) Apache and LiteSpeed apply
+# that parent file here too unless this one grants access.
+<IfModule mod_authz_core.c>
+    Require all granted
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

@@ -15,25 +15,36 @@ runs locally, so `composer install` on an 8.2 or 8.3 Hostinger plan cannot hit
 a package that secretly needs 8.4. Do not remove the pin without also raising
 the minimum PHP version documented here.
 
-**Domains.** Two sites, one domain:
+**Domains.** Two sites, one domain. On Hostinger both live inside
+`domains/darshansaathi.com/public_html`:
 
-| Address | What it serves | Document root |
-|---|---|---|
-| `temple.darshansaathi.com` | This Laravel app: admin panel (`/admin`), temple portal (`/temple`), API (`/api/v1`), and the pages the QR codes open | `app/public` (step 5) |
-| `darshansaathi.com` | The devotees' website: the Flutter app's web build | `public_html` |
-
-In hPanel → *Domains → Subdomains*, create `temple` and give it the
-document root `app/public`. In your DNS, the subdomain needs an `A` record
-(or a `CNAME` to `darshansaathi.com`), which hPanel adds for you when the
-domain uses Hostinger's nameservers. Turn on SSL for both under *Security →
-SSL*.
-
-For the devotees' website, build the app for the web and upload the contents
-of `build/web/` into `public_html`:
-
-```bash
-cd temple-app && flutter build web --release
 ```
+domains/darshansaathi.com/public_html/
+├── laravel/            ← this whole project (app, vendor, .env, public …)
+│   └── public/         ← temple.darshansaathi.com serves only this
+├── .htaccess           ← from the web build: hides /laravel from darshansaathi.com
+├── index.html, main.dart.js, assets/ …   ← darshansaathi.com (Flutter web build)
+```
+
+| Address | Document root |
+|---|---|
+| `temple.darshansaathi.com` — admin (`/admin`), temple portal (`/temple`), API (`/api/v1`), QR pages | `public_html/laravel/public` |
+| `darshansaathi.com` — the devotees' website | `public_html` |
+
+1. Upload the project into `public_html/laravel` (with its hidden files:
+   `.env`, `.htaccess`).
+2. hPanel → *Domains → Subdomains*: create `temple`, tick **Custom folder
+   for subdomain**, and enter `laravel/public`.
+3. hPanel → *Security → SSL*: install for both addresses.
+4. Build the website (`cd temple-app && flutter build web --release`) and
+   upload the contents of `build/web/` into `public_html`, **including
+   `.htaccess`**, and without deleting `laravel/`.
+
+Two `.htaccess` files keep the project private: `laravel/.htaccess` denies
+everything, and the web build's `.htaccess` returns 404 for `/laravel` on
+darshansaathi.com. `laravel/public/.htaccess` grants access again for the one
+folder that is meant to be served. Check afterwards that
+`https://darshansaathi.com/laravel/.env` answers 403 or 404.
 
 The web build calls the API on `temple.darshansaathi.com`; Laravel's
 default CORS settings already allow that for `/api/*`.
@@ -48,17 +59,18 @@ names look like `u123456789_temple` and `u123456789_admin`. Copy them exactly.
 
 ## 2. Get the code onto the server
 
-SSH in (hPanel → *Advanced → SSH Access*) and clone into a folder **beside**
-`public_html`, not inside it:
+SSH in (hPanel → *Advanced → SSH Access*) and clone into
+`public_html/laravel` (see **Domains** above):
 
 ```bash
-cd ~
-git clone https://github.com/PranayReddy10/temple-website.git app
-cd app
+cd ~/domains/darshansaathi.com/public_html
+git clone https://github.com/PranayReddy10/temple-website.git laravel
+cd laravel
 ```
 
-Keeping the application outside the web root means `.env`, `storage/` and
-`vendor/` are not reachable over HTTP. This matters: `.env` holds the database
+Only `laravel/public` is served (through temple.darshansaathi.com);
+`.env`, `storage/` and `vendor/` stay unreachable because of the two
+`.htaccess` files described above. This matters: `.env` holds the database
 password and the app key.
 
 ## 3. Install dependencies
@@ -111,24 +123,12 @@ prints environment variables, including the database password, to the visitor.
 
 Laravel serves from `public/`, and only `public/` may be web-reachable.
 
-**Preferred:** in hPanel → *Domains → Subdomains*, set
-`temple.darshansaathi.com`'s document root to `app/public`. Leave
+In hPanel → *Domains → Subdomains*, `temple.darshansaathi.com` uses the
+custom folder `laravel/public` (inside `public_html`). Leave
 `darshansaathi.com` on `public_html` for the devotees' website.
 
-**If your plan will not let you change the document root**, replace the
-subdomain's folder (the path hPanel shows for `temple.darshansaathi.com`,
-e.g. `~/domains/darshansaathi.com/public_html/temple`) with a symlink —
-never `darshansaathi.com`'s own `public_html`, which holds the devotees'
-website:
-
-```bash
-SUB=~/domains/darshansaathi.com/public_html/temple   # the path hPanel shows
-mv "$SUB" "$SUB"_backup
-ln -s ~/app/public "$SUB"
-```
-
-Do not copy the contents of `public/` into `public_html` and leave the app
-inside it — that publishes `.env` to the internet.
+Do not copy the contents of `public/` into `public_html` itself — the
+subdomain must point at `laravel/public`, never at the project folder.
 
 ## 6. Migrate and seed
 
@@ -288,7 +288,7 @@ chmod -R 775 storage bootstrap/cache
 ## Deploying an update
 
 ```bash
-cd ~/app
+cd ~/domains/darshansaathi.com/public_html/laravel
 php artisan down
 git pull origin main
 composer install --no-dev --optimize-autoloader
@@ -324,7 +324,7 @@ Shared plans run cron from hPanel → *Advanced → Cron Jobs*. Add one entry,
 every minute, and Laravel handles the rest of the scheduling itself:
 
 ```
-* * * * * cd ~/app && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd ~/domains/darshansaathi.com/public_html/laravel && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 Not needed for slice 1. It becomes necessary for stale-data flagging and
