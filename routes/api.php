@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\V1\TempleCategoryController;
 use App\Http\Controllers\Api\V1\TempleController;
 use App\Http\Controllers\Api\V1\TempleQrController;
 use App\Http\Controllers\Api\V1\TempleSuggestionController;
+use App\Http\Controllers\Api\V1\Trust\TrustAdminController;
 use App\Http\Controllers\Api\V1\Trust\TrustAuthController;
 use App\Http\Controllers\Api\V1\Trust\TrustBookingController;
 use App\Http\Controllers\Api\V1\Trust\TrustClaimController;
@@ -265,6 +266,22 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('passports/lookup', [TrustBookingController::class, 'passport'])->middleware('throttle:60,1')->name('passports.lookup');
 
             Route::get('temples', [TrustTempleController::class, 'index'])->name('temples.index');
+
+            // A super admin's queues: the same decisions as the admin panel.
+            Route::prefix('admin')->name('admin.')->middleware('super.admin')->group(function (): void {
+                Route::get('overview', [TrustAdminController::class, 'overview'])->name('overview');
+                Route::get('claims', [TrustAdminController::class, 'claims'])->name('claims.index');
+                Route::post('claims/{claim}/approve', [TrustAdminController::class, 'approveClaim'])->whereNumber('claim')->name('claims.approve');
+                Route::post('claims/{claim}/reject', [TrustAdminController::class, 'rejectClaim'])->whereNumber('claim')->name('claims.reject');
+                Route::get('registrations', [TrustAdminController::class, 'registrations'])->name('registrations.index');
+                Route::post('registrations/{registration}/approve', [TrustAdminController::class, 'approveRegistration'])->whereNumber('registration')->name('registrations.approve');
+                Route::post('registrations/{registration}/duplicate', [TrustAdminController::class, 'duplicateRegistration'])->whereNumber('registration')->name('registrations.duplicate');
+                Route::post('registrations/{registration}/reject', [TrustAdminController::class, 'rejectRegistration'])->whereNumber('registration')->name('registrations.reject');
+                Route::get('events', [TrustAdminController::class, 'events'])->name('events.index');
+                Route::post('events/{event}/approve', [TrustAdminController::class, 'approveEvent'])->whereNumber('event')->name('events.approve');
+                Route::post('events/{event}/reject', [TrustAdminController::class, 'rejectEvent'])->whereNumber('event')->name('events.reject');
+                Route::patch('temples/{temple}/status', [TrustAdminController::class, 'templeStatus'])->whereNumber('temple')->name('temples.status');
+            });
 
             Route::prefix('temples/{temple}')->whereNumber('temple')->name('temples.')->group(function (): void {
                 Route::get('/', [TrustTempleController::class, 'show'])->name('show');

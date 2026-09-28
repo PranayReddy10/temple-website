@@ -63,6 +63,8 @@ class TrustClaimController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        abort_if($this->trustUser($request)->isSuperAdmin(), 422, 'Super admins already manage every temple. Add a temple from the admin panel.');
+
         $validated = $request->validate([
             'temple_id' => ['required', 'integer', Rule::exists('temples', 'id')->where('status', 'published')],
             'role' => ['required', Rule::in(array_keys(TempleAccessForm::levels()))],

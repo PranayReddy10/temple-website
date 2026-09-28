@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Trust;
 
 use App\Enums\BookingStatus;
 use App\Enums\EventStatus;
+use App\Enums\TempleStatus;
 use App\Http\Controllers\Api\V1\Trust\Concerns\ScopesToTrustTemples;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\Trust\TrustTempleResource;
@@ -11,6 +12,7 @@ use App\Models\Temple;
 use App\Support\DevotionalClock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * The temples a team manages, and the part of each listing they own.
@@ -25,7 +27,25 @@ class TrustTempleController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $temples = $this->trustUser($request)->temples()
+        $user = $this->trustUser($request);
+
+        if ($user->isSuperAdmin()) {
+            $validated = $request->validate([
+                'q' => ['nullable', 'string', 'max:100'],
+                'status' => ['nullable', Rule::enum(TempleStatus::class)],
+            ]);
+
+            $page = Temple::query()
+                ->with(['deity:id,name', 'state:id,name', 'primaryPhoto'])
+                ->when($validated['q'] ?? null, fn ($q, string $term) => $q->search($term))
+                ->when($validated['status'] ?? null, fn ($q, string $status) => $q->where('status', $status))
+                ->orderBy('name')
+                ->paginate(30);
+
+            return TrustTempleResource::collection($page)->response();
+        }
+
+        $temples = $user->temples()
             ->with(['deity:id,name', 'state:id,name', 'primaryPhoto'])
             ->orderBy('name')
             ->get();

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\ActAsTempleTeam;
+use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\SetApiLocale;
 use App\Http\Middleware\ThrottlePerRoute;
 use App\Support\TrustedProxies;
@@ -28,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'throttle' => ThrottlePerRoute::class,
             'temple.team' => ActAsTempleTeam::class,
+            'super.admin' => EnsureSuperAdmin::class,
         ]);
 
         // Every API response is in some language, so the decision belongs to

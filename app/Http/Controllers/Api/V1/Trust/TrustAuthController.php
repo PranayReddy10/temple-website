@@ -84,13 +84,13 @@ class TrustAuthController extends Controller
             ]);
         }
 
-        // Staff sign in to the admin panel, where their wider access is
-        // audited; a token for them here would be one more way in.
-        if (! $user->isTempleAdmin()) {
+        // Temple teams, and super admins who run the whole platform from
+        // their phone. Editors stay in the admin panel.
+        if (! $user->isTempleAdmin() && ! $user->isSuperAdmin()) {
             LoginRecorder::failure('trust', $validated['email'], 'staff_account', $request);
 
             throw ValidationException::withMessages([
-                'email' => 'This is a staff account. Please sign in to the admin panel instead.',
+                'email' => 'Editor accounts sign in to the admin panel instead.',
             ]);
         }
 

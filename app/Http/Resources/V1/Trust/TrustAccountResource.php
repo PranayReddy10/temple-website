@@ -41,6 +41,8 @@ class TrustAccountResource extends JsonResource
                 'name' => $this->name,
                 'email' => $this->email,
                 'phone' => $this->phone,
+                'role' => $this->role?->value,
+                'is_super_admin' => $this->isSuperAdmin(),
             ],
             'temples' => TrustTempleResource::collection($temples)->resolve($request),
             'claims' => $claims->map(fn (TempleUser $claim): array => self::claim($claim))->values(),

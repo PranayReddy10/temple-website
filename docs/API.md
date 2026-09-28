@@ -804,8 +804,9 @@ committee, temple office). The Flutter client is
 
 Accounts are rows in `users` with the `temple_admin` role — the same
 accounts that sign in to `/temple` on the web — and authenticate with Sanctum
-tokens on the `trust` guard. A devotee token is refused here (401), and a
-staff account cannot sign in (use `/admin`).
+tokens on the `trust` guard. **Super admins** sign in too and manage every
+temple, plus the approval queues below. Editors cannot sign in (use
+`/admin`), and a devotee token is refused (401).
 
 **Signing up grants nothing.** A new account sees a temple only after staff
 approve a claim on it under Admin → Temple access. Every temple URL below is
@@ -860,6 +861,23 @@ runs it.
 
 Codes are matched only among this account's temples, so another temple's
 booking reads as not found.
+
+### Super admin queues (`admin/…`, super admins only)
+
+| Method | Path | |
+| --- | --- | --- |
+| `GET` | `admin/overview` | Pending claims, pending registrations, events in review, temples by status |
+| `GET` | `admin/claims?status=pending` | With the account's name, email and phone |
+| `POST` | `admin/claims/{id}/approve` · `reject` | `reason` on reject |
+| `GET` | `admin/registrations?status=pending` | Temple registrations and devotee suggestions, with photos |
+| `POST` | `admin/registrations/{id}/approve` · `duplicate` · `reject` | Approve lists a draft temple (`created_temple_id`); `temple_id` on duplicate; `note` on reject |
+| `GET` | `admin/events` | Events waiting for review |
+| `POST` | `admin/events/{id}/approve` · `reject` | `note` on reject |
+| `PATCH` | `admin/temples/{id}/status` | `draft`, `in_review`, `published`, `archived` |
+
+For a super admin, `GET temples` lists every temple (`?q=`, `?status=`,
+paginated) and every `temples/{id}/…` route reaches any temple. The same
+decisions as the admin panel, so either can finish what the other started.
 
 ### Who is acting
 

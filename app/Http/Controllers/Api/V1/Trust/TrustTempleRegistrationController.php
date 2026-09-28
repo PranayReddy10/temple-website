@@ -42,6 +42,8 @@ class TrustTempleRegistrationController extends Controller
     /** Multipart: the temple's fields plus `photos[]`. */
     public function store(Request $request): JsonResponse
     {
+        abort_if($this->trustUser($request)->isSuperAdmin(), 422, 'Super admins already manage every temple. Add a temple from the admin panel.');
+
         $user = $this->trustUser($request);
 
         // The account's own phone stands in when the form leaves it out.

@@ -110,9 +110,14 @@ class TrustAppApiTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors('email');
 
-        User::create(['name' => 'Editor', 'email' => 'editor@example.org', 'password' => 'a-long-password', 'role' => UserRole::SuperAdmin]);
+        User::create(['name' => 'Editor', 'email' => 'editor@example.org', 'password' => 'a-long-password', 'role' => UserRole::Editor]);
         $this->postJson('/api/v1/trust/auth/login', ['email' => 'editor@example.org', 'password' => 'a-long-password'])
             ->assertUnprocessable();
+
+        User::create(['name' => 'Admin', 'email' => 'admin@example.org', 'password' => 'a-long-password', 'role' => UserRole::SuperAdmin]);
+        $this->postJson('/api/v1/trust/auth/login', ['email' => 'admin@example.org', 'password' => 'a-long-password'])
+            ->assertOk()
+            ->assertJsonPath('data.account.user.is_super_admin', true);
     }
 
     public function test_a_devotee_token_is_refused_and_a_deactivated_team_is_stopped(): void
@@ -351,5 +356,74 @@ class TrustAppApiTest extends TestCase
         $this->as($token)->getJson('/api/v1/trust/options')
             ->assertOk()
             ->assertJsonStructure(['data' => ['timing_kinds', 'event_types', 'puja_kinds', 'photo_categories', 'days', 'claim_levels', 'registration_roles', 'deities', 'states']]);
+    }
+
+    protected function superAdmin(): string
+    {
+        User::create(['name' => 'Admin', 'email' => 'admin@example.org', 'password' => 'a-long-password', 'role' => UserRole::SuperAdmin]);
+
+        return $this->postJson('/api/v1/trust/auth/login', ['email' => 'admin@example.org', 'password' => 'a-long-password'])->json('data.token');
+    }
+
+    public function test_a_super_admin_manages_every_temple_and_the_team_cannot_reach_the_admin_queues(): void
+    {
+        $admin = $this->superAdmin();
+
+        $this->as($admin)->getJson('/api/v1/trust/temples?q=Another')->assertOk()->assertJsonPath('data.0.name', 'Another Temple');
+        $this->as($admin)->patchJson('/api/v1/trust/temples/'.$this->other->id, ['contact_phone' => '0401234'])->assertOk();
+        $this->as($admin)->postJson('/api/v1/trust/temples/'.$this->other->id.'/timings', ['kind' => 'darshan', 'opens_at' => '06:00'])->assertCreated();
+
+        // Super admins publish events directly.
+        $this->as($admin)->post('/api/v1/trust/temples/'.$this->other->id.'/events', [
+            'type' => 'festival', 'title' => 'Utsavam', 'starts_on' => now()->addDay()->toDateString(), 'is_all_day' => '1', 'status' => 'published',
+        ], self::JSON)->assertCreated()->assertJsonPath('data.status.value', 'published');
+
+        $this->as($admin)->postJson('/api/v1/trust/claims', ['temple_id' => $this->temple->id, 'role' => 'owner', 'note' => 'Just checking this.'])
+            ->assertUnprocessable();
+
+        $team = $this->register();
+        $this->as($team)->getJson('/api/v1/trust/admin/overview')->assertForbidden();
+        $this->as($team)->getJson('/api/v1/trust/temples/'.$this->other->id)->assertNotFound();
+    }
+
+    public function test_a_super_admin_approves_claims_registrations_and_events_from_the_app(): void
+    {
+        $team = $this->register();
+        $this->as($team)->postJson('/api/v1/trust/claims', [
+            'temple_id' => $this->temple->id, 'role' => 'owner', 'note' => 'Secretary of the temple trust.',
+        ])->assertCreated();
+        $this->as($team)->post('/api/v1/trust/registrations', [
+            'name' => 'Village Shiva Temple', 'city' => 'Kolanupaka',
+            'description' => 'A small Chalukya-era Shiva temple cared for by the village trust.',
+            'submitter_role' => 'trustee', 'photos' => [UploadedFile::fake()->image('front.jpg')],
+        ], self::JSON)->assertCreated();
+
+        $admin = $this->superAdmin();
+        $this->as($admin)->getJson('/api/v1/trust/admin/overview')
+            ->assertJsonPath('data.claims_pending', 1)
+            ->assertJsonPath('data.registrations_pending', 1);
+
+        $claimId = $this->as($admin)->getJson('/api/v1/trust/admin/claims')
+            ->assertJsonPath('data.0.user.phone', '9876543210')
+            ->json('data.0.id');
+        $this->as($admin)->postJson('/api/v1/trust/admin/claims/'.$claimId.'/approve')->assertOk()->assertJsonPath('data.status', 'approved');
+
+        $regId = $this->as($admin)->getJson('/api/v1/trust/admin/registrations')->assertJsonPath('data.0.from_trust_app', true)->json('data.0.id');
+        $templeId = $this->as($admin)->postJson('/api/v1/trust/admin/registrations/'.$regId.'/approve')->assertOk()->json('data.created_temple_id');
+        $this->as($admin)->postJson('/api/v1/trust/admin/registrations/'.$regId.'/reject', ['note' => 'x'])->assertUnprocessable();
+
+        // The registrant now waits on a claim for the new temple, which is a draft.
+        $this->assertSame('pending', TempleUser::query()->where('temple_id', $templeId)->firstOrFail()->status());
+        $this->assertSame(TempleStatus::Draft, Temple::findOrFail($templeId)->status);
+        $this->as($admin)->patchJson('/api/v1/trust/admin/temples/'.$templeId.'/status', ['status' => 'published'])
+            ->assertOk()->assertJsonPath('data.status.value', 'published');
+
+        // The team's event waits; the super admin approves it.
+        $this->as($team)->post('/api/v1/trust/temples/'.$this->temple->id.'/events', [
+            'type' => 'festival', 'title' => 'Sri Rama Navami', 'starts_on' => now()->addWeek()->toDateString(), 'is_all_day' => '1', 'status' => 'published',
+        ], self::JSON)->assertCreated()->assertJsonPath('data.status.value', 'pending_review');
+
+        $eventId = $this->as($admin)->getJson('/api/v1/trust/admin/events')->assertJsonCount(1, 'data')->json('data.0.id');
+        $this->as($admin)->postJson('/api/v1/trust/admin/events/'.$eventId.'/approve')->assertOk()->assertJsonPath('data.status.value', 'published');
     }
 }

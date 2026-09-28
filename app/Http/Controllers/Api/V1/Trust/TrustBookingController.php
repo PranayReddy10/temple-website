@@ -106,9 +106,10 @@ class TrustBookingController extends Controller
 
     protected function find(Request $request, string $code): ?PujaBooking
     {
+        $ids = $this->bookableTempleIds($request);
         $query = PujaBooking::query()
             ->with(['puja', 'temple', 'payment'])
-            ->whereIn('temple_id', $this->trustUser($request)->approvedTempleIds());
+            ->when($ids !== null, fn ($q) => $q->whereIn('temple_id', $ids));
 
         $token = BookingQr::parse($code);
 

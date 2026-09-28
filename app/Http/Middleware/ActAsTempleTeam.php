@@ -15,8 +15,8 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Runs after auth:trust. Two things happen here:
  *
- * 1. Only an active temple admin passes. Staff tokens are never issued by
- *    this API, but a role changed after sign-in must still stop at the door.
+ * 1. Only an active temple admin or super admin passes. A role changed
+ *    after sign-in must still stop at the door.
  *
  * 2. The same user is placed on the staff guard for this request. The
  *    observers read ActingStaff, which asks the staff guard by name; without
@@ -39,8 +39,10 @@ class ActAsTempleTeam
             abort(403, 'This account is no longer active.');
         }
 
-        if (! $user->isTempleAdmin()) {
-            abort(403, 'The trust app is for temple teams. Staff accounts sign in to the admin panel.');
+        // Super admins manage every temple here too. Editors do not: their
+        // work is the editorial panel's, and it is audited there.
+        if (! $user->isTempleAdmin() && ! $user->isSuperAdmin()) {
+            abort(403, 'The trust app is for temple teams and super admins. Editors sign in to the admin panel.');
         }
 
         Auth::guard(ActingStaff::GUARD)->setUser($user);
