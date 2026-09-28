@@ -98,6 +98,15 @@ Route::match(['get', 'post'], '/pay/{payment}/return/{gateway}', [PayController:
     ->name('pay.return');
 Route::get('/pay/{payment}/done', [PayController::class, 'done'])->name('pay.done');
 
+// Public, indexable pages for the devotees' website: darshansaathi.com's
+// .htaccess sends these paths here. See App\Support\Seo.
+Route::get('/temples', [\App\Http\Controllers\PublicTempleController::class, 'index'])->name('site.temples');
+Route::get('/temples/{slug}', [\App\Http\Controllers\PublicTempleController::class, 'show'])->name('site.temple');
+Route::get('/states/{slug}', [\App\Http\Controllers\PublicTempleController::class, 'state'])->name('site.state');
+Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
+Route::get('/sitemap-pages.xml', [\App\Http\Controllers\SitemapController::class, 'pages']);
+Route::get('/sitemap-temples-{page}.xml', [\App\Http\Controllers\SitemapController::class, 'temples'])->whereNumber('page');
+
 // A saved upload, read back same-origin for the admin panel's upload fields.
 // See MediaPreviewController.
 Route::get('/media-preview', \App\Http\Controllers\MediaPreviewController::class)

@@ -46,6 +46,16 @@ darshansaathi.com. `laravel/public/.htaccess` grants access again for the one
 folder that is meant to be served. Check afterwards that
 `https://darshansaathi.com/laravel/.env` answers 403 or 404.
 
+**Search engines.** The Flutter site is a blank page to them, so the temple
+directory (`/temples`), each temple (`/temples/{slug}`), each state
+(`/states/{slug}`) and the sitemap (`/sitemap.xml`) are rendered by Laravel.
+The web build's `.htaccess` hands exactly those paths, and `/storage` for
+their photos, to `laravel/public/index.php`, so they answer on
+darshansaathi.com. The same pages on temple.darshansaathi.com carry
+`noindex` and a canonical link to the website's copy. After deploying, add
+`https://darshansaathi.com` in Google Search Console and submit
+`https://darshansaathi.com/sitemap.xml`.
+
 The web build calls the API on `temple.darshansaathi.com`; Laravel's
 default CORS settings already allow that for `/api/*`.
 
