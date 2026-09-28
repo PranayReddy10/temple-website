@@ -218,6 +218,32 @@ class TempleAdminDetailTest extends TestCase
     }
 
     /**
+     * The field previews a saved file by downloading it with fetch(). From
+     * Spaces that is cross-origin and hangs at "Waiting for size" without
+     * CORS on the bucket, so the preview comes from this host instead.
+     */
+    public function test_the_cover_preview_is_served_from_this_host(): void
+    {
+        $this->actingAs($this->staff());
+        Storage::fake('public');
+        Storage::disk('public')->put('temples/1/cover.jpg', 'jpeg bytes');
+        $temple = Temple::create(['name' => 'Kashi Vishwanath']);
+        $temple->photos()->create(['disk' => 'public', 'path' => 'temples/1/cover.jpg', 'is_primary' => true]);
+
+        $field = Livewire::test(EditTemple::class, ['record' => $temple->getKey()])->instance()->form->getComponent('cover_image');
+        $files = $field->getUploadedFiles();
+        $url = collect($files)->first()['url'] ?? null;
+
+        $this->assertIsString($url);
+        $this->assertStringStartsWith('/media-preview?', $url);
+        $this->get($url)->assertOk()->assertStreamedContent('jpeg bytes');
+
+        // Only the URL the form signed opens anything.
+        $this->get('/media-preview?disk=public&path=temples/1/cover.jpg')->assertForbidden();
+        $this->get(str_replace('cover.jpg', 'other.jpg', $url))->assertForbidden();
+    }
+
+    /**
      * Clearing the field means "not this one as the cover", not "destroy this
      * photograph" — which would take the file with it.
      */
