@@ -1,2 +1,14 @@
+# temple.darshansaathi.com: the admin panel, temple portal and API.
+# The public temple pages are listed on https://darshansaathi.com; the copies
+# here carry a noindex tag and point there.
 User-agent: *
-Disallow:
+Disallow: /admin
+Disallow: /temple/
+Disallow: /api/
+Disallow: /livewire/
+Disallow: /pay/
+Disallow: /bookings/
+Disallow: /passport/
+Disallow: /media-preview
+
+Sitemap: https://darshansaathi.com/sitemap.xml
