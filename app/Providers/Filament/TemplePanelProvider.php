@@ -40,6 +40,9 @@ class TemplePanelProvider extends PanelProvider
             ->id('temple')
             ->path('temple')
             ->login()
+            // "Forgot password?" on the sign-in page: a reset link by email,
+            // through the mail set up under App → Email.
+            ->passwordReset()
             // The same profile page as the admin panel; it adapts to show the
             // temples this account has been approved for.
             ->profile(Profile::class, isSimple: false)
