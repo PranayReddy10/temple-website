@@ -39,6 +39,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        self::previewUploadsFromThisHost();
+
         /*
          * Where uploads go is a setting, not only an environment variable.
          *
@@ -132,5 +134,45 @@ class AppServiceProvider extends ServiceProvider
                 Pwa::headTags(Filament::getCurrentOrDefaultPanel()?->getId() ?? ''),
             ]),
         );
+    }
+
+    /**
+     * Upload fields read saved files back through this host.
+     *
+     * Filament previews a saved file by downloading it with fetch(); from
+     * Spaces that is a cross-origin request the browser blocks without CORS
+     * on the bucket, and the field hangs at "Waiting for size". A signed,
+     * relative URL to MediaPreviewController makes it same-origin, whichever
+     * disk the file is on. The size and type are read the way Filament reads
+     * them.
+     */
+    protected static function previewUploadsFromThisHost(): void
+    {
+        \Filament\Forms\Components\FileUpload::configureUsing(function (\Filament\Forms\Components\FileUpload $upload): void {
+            $upload->getUploadedFileUsing(function (\Filament\Forms\Components\FileUpload $component, string $file, string|array|null $storedFileNames): ?array {
+                $disk = $component->getDiskName();
+                $storage = $component->getDisk();
+                $size = 0;
+                $type = null;
+
+                if ($component->shouldFetchFileInformation()) {
+                    try {
+                        $size = $storage->size($file);
+                        $type = $storage->mimeType($file);
+                    } catch (\Throwable) {
+                        return null;
+                    }
+                }
+
+                return [
+                    'name' => ($component->isMultiple() ? ($storedFileNames[$file] ?? null) : $storedFileNames) ?? basename($file),
+                    'size' => $size,
+                    'type' => $type,
+                    'url' => in_array($disk, \App\Http\Controllers\MediaPreviewController::DISKS, true)
+                        ? \Illuminate\Support\Facades\URL::temporarySignedRoute('media.preview', now()->addHours(2), ['disk' => $disk, 'path' => $file], absolute: false)
+                        : $storage->url($file),
+                ];
+            });
+        });
     }
 }

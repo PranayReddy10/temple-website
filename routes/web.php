@@ -98,6 +98,12 @@ Route::match(['get', 'post'], '/pay/{payment}/return/{gateway}', [PayController:
     ->name('pay.return');
 Route::get('/pay/{payment}/done', [PayController::class, 'done'])->name('pay.done');
 
+// A saved upload, read back same-origin for the admin panel's upload fields.
+// See MediaPreviewController.
+Route::get('/media-preview', \App\Http\Controllers\MediaPreviewController::class)
+    ->middleware('signed:relative')
+    ->name('media.preview');
+
 Route::get('/storage/{path}', MediaFileController::class)
     ->where('path', '.*')
     ->name('media.file');
