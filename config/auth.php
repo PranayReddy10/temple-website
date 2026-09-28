@@ -49,6 +49,16 @@ return [
             'provider' => 'devotees',
         ],
 
+        /*
+         * The temple trust app: temple teams on the users table, with Sanctum
+         * tokens. A token belongs to the model it was issued to, so a devotee
+         * token is refused here and a trust token on the devotee guard.
+         */
+        'trust' => [
+            'driver' => 'sanctum',
+            'provider' => 'users',
+        ],
+
         'web' => [
             'driver' => 'session',
             'provider' => 'users',

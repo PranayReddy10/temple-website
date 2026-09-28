@@ -43,6 +43,18 @@ class Temple extends Model
         'photography_policy',
     ];
 
+    /**
+     * What a temple's own team may change on its listing: the temple
+     * portal's form (MyTempleForm) and the trust app. Identity, taxonomy and
+     * trust level stay with the editors.
+     */
+    public const TEAM_EDITABLE = [
+        'short_description', 'address', 'city', 'pincode', 'latitude', 'longitude',
+        'official_website', 'contact_phone', 'contact_email',
+        'dress_code', 'photography_policy', 'mobile_policy', 'footwear_policy',
+        'entry_rules', 'queue_information',
+    ];
+
     protected $fillable = [
         'name', 'slug', 'deity_id',
         'state_id', 'district_id', 'city', 'address', 'pincode', 'latitude', 'longitude',

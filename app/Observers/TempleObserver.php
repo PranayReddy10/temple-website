@@ -68,9 +68,25 @@ class TempleObserver
             return;
         }
 
-        if (! ActingStaff::user()?->canPublish()) {
-            throw new AuthorizationException('Your role cannot publish temples. Set the status to In Review instead.');
+        $user = ActingStaff::user();
+
+        if ($user?->canPublish()) {
+            return;
         }
+
+        // A temple's own team keeps its live listing current — timings of
+        // the office, a new phone number — without taking it offline. Only
+        // the fields the portal gives them, only on a temple they are
+        // approved for, and never the status itself.
+        if ($user !== null
+            && $user->isTempleAdmin()
+            && $user->administersTemple($temple)
+            && ! $temple->isDirty('status')
+            && array_diff(array_keys($temple->getDirty()), Temple::TEAM_EDITABLE) === []) {
+            return;
+        }
+
+        throw new AuthorizationException('Your role cannot publish temples. Set the status to In Review instead.');
     }
 
     /**

@@ -27,6 +27,17 @@ use App\Http\Controllers\Api\V1\TempleCategoryController;
 use App\Http\Controllers\Api\V1\TempleController;
 use App\Http\Controllers\Api\V1\TempleQrController;
 use App\Http\Controllers\Api\V1\TempleSuggestionController;
+use App\Http\Controllers\Api\V1\Trust\TrustAuthController;
+use App\Http\Controllers\Api\V1\Trust\TrustBookingController;
+use App\Http\Controllers\Api\V1\Trust\TrustClaimController;
+use App\Http\Controllers\Api\V1\Trust\TrustEventController;
+use App\Http\Controllers\Api\V1\Trust\TrustOptionsController;
+use App\Http\Controllers\Api\V1\Trust\TrustPhotoController;
+use App\Http\Controllers\Api\V1\Trust\TrustPujaController;
+use App\Http\Controllers\Api\V1\Trust\TrustReviewController;
+use App\Http\Controllers\Api\V1\Trust\TrustScheduleController;
+use App\Http\Controllers\Api\V1\Trust\TrustTempleController;
+use App\Http\Controllers\Api\V1\Trust\TrustTempleRegistrationController;
 use App\Http\Controllers\Api\V1\VisitPhotoController;
 use App\Http\Controllers\Api\V1\YatraController;
 use Illuminate\Support\Facades\Route;
@@ -203,6 +214,94 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('logout', [DevoteeAuthController::class, 'logout'])
             ->middleware('auth:devotee')
             ->name('logout');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Temple trust app
+    |--------------------------------------------------------------------------
+    |
+    | The mobile companion to the temple portal, for a temple's own team.
+    | Accounts live on the users table as temple admins and authenticate with
+    | Sanctum tokens on the 'trust' guard, which cannot accept a devotee's
+    | token. Signing up grants nothing: access to a temple comes only from a
+    | claim staff have approved, and every temple below is looked up through
+    | that (ScopesToTrustTemples).
+    |
+    */
+    Route::prefix('trust')->name('trust.')->group(function (): void {
+        Route::post('auth/register', [TrustAuthController::class, 'register'])
+            ->middleware('throttle:6,1')
+            ->name('auth.register');
+        Route::post('auth/login', [TrustAuthController::class, 'login'])
+            ->middleware('throttle:10,1')
+            ->name('auth.login');
+
+        Route::middleware(['auth:trust', 'temple.team'])->group(function (): void {
+            Route::post('auth/logout', [TrustAuthController::class, 'logout'])->name('auth.logout');
+            Route::get('me', [TrustAuthController::class, 'me'])->name('me');
+            Route::patch('me', [TrustAuthController::class, 'update'])->name('me.update');
+
+            Route::get('options', TrustOptionsController::class)->name('options');
+
+            // Asking to manage a temple already listed.
+            Route::get('claimable-temples', [TrustClaimController::class, 'search'])->name('claims.search');
+            Route::get('claims', [TrustClaimController::class, 'index'])->name('claims.index');
+            Route::post('claims', [TrustClaimController::class, 'store'])
+                ->middleware('throttle:10,1')
+                ->name('claims.store');
+            Route::delete('claims/{claim}', [TrustClaimController::class, 'destroy'])->whereNumber('claim')->name('claims.destroy');
+
+            // Registering a temple that is not listed at all.
+            Route::get('registrations', [TrustTempleRegistrationController::class, 'index'])->name('registrations.index');
+            Route::post('registrations', [TrustTempleRegistrationController::class, 'store'])
+                ->middleware('throttle:6,1')
+                ->name('registrations.store');
+
+            // At the counter: scans are checked against every temple this
+            // account manages, so the app need not ask which one first.
+            Route::post('bookings/scan', [TrustBookingController::class, 'scan'])->middleware('throttle:60,1')->name('bookings.scan');
+            Route::post('bookings/verify', [TrustBookingController::class, 'verify'])->middleware('throttle:60,1')->name('bookings.verify');
+            Route::post('passports/lookup', [TrustBookingController::class, 'passport'])->middleware('throttle:60,1')->name('passports.lookup');
+
+            Route::get('temples', [TrustTempleController::class, 'index'])->name('temples.index');
+
+            Route::prefix('temples/{temple}')->whereNumber('temple')->name('temples.')->group(function (): void {
+                Route::get('/', [TrustTempleController::class, 'show'])->name('show');
+                Route::patch('/', [TrustTempleController::class, 'update'])->name('update');
+
+                Route::get('timings', [TrustScheduleController::class, 'timings'])->name('timings.index');
+                Route::post('timings', [TrustScheduleController::class, 'storeTiming'])->name('timings.store');
+                Route::put('timings/{timing}', [TrustScheduleController::class, 'updateTiming'])->whereNumber('timing')->name('timings.update');
+                Route::delete('timings/{timing}', [TrustScheduleController::class, 'destroyTiming'])->whereNumber('timing')->name('timings.destroy');
+
+                Route::get('closures', [TrustScheduleController::class, 'closures'])->name('closures.index');
+                Route::post('closures', [TrustScheduleController::class, 'storeClosure'])->name('closures.store');
+                Route::put('closures/{closure}', [TrustScheduleController::class, 'updateClosure'])->whereNumber('closure')->name('closures.update');
+                Route::delete('closures/{closure}', [TrustScheduleController::class, 'destroyClosure'])->whereNumber('closure')->name('closures.destroy');
+
+                // POST for update too: multipart, so an image can ride along.
+                Route::get('events', [TrustEventController::class, 'index'])->name('events.index');
+                Route::post('events', [TrustEventController::class, 'store'])->middleware('throttle:30,1')->name('events.store');
+                Route::post('events/{event}', [TrustEventController::class, 'update'])->whereNumber('event')->name('events.update');
+                Route::delete('events/{event}', [TrustEventController::class, 'destroy'])->whereNumber('event')->name('events.destroy');
+
+                Route::get('sevas', [TrustPujaController::class, 'index'])->name('sevas.index');
+                Route::post('sevas', [TrustPujaController::class, 'store'])->middleware('throttle:30,1')->name('sevas.store');
+                Route::post('sevas/{puja}', [TrustPujaController::class, 'update'])->whereNumber('puja')->name('sevas.update');
+                Route::delete('sevas/{puja}', [TrustPujaController::class, 'destroy'])->whereNumber('puja')->name('sevas.destroy');
+
+                Route::get('photos', [TrustPhotoController::class, 'index'])->name('photos.index');
+                Route::post('photos', [TrustPhotoController::class, 'store'])->middleware('throttle:30,1')->name('photos.store');
+                Route::patch('photos/{photo}', [TrustPhotoController::class, 'update'])->whereNumber('photo')->name('photos.update');
+                Route::delete('photos/{photo}', [TrustPhotoController::class, 'destroy'])->whereNumber('photo')->name('photos.destroy');
+
+                Route::get('bookings', [TrustBookingController::class, 'index'])->name('bookings.index');
+
+                Route::get('reviews', [TrustReviewController::class, 'index'])->name('reviews.index');
+                Route::post('reviews/{review}/reply', [TrustReviewController::class, 'reply'])->whereNumber('review')->name('reviews.reply');
+            });
+        });
     });
 
     Route::middleware('auth:devotee')->group(function (): void {

@@ -64,7 +64,7 @@ Three audiences, three entry points. Only the first exists today.
 | Audience | Entry point | Auth | Stored in | Status |
 | --- | --- | --- | --- | --- |
 | Staff — super admin, editors | `/admin` | Session | `users` | ✅ Built |
-| Temple authority — trust, temple office | `/temple` | Session | `users`, scoped by `temple_user` | ✅ Built |
+| Temple authority — trust, temple office | `/temple` and the Temple Trust app | Session / Sanctum token (`trust` guard) | `users`, scoped by `temple_user` | ✅ Built |
 | Devotees — app and web | Flutter app | Sanctum token | `devotees` (separate table) | ✅ Built |
 
 Devotees get their own table on purpose: they are expected in the millions
