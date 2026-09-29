@@ -18,6 +18,7 @@ class VisitResource extends JsonResource
                 'slug' => $this->temple->slug,
                 'name' => $this->temple->translate('name', app()->getLocale(), reviewedOnly: true),
                 'city' => $this->temple->city,
+                'cover' => $this->temple->coverUrls(),
             ]),
 
             'visited_on' => $this->visited_on?->toDateString(),

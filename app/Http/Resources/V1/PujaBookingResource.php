@@ -33,6 +33,7 @@ class PujaBookingResource extends JsonResource
                 'slug' => $this->temple->slug,
                 'name' => $this->temple->name,
                 'city' => $this->temple->city,
+                'cover' => $this->temple->coverUrls(),
             ],
             'puja' => $this->puja === null ? null : [
                 'id' => $this->puja->getKey(),

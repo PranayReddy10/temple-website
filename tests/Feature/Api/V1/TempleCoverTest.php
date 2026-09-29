@@ -43,4 +43,25 @@ class TempleCoverTest extends TestCase
         $this->getJson('/api/v1/temples')->assertOk()->assertJsonPath('data.0.primary_photo.id', $second->id);
         $this->getJson('/api/v1/temples/cover-temple')->assertOk()->assertJsonPath('data.primary_photo.id', $second->id);
     }
+
+    /** Every screen that names a temple can show it: visits, yatra stops, reviews. */
+    public function test_nested_temples_carry_their_cover(): void
+    {
+        $t = Temple::create(['name' => 'Cover Temple', 'slug' => 'cover-temple', 'status' => TempleStatus::Published, 'published_at' => now()]);
+        $lead = $this->photo($t, 'temples/1/b.jpg', ['is_primary' => true, 'thumbnail_path' => 'temples/1/b-thumb.webp']);
+        $devotee = \App\Models\Devotee::factory()->create();
+        \Laravel\Sanctum\Sanctum::actingAs($devotee, guard: 'devotee');
+
+        \App\Models\DevoteeVisit::create(['devotee_id' => $devotee->id, 'temple_id' => $t->id, 'method' => 'manual', 'visited_on' => '2026-09-01']);
+        $this->getJson('/api/v1/me/visits')->assertOk()
+            ->assertJsonPath('data.0.temple.cover.thumbnail', $lead->thumbnailUrl());
+
+        $yatra = \App\Models\Yatra::create(['devotee_id' => $devotee->id, 'title' => 'Trip']);
+        $yatra->stops()->create(['temple_id' => $t->id, 'day_number' => 1, 'sort_order' => 1]);
+        $this->getJson("/api/v1/me/yatras/{$yatra->id}")->assertOk()
+            ->assertJsonPath('data.stops.0.temple.cover.medium', $lead->mediumUrl());
+
+        $this->postJson('/api/v1/temples/cover-temple/reviews', ['queue_rating' => 4])->assertCreated()
+            ->assertJsonPath('data.temple.cover.original', $lead->url());
+    }
 }

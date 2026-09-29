@@ -132,6 +132,27 @@ class Temple extends Model
             ->orderBy('id');
     }
 
+    /**
+     * The cover's sizes for a temple nested in another answer (a booking, a
+     * visit, a review, a yatra stop), so every screen that names the temple
+     * can show it. Null unless primaryPhoto was loaded, so it never costs a
+     * query per row.
+     *
+     * @return array{thumbnail: ?string, medium: ?string, original: ?string}|null
+     */
+    public function coverUrls(): ?array
+    {
+        if (! $this->relationLoaded('primaryPhoto') || $this->primaryPhoto === null) {
+            return null;
+        }
+
+        return [
+            'thumbnail' => $this->primaryPhoto->thumbnailUrl(),
+            'medium' => $this->primaryPhoto->mediumUrl(),
+            'original' => $this->primaryPhoto->url(),
+        ];
+    }
+
     public function timings(): HasMany
     {
         return $this->hasMany(TempleTiming::class)->orderBy('sort_order')->orderBy('id');
