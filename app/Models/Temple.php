@@ -116,9 +116,20 @@ class Temple extends Model
         return $this->hasMany(TemplePhoto::class)->orderBy('sort_order')->orderBy('id');
     }
 
+    /**
+     * The cover: the lead photo, or, when none is marked as lead (or the lead
+     * one is hidden), the first published photo, so a temple with photos
+     * never shows up without one. Only published photos, since this is what
+     * devotees see. Eager loading keeps the first row per temple, which the
+     * ordering makes the lead one.
+     */
     public function primaryPhoto(): HasOne
     {
-        return $this->hasOne(TemplePhoto::class)->where('is_primary', true);
+        return $this->hasOne(TemplePhoto::class)
+            ->where('is_published', true)
+            ->orderByDesc('is_primary')
+            ->orderBy('sort_order')
+            ->orderBy('id');
     }
 
     public function timings(): HasMany
