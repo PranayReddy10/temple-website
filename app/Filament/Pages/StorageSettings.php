@@ -236,6 +236,26 @@ class StorageSettings extends Page
                         ->send();
                 }),
 
+            // The website and the upload previews read photos by script,
+            // which a Space refuses to other domains until CORS is set.
+            Action::make('allow_cors')
+                ->label('Allow the website to load photos')
+                ->icon('heroicon-o-globe-alt')
+                ->color('gray')
+                ->visible(fn (): bool => MediaStorage::spacesIsFilledIn())
+                ->requiresConfirmation()
+                ->modalDescription(fn (): string => 'Sets a CORS rule on the Space so '.implode(' and ', \App\Support\SpacesCors::origins()).' may load its photos (GET and HEAD only). Replaces any CORS rule the Space already has.')
+                ->action(function (): void {
+                    $result = \App\Support\SpacesCors::apply();
+
+                    Notification::make()
+                        ->title($result['ok'] ? 'Photos allowed' : 'Could not change the Space')
+                        ->body($result['message'])
+                        ->status($result['ok'] ? 'success' : 'danger')
+                        ->persistent(! $result['ok'])
+                        ->send();
+                }),
+
             /*
              * Repairing the link from here rather than over SSH.
              *
