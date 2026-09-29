@@ -41,6 +41,14 @@ class AppServiceProvider extends ServiceProvider
     {
         self::previewUploadsFromThisHost();
 
+        // Photo and link URLs the API hands out must be https when the site
+        // is: Android refuses plain-http images, so a proxy or CDN that
+        // forwards requests over http would otherwise blank every photo in
+        // the app while the admin panel (relative URLs) looks fine.
+        if (str_starts_with((string) config('app.url'), 'https://')) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
+
         /*
          * Where uploads go is a setting, not only an environment variable.
          *

@@ -25,6 +25,7 @@ class ReviewResource extends JsonResource
                 'slug' => $this->temple->slug,
                 'name' => $this->temple->name,
                 'city' => $this->temple->city,
+                'cover' => $this->temple->coverUrls(),
                 'deity_slug' => $this->temple->relationLoaded('deity') ? $this->temple->deity?->slug : null,
             ]),
             'devotee' => [

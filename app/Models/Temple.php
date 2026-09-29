@@ -116,9 +116,41 @@ class Temple extends Model
         return $this->hasMany(TemplePhoto::class)->orderBy('sort_order')->orderBy('id');
     }
 
+    /**
+     * The cover: the lead photo, or, when none is marked as lead (or the lead
+     * one is hidden), the first published photo, so a temple with photos
+     * never shows up without one. Only published photos, since this is what
+     * devotees see. Eager loading keeps the first row per temple, which the
+     * ordering makes the lead one.
+     */
     public function primaryPhoto(): HasOne
     {
-        return $this->hasOne(TemplePhoto::class)->where('is_primary', true);
+        return $this->hasOne(TemplePhoto::class)
+            ->where('is_published', true)
+            ->orderByDesc('is_primary')
+            ->orderBy('sort_order')
+            ->orderBy('id');
+    }
+
+    /**
+     * The cover's sizes for a temple nested in another answer (a booking, a
+     * visit, a review, a yatra stop), so every screen that names the temple
+     * can show it. Null unless primaryPhoto was loaded, so it never costs a
+     * query per row.
+     *
+     * @return array{thumbnail: ?string, medium: ?string, original: ?string}|null
+     */
+    public function coverUrls(): ?array
+    {
+        if (! $this->relationLoaded('primaryPhoto') || $this->primaryPhoto === null) {
+            return null;
+        }
+
+        return [
+            'thumbnail' => $this->primaryPhoto->thumbnailUrl(),
+            'medium' => $this->primaryPhoto->mediumUrl(),
+            'original' => $this->primaryPhoto->url(),
+        ];
     }
 
     public function timings(): HasMany

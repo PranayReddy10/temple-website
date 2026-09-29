@@ -36,7 +36,7 @@ class PassportController extends Controller
     {
         $visits = $request->user()
             ->visits()
-            ->with(['temple:id,slug,name,city', 'photos'])
+            ->with(['temple:id,slug,name,city', 'temple.primaryPhoto', 'photos'])
             ->paginate(min(50, max(1, (int) $request->integer('per_page', 20))));
 
         return VisitResource::collection($visits);
@@ -95,7 +95,7 @@ class PassportController extends Controller
         // A trip that planned this temple is now one stop further along.
         $this->closeMatchingYatraStop($request, $visit);
 
-        return (new VisitResource($visit->load('temple:id,slug,name,city')))
+        return (new VisitResource($visit->load(['temple:id,slug,name,city', 'temple.primaryPhoto'])))
             ->response()
             ->setStatusCode(201);
     }

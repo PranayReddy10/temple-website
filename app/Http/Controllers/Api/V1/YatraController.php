@@ -28,7 +28,7 @@ class YatraController extends Controller
     {
         $yatras = $request->user()
             ->yatras()
-            ->with(['stops.temple:id,slug,name,city'])
+            ->with(['stops.temple:id,slug,name,city', 'stops.temple.primaryPhoto'])
             ->paginate(min(50, max(1, (int) $request->integer('per_page', 20))));
 
         return YatraResource::collection($yatras);
@@ -38,7 +38,7 @@ class YatraController extends Controller
     {
         $this->assertOwned($request, $yatra);
 
-        return new YatraResource($yatra->load('stops.temple:id,slug,name,city'));
+        return new YatraResource($yatra->load(['stops.temple:id,slug,name,city', 'stops.temple.primaryPhoto']));
     }
 
     public function store(Request $request): JsonResponse
@@ -49,7 +49,7 @@ class YatraController extends Controller
         $yatra->devotee_id = $request->user()->getKey();
         $yatra->save();
 
-        return (new YatraResource($yatra->load('stops.temple:id,slug,name,city')))
+        return (new YatraResource($yatra->load(['stops.temple:id,slug,name,city', 'stops.temple.primaryPhoto'])))
             ->response()
             ->setStatusCode(201);
     }
@@ -60,7 +60,7 @@ class YatraController extends Controller
 
         $yatra->update($request->validate($this->rules(updating: true)));
 
-        return new YatraResource($yatra->load('stops.temple:id,slug,name,city'));
+        return new YatraResource($yatra->load(['stops.temple:id,slug,name,city', 'stops.temple.primaryPhoto']));
     }
 
     public function destroy(Request $request, Yatra $yatra): JsonResponse
@@ -106,7 +106,7 @@ class YatraController extends Controller
             ],
         );
 
-        return (new YatraResource($yatra->fresh()->load('stops.temple:id,slug,name,city')))
+        return (new YatraResource($yatra->fresh()->load(['stops.temple:id,slug,name,city', 'stops.temple.primaryPhoto'])))
             ->response()
             ->setStatusCode(201);
     }

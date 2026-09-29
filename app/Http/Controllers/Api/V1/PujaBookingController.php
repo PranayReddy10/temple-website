@@ -38,7 +38,7 @@ class PujaBookingController extends Controller
     {
         return PujaBookingResource::collection(
             $request->user()->pujaBookings()
-                ->with(['puja', 'temple:id,slug,name,city', 'payment'])
+                ->with(['puja', 'temple:id,slug,name,city', 'temple.primaryPhoto', 'payment'])
                 ->orderByDesc('booked_for')
                 ->orderByDesc('id')
                 ->paginate(50)
@@ -104,7 +104,7 @@ class PujaBookingController extends Controller
             }
         }
 
-        return response()->json(['data' => (new PujaBookingResource($booking->load(['puja', 'temple', 'payment'])))->resolve($request)]);
+        return response()->json(['data' => (new PujaBookingResource($booking->load(['puja', 'temple.primaryPhoto', 'payment'])))->resolve($request)]);
     }
 
     public function cancel(Request $request, string $reference): JsonResponse
@@ -119,13 +119,13 @@ class PujaBookingController extends Controller
 
         $this->bookings->cancel($booking, 'devotee', $request->input('reason'));
 
-        return response()->json(['data' => (new PujaBookingResource($booking->fresh(['puja', 'temple', 'payment'])))->resolve($request)]);
+        return response()->json(['data' => (new PujaBookingResource($booking->fresh(['puja', 'temple.primaryPhoto', 'payment'])))->resolve($request)]);
     }
 
     protected function mine(Request $request, string $reference): PujaBooking
     {
         return $request->user()->pujaBookings()
-            ->with(['puja', 'temple', 'payment'])
+            ->with(['puja', 'temple.primaryPhoto', 'payment'])
             ->where('reference', strtoupper($reference))
             ->first() ?? throw new NotFoundHttpException();
     }
