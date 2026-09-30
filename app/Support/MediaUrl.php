@@ -22,30 +22,7 @@ final class MediaUrl
             return null;
         }
 
-        $disk ??= config('filesystems.media');
-
-        // A browser (the website) reads photos on another domain only when
-        // that domain sends CORS headers, and a Space behind its CDN does
-        // not reliably do so. Browsers calling the API therefore get Spaces
-        // photos through this host (SpacesMediaController), which does.
-        // Phones send no Origin and keep the CDN address.
-        if ($disk === MediaStorage::SPACES_DISK && self::forBrowser()) {
-            return url('/media/'.ltrim($path, '/'));
-        }
-
-        return self::absolute(Storage::disk($disk)->url($path));
-    }
-
-    /** An API request made by a web page on another domain. */
-    public static function forBrowser(): bool
-    {
-        if (app()->runningInConsole() && ! app()->runningUnitTests()) {
-            return false;
-        }
-
-        $request = request();
-
-        return $request->is('api/*') && filled($request->headers->get('Origin'));
+        return self::absolute(Storage::disk($disk ?? config('filesystems.media'))->url($path));
     }
 
     public static function absolute(?string $url): ?string

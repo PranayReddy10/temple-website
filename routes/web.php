@@ -113,11 +113,6 @@ Route::get('/media-preview', \App\Http\Controllers\MediaPreviewController::class
     ->middleware('signed:relative')
     ->name('media.preview');
 
-// Photos on the Space, for browsers (see SpacesMediaController).
-Route::get('/media/{path}', \App\Http\Controllers\SpacesMediaController::class)
-    ->where('path', '.*')
-    ->name('media.spaces');
-
 Route::get('/storage/{path}', MediaFileController::class)
     ->where('path', '.*')
     ->name('media.file');
