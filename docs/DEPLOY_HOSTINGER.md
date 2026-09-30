@@ -255,14 +255,9 @@ devotee. When volume grows, move `TemplePhotoProcessor` into a queued job.
 
 ## 7b. Home-screen icons
 
-Nothing to do: the icons and `favicon.ico` are committed. If the brand colours
-in `config/brand.php` change, redraw them with
-
-```bash
-php artisan app:icons
-```
-
-and commit the result. Both panels are installable from **My profile → Use this
+Nothing to do: the icons, `favicon.ico` and `public/brand` are committed. They
+are drawn from the logo's source in the app repository (`tool/brand/`, see its
+README), not on the server. Both panels are installable from **My profile → Use this
 on your phone**; the service worker needs https, which a Hostinger domain has,
 and simply does not register without it.
 
