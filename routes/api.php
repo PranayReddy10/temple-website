@@ -28,10 +28,12 @@ use App\Http\Controllers\Api\V1\TempleController;
 use App\Http\Controllers\Api\V1\TempleQrController;
 use App\Http\Controllers\Api\V1\TempleSuggestionController;
 use App\Http\Controllers\Api\V1\Trust\TrustAdminController;
+use App\Http\Controllers\Api\V1\Trust\TrustAdminFinanceController;
 use App\Http\Controllers\Api\V1\Trust\TrustAuthController;
 use App\Http\Controllers\Api\V1\Trust\TrustBookingController;
 use App\Http\Controllers\Api\V1\Trust\TrustClaimController;
 use App\Http\Controllers\Api\V1\Trust\TrustEventController;
+use App\Http\Controllers\Api\V1\Trust\TrustFinanceController;
 use App\Http\Controllers\Api\V1\Trust\TrustOptionsController;
 use App\Http\Controllers\Api\V1\Trust\TrustPhotoController;
 use App\Http\Controllers\Api\V1\Trust\TrustPujaController;
@@ -281,6 +283,14 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 Route::post('events/{event}/approve', [TrustAdminController::class, 'approveEvent'])->whereNumber('event')->name('events.approve');
                 Route::post('events/{event}/reject', [TrustAdminController::class, 'rejectEvent'])->whereNumber('event')->name('events.reject');
                 Route::patch('temples/{temple}/status', [TrustAdminController::class, 'templeStatus'])->whereNumber('temple')->name('temples.status');
+
+                // Settling with temples: the same service as Admin → Finance.
+                Route::get('finance', [TrustAdminFinanceController::class, 'overview'])->name('finance');
+                Route::get('settlements', [TrustAdminFinanceController::class, 'settlements'])->name('settlements.index');
+                Route::post('temples/{temple}/settlements', [TrustAdminFinanceController::class, 'store'])->whereNumber('temple')->middleware('throttle:30,1')->name('settlements.store');
+                Route::post('settlements/{settlement}/paid', [TrustAdminFinanceController::class, 'paid'])->whereNumber('settlement')->name('settlements.paid');
+                Route::post('settlements/{settlement}/cancel', [TrustAdminFinanceController::class, 'cancel'])->whereNumber('settlement')->name('settlements.cancel');
+                Route::post('temples/{temple}/payout-account/verify', [TrustAdminFinanceController::class, 'verifyPayoutAccount'])->whereNumber('temple')->name('payout-account.verify');
             });
 
             Route::prefix('temples/{temple}')->whereNumber('temple')->name('temples.')->group(function (): void {
@@ -314,6 +324,12 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 Route::delete('photos/{photo}', [TrustPhotoController::class, 'destroy'])->whereNumber('photo')->name('photos.destroy');
 
                 Route::get('bookings', [TrustBookingController::class, 'index'])->name('bookings.index');
+
+                // Money: bookings paid, the platform's settlements, the payout account.
+                Route::get('finance', [TrustFinanceController::class, 'show'])->name('finance');
+                Route::get('settlements', [TrustFinanceController::class, 'settlements'])->name('settlements.index');
+                Route::get('settlements/{settlement}', [TrustFinanceController::class, 'settlement'])->whereNumber('settlement')->name('settlements.show');
+                Route::put('payout-account', [TrustFinanceController::class, 'updatePayoutAccount'])->middleware('throttle:10,1')->name('payout-account.update');
 
                 Route::get('reviews', [TrustReviewController::class, 'index'])->name('reviews.index');
                 Route::post('reviews/{review}/reply', [TrustReviewController::class, 'reply'])->whereNumber('review')->name('reviews.reply');

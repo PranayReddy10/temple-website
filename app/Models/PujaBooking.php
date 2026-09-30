@@ -118,12 +118,36 @@ class PujaBooking extends Model
         return $this->belongsTo(User::class, 'verified_by');
     }
 
+    /** The payout to the temple that covered this booking, once there is one. */
+    public function settlement(): BelongsTo
+    {
+        return $this->belongsTo(TempleSettlement::class, 'settlement_id');
+    }
+
     // --- Scopes ---
 
     /** Bookings the temple should expect somebody for. */
     public function scopeLive(Builder $query): Builder
     {
         return $query->whereIn('status', [BookingStatus::Confirmed->value, BookingStatus::Verified->value]);
+    }
+
+    /**
+     * Money the platform holds for the temple: paid, still live, and in no
+     * settlement yet. A refunded or cancelled booking drops out by itself.
+     */
+    public function scopeSettleable(Builder $query): Builder
+    {
+        return $query->live()
+            ->where('amount_paise', '>', 0)
+            ->whereNull('settlement_id')
+            ->whereHas('payment', fn (Builder $q) => $q->where('status', Payment::PAID));
+    }
+
+    /** Live bookings that carry a fee: a paid booking is the only kind confirmed. */
+    public function scopePaidFor(Builder $query): Builder
+    {
+        return $query->live()->where('amount_paise', '>', 0);
     }
 
     public function scopeForDay(Builder $query, \Carbon\CarbonInterface|string $date): Builder
