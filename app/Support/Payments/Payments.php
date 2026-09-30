@@ -116,6 +116,17 @@ class Payments
             // the money arrived, not the app.
             if ($locked->booking !== null) {
                 app(\App\Support\Bookings\PujaBookings::class)->confirm($locked->booking);
+            } elseif ($locked->purpose === Payment::PUJA_BOOKING && filled($locked->meta['booking'] ?? null)) {
+                // An earlier attempt for a booking that has since been given
+                // a new payment ("Pay now" again) went through after all:
+                // the money is in, so the booking holds, on this payment.
+                $booking = \App\Models\PujaBooking::query()->where('reference', $locked->meta['booking'])
+                    ->where('devotee_id', $locked->devotee_id)->first();
+                if ($booking !== null && $booking->status === \App\Enums\BookingStatus::PendingPayment) {
+                    $booking->payment()->associate($locked);
+                    $booking->save();
+                    app(\App\Support\Bookings\PujaBookings::class)->confirm($booking);
+                }
             }
 
             return $locked;

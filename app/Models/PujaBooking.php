@@ -179,6 +179,15 @@ class PujaBooking extends Model
         return $this->isFree() ? 'Free' : '₹'.number_format($this->amount_paise / 100, 2);
     }
 
+    /** Still waiting on its money, for a day that has not passed. */
+    public function canBePaidFor(): bool
+    {
+        return $this->status === \App\Enums\BookingStatus::PendingPayment
+            && $this->amount_paise > 0
+            && $this->booked_for !== null
+            && ! $this->booked_for->lt(\App\Support\DevotionalClock::now()->startOfDay());
+    }
+
     public function qrUrl(): string
     {
         return BookingQr::url($this);
