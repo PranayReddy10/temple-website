@@ -15,13 +15,11 @@
     <meta property="og:title" content="{{ $title }}">
     <meta property="og:description" content="{{ $description }}">
     <meta property="og:url" content="{{ $canonical }}">
-    @if (! empty($image))
-        <meta property="og:image" content="{{ $image }}">
-        <meta name="twitter:card" content="summary_large_image">
-    @else
-        <meta name="twitter:card" content="summary">
-    @endif
+    {{-- The temple's own photo, else the brand's share card (web/og.png in the app's web build). --}}
+    <meta property="og:image" content="{{ ! empty($image) ? $image : \App\Support\Seo::url('og.png') }}">
+    <meta name="twitter:card" content="summary_large_image">
     <link rel="icon" href="{{ \App\Support\Seo::url('favicon.png') }}">
+    <link rel="apple-touch-icon" href="{{ \App\Support\Seo::url('icons/Icon-192.png') }}">
     @stack('head')
     <style>
         :root { --saffron: {{ config('brand.colors.saffron.hex') }}; --kumkum: {{ config('brand.colors.kumkum.hex') }}; --sandal: {{ config('brand.colors.sandal.hex') }}; --deep: {{ config('brand.colors.deep.hex') }}; --muted: #7a6a60; --line: #e7dccb; }
@@ -48,7 +46,11 @@
 <body>
 <header class="top">
     <div class="wrap">
-        <a class="brand" href="{{ \App\Support\Seo::url('/') }}">{{ config('brand.name') }}</a>
+        <a class="brand" href="{{ \App\Support\Seo::url('/') }}" style="display:inline-flex;align-items:center;gap:10px">
+            {{-- Inline: these pages are also served on darshansaathi.com, where /brand is not this app's. --}}
+            <span style="width:34px;height:34px;display:inline-block">{!! file_get_contents(public_path('brand/logo-mark-light.svg')) !!}</span>
+            {{ config('brand.name') }}
+        </a>
         <a class="cta" href="{{ \App\Support\Seo::url('/') }}">Open the app</a>
     </div>
 </header>

@@ -49,6 +49,15 @@ class TemplePanelProvider extends PanelProvider
             // Local initials avatar, as in the admin panel.
             ->defaultAvatarProvider(InitialsAvatarProvider::class)
             ->brandName(fn (): string => setting('brand_name', 'brand.name').' — Temple Portal')
+            // The mark beside the name (public/brand, drawn by the app repo's
+            // tool/brand/render.js). Root-relative, like the favicon below.
+            ->brandLogo(fn () => new \Illuminate\Support\HtmlString(
+                '<span style="display:inline-flex;align-items:center;gap:.55rem;font-weight:700">'
+                .'<img src="/brand/logo-mark.svg" alt="" style="height:2.1rem;width:2.1rem">'
+                .'<span>'.e(setting('brand_name', 'brand.name').' — Temple Portal').'</span></span>'
+            ))
+            ->brandLogoHeight('2.4rem')
+            ->favicon('/icons/favicon-32.png')
             // Kumkum-led rather than saffron, so it is obvious at a glance
             // which panel you are looking at.
             ->colors([

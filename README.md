@@ -437,12 +437,10 @@ that expired three days ago, and being unable to clear it by refreshing. So:
   deployed assets, so an old one is deleted on activate rather than left to
   serve last week's stylesheet.
 
-The icons are drawn by `php artisan app:icons` rather than exported from a
-design tool, so a change of brand colour is a config change and one command. The
-mark is a gopuram — the one silhouette that still reads as "temple" at 32
-pixels. `favicon.ico` is generated too: the one in the repository was zero
-bytes, and the admin panel pointed its favicon at it through `asset()`, so it
-was broken twice over.
+The logo (concept A, "Gopuram & Diya": the temple tower with a lamp's flame
+over its finial and a lit doorway) is drawn from one SVG source in the app
+repository, `tool/brand/`, whose `render.js` writes every icon for both repos:
+`public/icons`, `favicon.ico` and the SVG masters in `public/brand`.
 
 ## Support and reports
 

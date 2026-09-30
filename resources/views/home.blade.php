@@ -27,7 +27,7 @@
 </head>
 <body>
     <main class="card">
-        <img class="logo" src="{{ asset('icons/icon-192.png') }}" alt="">
+        <img class="logo" src="/icons/icon-192.png" alt="">
         <h1>{{ config('brand.name') }}</h1>
         <p class="tagline">{{ config('brand.tagline') }}</p>
         @if ($temples > 0)
