@@ -160,9 +160,9 @@ class TempleBalanceResource extends Resource
             ])
             ->filters([
                 Filter::make('owed')
-                    ->label('Owed now or being paid')
+                    ->label('Unsettled money or being paid')
                     ->query(fn (Builder $query): Builder => $query->where(fn (Builder $q) => $q
-                        ->whereHas('pujaBookings', fn (Builder $b) => $b->settleable()->whereDate('booked_for', '<=', app(Settlements::class)->defaultCutoff()->toDateString()))
+                        ->whereHas('pujaBookings', fn (Builder $b) => $b->settleable())
                         ->orWhereHas('settlements', fn (Builder $s) => $s->pending())))
                     ->toggle()
                     ->default(),
@@ -195,7 +195,7 @@ class TempleBalanceResource extends Resource
             ->label('Settle')
             ->icon('heroicon-o-banknotes')
             ->color('success')
-            ->visible(fn (Temple $t): bool => (int) $t->ready_gross > 0)
+            ->visible(fn (Temple $t): bool => (int) $t->ready_gross + (int) $t->ahead_gross > 0)
             ->modalHeading(fn (Temple $t): string => 'Settle with '.$t->name)
             ->modalDescription(function (Temple $t): string {
                 $account = $t->payoutAccount;
@@ -210,10 +210,13 @@ class TempleBalanceResource extends Resource
                 DatePicker::make('up_to')
                     ->label('Settle seva days up to')
                     ->native(false)
-                    ->default(fn () => app(Settlements::class)->defaultCutoff()->toDateString())
-                    ->maxDate(fn () => DevotionalClock::now()->toDateString())
+                    // Everything unsettled by default, advance bookings included.
+                    ->default(fn (Temple $record) => (app(Settlements::class)->latestUnsettledDay($record) ?? DevotionalClock::now())->toDateString())
                     ->required()
-                    ->helperText('Every paid booking up to this day that is not settled yet is included. Days still ahead are left for the next settlement.'),
+                    ->helperText(fn (Temple $record): string => 'Every paid booking up to this day that is not settled yet is included: '
+                        .TempleSettlement::rupees((int) $record->ready_gross).' for days already past'
+                        .((int) $record->ahead_gross > 0 ? ' and '.TempleSettlement::rupees((int) $record->ahead_gross).' paid in advance for days ahead' : '')
+                        .'. Choose an earlier day to leave advance bookings for later. Once settled, a booking can no longer be cancelled.'),
                 Textarea::make('note')->label('Note (the temple sees this)')->rows(2)->maxLength(500),
             ])
             ->modalSubmitActionLabel('Prepare settlement')

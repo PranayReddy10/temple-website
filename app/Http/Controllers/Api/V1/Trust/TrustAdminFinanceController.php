@@ -33,10 +33,11 @@ class TrustAdminFinanceController extends Controller
             return ['bookings' => (int) $row->n, 'amount_paise' => (int) $row->amount, 'amount' => TempleSettlement::rupees((int) $row->amount)];
         })($query->selectRaw('count(*) as n, coalesce(sum(amount_paise), 0) as amount')->first());
 
+        // Everything paid and unsettled, advance bookings included; "ahead"
+        // is the part for seva days still to come.
         $owed = PujaBooking::query()
             ->settleable()
-            ->whereDate('booked_for', '<=', $cutoff)
-            ->selectRaw('temple_id, count(*) as n, coalesce(sum(amount_paise), 0) as gross')
+            ->selectRaw('temple_id, count(*) as n, coalesce(sum(amount_paise), 0) as gross, coalesce(sum(case when booked_for > ? then amount_paise else 0 end), 0) as ahead', [$cutoff])
             ->groupBy('temple_id')
             ->get()
             ->keyBy('temple_id');
@@ -61,6 +62,7 @@ class TrustAdminFinanceController extends Controller
                     'city' => $t->city,
                     'ready_bookings' => (int) ($owed[$t->id]->n ?? 0),
                     'ready_gross_paise' => $gross,
+                    'ahead_gross_paise' => (int) ($owed[$t->id]->ahead ?? 0),
                     'fee_percent' => $percent,
                     'ready_net_paise' => $gross - $fee,
                     'ready_net' => TempleSettlement::rupees($gross - $fee),
@@ -115,10 +117,16 @@ class TrustAdminFinanceController extends Controller
 
         $validated = $request->validate([
             'up_to' => ['nullable', 'date_format:Y-m-d'],
+            // Everything unsettled, advance bookings included.
+            'all' => ['nullable', 'boolean'],
             'note' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $row = $settlements->create($record, $validated['up_to'] ?? null, $this->trustUser($request), $validated['note'] ?? null);
+        $upTo = ($validated['all'] ?? false)
+            ? ($settlements->latestUnsettledDay($record) ?? DevotionalClock::now())
+            : ($validated['up_to'] ?? null);
+
+        $row = $settlements->create($record, $upTo, $this->trustUser($request), $validated['note'] ?? null);
 
         return response()->json(['data' => $this->row($row->load('temple:id,name,city'))], 201);
     }
