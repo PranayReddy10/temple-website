@@ -118,6 +118,51 @@ final class PujaBookings
         });
     }
 
+    /**
+     * Another try at paying for a booking still awaiting its money: the
+     * first checkout was closed, failed on the phone, or never opened.
+     *
+     * The last attempt is asked first, since it may have gone through after
+     * all; only an unpaid booking gets a fresh payment. The booking then
+     * points at the new one, so a late "failed" for the old attempt cannot
+     * cancel it, and a late "paid" for it still confirms the booking (see
+     * Payments::apply).
+     */
+    public function retryPayment(PujaBooking $booking, ?string $gateway = null): PujaBooking
+    {
+        $booking->loadMissing('payment');
+
+        if ($booking->payment !== null && ! $booking->payment->isSettled()) {
+            try {
+                $this->payments->reconcile($booking->payment);
+            } catch (\Throwable) {
+                // The gateway could not be asked; a new attempt is still fair.
+            }
+            $booking->refresh();
+        }
+
+        if (! $booking->canBePaidFor()) {
+            throw ValidationException::withMessages(['status' => $booking->isLive()
+                ? 'This booking is already paid.'
+                : 'This booking can no longer be paid for. Book again.']);
+        }
+
+        $gateway ??= $booking->payment?->gateway ?? \App\Support\AppConfig::payments('android')['default_gateway'] ?? null;
+
+        if ($gateway === null || ! in_array($gateway, \App\Support\AppConfig::enabledGateways(), true)) {
+            throw ValidationException::withMessages(['gateway' => 'Payments are not open yet. Book at the temple counter for now.']);
+        }
+
+        $payment = $this->payments->beginFor($booking->devotee, $booking->amount_paise, Payment::PUJA_BOOKING, $gateway, [
+            'booking' => $booking->reference,
+        ], $booking->currency ?: 'INR');
+
+        $booking->payment()->associate($payment);
+        $booking->save();
+
+        return $booking->load(['puja', 'temple', 'payment']);
+    }
+
     /** The payment for this booking went through: the temple should expect them. */
     public function confirm(PujaBooking $booking): PujaBooking
     {

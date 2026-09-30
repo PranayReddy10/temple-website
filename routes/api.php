@@ -389,6 +389,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('me/bookings/{reference}', [PujaBookingController::class, 'show'])
             ->where('reference', '[A-Za-z0-9]{6,16}')
             ->name('me.bookings.show');
+        Route::post('me/bookings/{reference}/pay', [PujaBookingController::class, 'pay'])
+            ->middleware('throttle:20,1')
+            ->name('me.bookings.pay');
         Route::post('me/bookings/{reference}/cancel', [PujaBookingController::class, 'cancel'])
             ->where('reference', '[A-Za-z0-9]{6,16}')
             ->name('me.bookings.cancel');

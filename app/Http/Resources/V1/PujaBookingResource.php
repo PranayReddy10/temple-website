@@ -21,8 +21,10 @@ class PujaBookingResource extends JsonResource
         return [
             // The reference is the public id; the row id never leaves.
             'reference' => $this->reference,
-            'code' => $this->code,
-            'qr_url' => $this->qrUrl(),
+            // The counter code only once the booking holds: a booking still
+            // waiting on its money must not look like a ticket.
+            'code' => $this->isLive() ? $this->code : null,
+            'qr_url' => $this->isLive() ? $this->qrUrl() : null,
             'status' => [
                 'value' => $this->status->value,
                 'label' => $this->status->getLabel(),
@@ -64,6 +66,8 @@ class PujaBookingResource extends JsonResource
             'cancelled_at' => $this->cancelled_at?->toIso8601String(),
             'cancel_reason' => $this->cancel_reason,
             'can_cancel' => $this->canBeCancelledByDevotee(),
+            // Awaiting payment and not yet past: the app offers "Pay now".
+            'can_pay' => $this->canBePaidFor(),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

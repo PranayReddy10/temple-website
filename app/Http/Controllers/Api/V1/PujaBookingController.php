@@ -107,6 +107,28 @@ class PujaBookingController extends Controller
         return response()->json(['data' => (new PujaBookingResource($booking->load(['puja', 'temple.primaryPhoto', 'payment'])))->resolve($request)]);
     }
 
+    /** "Pay now" for a booking still awaiting payment: a fresh checkout. */
+    public function pay(Request $request, string $reference): JsonResponse
+    {
+        $validated = $request->validate([
+            'gateway' => ['nullable', 'string', Rule::in(array_keys(Payment::GATEWAYS))],
+            'platform' => ['nullable', Rule::in(['android', 'ios', 'web'])],
+            'mode' => ['nullable', Rule::in(['sdk', 'web'])],
+        ]);
+
+        $config = AppConfig::payments($validated['platform'] ?? 'android');
+        abort_unless($config['enabled'], 403, 'Payments are not open on this device yet. Book at the temple counter for now.');
+
+        $booking = $this->bookings->retryPayment($this->mine($request, $reference), $validated['gateway'] ?? null);
+
+        return response()->json([
+            'data' => (new PujaBookingResource($booking))->resolve($request),
+            'checkout' => $booking->isLive() || $booking->payment === null
+                ? null
+                : $this->checkoutPayload($booking->payment, ($validated['mode'] ?? 'web') === 'sdk'),
+        ]);
+    }
+
     public function cancel(Request $request, string $reference): JsonResponse
     {
         $booking = $this->mine($request, $reference);

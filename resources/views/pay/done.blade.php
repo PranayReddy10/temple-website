@@ -23,5 +23,12 @@
         <p class="muted">This can take a minute. You can return to the app; {{ $payment->isForBooking() ? 'your booking is confirmed' : 'your plan switches on' }} as soon as the bank confirms.</p>
         <script>setTimeout(function () { location.reload(); }, 5000);</script>
     @endif
+    {{-- The website opened this page in its own tab: offer the way back,
+         and close the tab when the payment has settled, if the browser lets
+         a script close a tab a script opened. --}}
+    @if ($paid || $failed)
+        <p style="margin-top:18px"><a class="button" href="{{ rtrim((string) config('brand.website'), '/') }}/">Return to {{ config('brand.name') }}</a></p>
+        <script>setTimeout(function () { try { window.close(); } catch (e) {} }, 2500);</script>
+    @endif
 </main>
 @endsection

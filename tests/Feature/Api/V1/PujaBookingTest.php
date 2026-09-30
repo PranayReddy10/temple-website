@@ -163,6 +163,64 @@ class PujaBookingTest extends TestCase
         $this->getJson('/api/v1/me/bookings')->assertOk()->assertJsonCount(1, 'data');
     }
 
+    public function test_an_unpaid_booking_shows_no_code_and_can_be_paid_again(): void
+    {
+        $this->devotee();
+        $puja = $this->puja();
+        Http::fake(['api.razorpay.com/v1/orders' => Http::sequence()
+            ->push(['id' => 'order_A1'])->push(['id' => 'order_A2']),
+            'api.razorpay.com/v1/orders/*/payments' => Http::response(['items' => []]),
+            'api.razorpay.com/v1/orders/*' => Http::response(['id' => 'order_A1', 'status' => 'created'])]);
+
+        $first = $this->postJson("/api/v1/temples/booking-temple/pujas/{$puja->id}/bookings", ['booked_for' => $this->today(), 'platform' => 'android', 'mode' => 'sdk'])
+            ->assertCreated()
+            // Not a ticket until it is paid.
+            ->assertJsonPath('data.code', null)
+            ->assertJsonPath('data.qr_url', null)
+            ->assertJsonPath('data.can_pay', true);
+        $reference = $first->json('data.reference');
+        $firstPayment = $first->json('checkout.payment.id');
+
+        // The devotee closed the checkout; "Pay now" gives a fresh one.
+        $retry = $this->postJson("/api/v1/me/bookings/{$reference}/pay", ['platform' => 'android', 'mode' => 'sdk'])
+            ->assertOk()
+            ->assertJsonPath('data.status.value', 'pending_payment')
+            ->assertJsonPath('checkout.sdk.gateway', 'razorpay');
+        $secondPayment = $retry->json('checkout.payment.id');
+        $this->assertNotSame($firstPayment, $secondPayment);
+
+        // A late "failed" for the first attempt does not cancel the booking.
+        app(\App\Support\Payments\Payments::class)->apply(Payment::query()->where('uuid', $firstPayment)->firstOrFail(), Payment::FAILED, reason: 'Abandoned.');
+        $this->getJson("/api/v1/me/bookings/{$reference}")->assertJsonPath('data.status.value', 'pending_payment');
+
+        // Paying the second confirms it, and now it has its code.
+        app(\App\Support\Payments\Payments::class)->apply(Payment::query()->where('uuid', $secondPayment)->firstOrFail(), Payment::PAID, 'pay_A2');
+        $this->getJson("/api/v1/me/bookings/{$reference}")
+            ->assertJsonPath('data.status.value', 'confirmed')
+            ->assertJsonPath('data.can_pay', false);
+        $this->assertNotNull($this->getJson("/api/v1/me/bookings/{$reference}")->json('data.code'));
+
+        // Nothing left to pay.
+        $this->postJson("/api/v1/me/bookings/{$reference}/pay", ['platform' => 'android'])->assertUnprocessable();
+    }
+
+    public function test_a_late_payment_on_an_earlier_attempt_still_confirms_the_booking(): void
+    {
+        $this->devotee();
+        $puja = $this->puja();
+        Http::fake(['api.razorpay.com/v1/orders' => Http::sequence()->push(['id' => 'order_L1'])->push(['id' => 'order_L2']),
+            'api.razorpay.com/v1/orders/*/payments' => Http::response(['items' => []]),
+            'api.razorpay.com/v1/orders/*' => Http::response(['id' => 'order_L1', 'status' => 'created'])]);
+
+        $first = $this->postJson("/api/v1/temples/booking-temple/pujas/{$puja->id}/bookings", ['booked_for' => $this->today(), 'platform' => 'android', 'mode' => 'sdk'])->assertCreated();
+        $reference = $first->json('data.reference');
+        $this->postJson("/api/v1/me/bookings/{$reference}/pay", ['platform' => 'android', 'mode' => 'sdk'])->assertOk();
+
+        app(\App\Support\Payments\Payments::class)->apply(Payment::query()->where('uuid', $first->json('checkout.payment.id'))->firstOrFail(), Payment::PAID, 'pay_L1');
+
+        $this->getJson("/api/v1/me/bookings/{$reference}")->assertJsonPath('data.status.value', 'confirmed');
+    }
+
     public function test_a_failed_payment_cancels_the_booking_and_frees_the_slot(): void
     {
         $this->devotee();
