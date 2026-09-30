@@ -20,6 +20,18 @@
     <meta name="twitter:card" content="summary_large_image">
     <link rel="icon" href="{{ \App\Support\Seo::url('favicon.png') }}">
     <link rel="apple-touch-icon" href="{{ \App\Support\Seo::url('icons/Icon-192.png') }}">
+    @if (filled(setting('google_site_verification')))
+        <meta name="google-site-verification" content="{{ setting('google_site_verification') }}">
+    @endif
+    @if (filled(setting('bing_site_verification')))
+        <meta name="msvalidate.01" content="{{ setting('bing_site_verification') }}">
+    @endif
+    @php($ga = \App\Support\Seo::measurementId())
+    @if ($ga && \App\Support\Seo::onWebsite(request()))
+        {{-- The same stream as the web app, so a visit that starts here and goes on in the app is one visit. --}}
+        <script async src="https://www.googletagmanager.com/gtag/js?id={{ $ga }}"></script>
+        <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config',@json($ga));</script>
+    @endif
     @stack('head')
     <style>
         :root { --saffron: {{ config('brand.colors.saffron.hex') }}; --kumkum: {{ config('brand.colors.kumkum.hex') }}; --sandal: {{ config('brand.colors.sandal.hex') }}; --deep: {{ config('brand.colors.deep.hex') }}; --muted: #7a6a60; --line: #e7dccb; }

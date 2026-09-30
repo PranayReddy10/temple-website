@@ -5,6 +5,7 @@ namespace Tests\Feature\Platform;
 use App\Enums\TempleStatus;
 use App\Enums\UserRole;
 use App\Filament\Pages\Settings\ManageAds;
+use App\Filament\Pages\Settings\ManageAnalytics;
 use App\Filament\Pages\Settings\ManageAppControl;
 use App\Filament\Pages\Settings\ManageEmail;
 use App\Filament\Pages\Settings\ManagePayments;
@@ -31,6 +32,32 @@ use Tests\TestCase;
 class AppControlTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_analytics_is_off_until_switched_on_and_each_platform_gets_its_own_ids(): void
+    {
+        foreach (['firebase_project_id' => 'darshan-saathi', 'firebase_messaging_sender_id' => '123', 'firebase_android_api_key' => 'AIza-android',
+            'firebase_android_app_id' => '1:123:android:abc', 'firebase_web_api_key' => 'AIza-web', 'firebase_web_app_id' => '1:123:web:def',
+            'firebase_measurement_id' => 'G-ABC123'] as $key => $value) {
+            Setting::set($key, $value);
+        }
+
+        $this->getJson('/api/v1/app/config?platform=android')->assertJsonPath('data.analytics.enabled', false);
+
+        Setting::set('analytics_enabled', '1', 'boolean');
+
+        // The app reuses the Push setup ids, whether or not push is on.
+        $this->getJson('/api/v1/app/config?platform=android')
+            ->assertJsonPath('data.analytics.enabled', true)
+            ->assertJsonPath('data.analytics.firebase.app_id', '1:123:android:abc')
+            ->assertJsonPath('data.push.enabled', false);
+        $this->getJson('/api/v1/app/config?platform=web')
+            ->assertJsonPath('data.analytics.enabled', true)
+            ->assertJsonPath('data.analytics.firebase.app_id', '1:123:web:def')
+            ->assertJsonPath('data.analytics.firebase.measurement_id', 'G-ABC123')
+            ->assertJsonPath('data.analytics.firebase.auth_domain', 'darshan-saathi.firebaseapp.com');
+        // No iOS app in Firebase yet: nothing to report with.
+        $this->getJson('/api/v1/app/config?platform=ios')->assertJsonPath('data.analytics.enabled', false);
+    }
 
     public function test_maintenance_and_update_rules_reach_the_app(): void
     {
@@ -149,7 +176,7 @@ class AppControlTest extends TestCase
         $this->actingAs($admin);
 
         foreach ([ManageAppControl::class, ManageSignIn::class, ManagePush::class, ManageAds::class, ManagePayments::class,
-            ManageAppNotifications::class, ManageSubscriptionPlans::class, ListPayments::class, ManageDevoteeSubscriptions::class, ManageEmail::class] as $page) {
+            ManageAppNotifications::class, ManageSubscriptionPlans::class, ListPayments::class, ManageDevoteeSubscriptions::class, ManageEmail::class, ManageAnalytics::class] as $page) {
             Livewire::test($page)->assertOk();
         }
 

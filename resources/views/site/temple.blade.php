@@ -20,6 +20,15 @@
             'addressCountry' => 'IN',
         ]),
         'geo' => $temple->hasCoordinates() ? ['@type' => 'GeoCoordinates', 'latitude' => (float) $temple->latitude, 'longitude' => (float) $temple->longitude] : null,
+        // Opening hours, from the general and darshan timings that give both ends.
+        'openingHoursSpecification' => $temple->timings
+            ->filter(fn ($t) => in_array($t->kind?->value, ['general', 'darshan'], true) && filled($t->opens_at) && filled($t->closes_at))
+            ->map(fn ($t) => [
+                '@type' => 'OpeningHoursSpecification',
+                'dayOfWeek' => $t->day_of_week === null ? array_values(\App\Models\TempleTiming::dayNames()) : \App\Models\TempleTiming::dayNames()[$t->day_of_week] ?? null,
+                'opens' => substr((string) $t->opens_at, 0, 5),
+                'closes' => substr((string) $t->closes_at, 0, 5),
+            ])->values()->all() ?: null,
     ]);
     $crumbs = [
         '@context' => 'https://schema.org',
@@ -48,6 +57,12 @@
         .puja b { display: block; }
         .facts dt { font-weight: 600; margin-top: 10px; }
         .facts dd { margin: 2px 0 0; }
+        .more { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+        .more a { display: flex; gap: 10px; align-items: center; background: #fffdf9; border: 1px solid var(--line); border-radius: 14px; padding: 8px; text-decoration: none; color: var(--deep); }
+        .more .ph { width: 64px; height: 48px; flex: none; border-radius: 10px; overflow: hidden; background: #efe3cf; }
+        .more .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .more b { display: block; font-size: .92rem; line-height: 1.25; }
+        .more span { color: var(--muted); font-size: .8rem; }
     </style>
 @endpush
 
@@ -58,7 +73,10 @@
         › {{ $temple->name }}
     </p>
     <h1>{{ $temple->name }}</h1>
-    <p class="muted">{{ collect([$temple->deity?->name, $place])->filter()->implode(' · ') }}</p>
+    <p class="muted">
+        @if ($temple->deity?->slug && $sameDeity->isNotEmpty())<a href="{{ Seo::url('deities/'.$temple->deity->slug) }}">{{ $temple->deity->name }}</a>@else{{ $temple->deity?->name }}@endif
+        @if ($temple->deity && $place !== '') · @endif{{ $place }}
+    </p>
 
     @if ($image)
         <div class="hero"><img src="{{ $image }}" alt="{{ $temple->name }}"></div>
@@ -119,4 +137,22 @@
             <p style="margin-top:16px"><a class="cta" style="display:inline-block;text-decoration:none" href="{{ Seo::url('/') }}">Book pujas and plan your visit in {{ config('brand.name') }}</a></p>
         </aside>
     </div>
+
+    @foreach ([
+        ['list' => $sameDeity, 'heading' => 'More '.\App\Http\Controllers\PublicTempleController::deityPhrase((string) $temple->deity?->name).' temples', 'all' => $temple->deity?->slug ? Seo::url('deities/'.$temple->deity->slug) : null],
+        ['list' => $sameState->reject(fn ($t) => $sameDeity->contains('id', $t->id)), 'heading' => 'More temples in '.$temple->state?->name, 'all' => $temple->state ? Seo::url('states/'.$temple->state->slug) : null],
+    ] as $group)
+        @if ($group['list']->isNotEmpty())
+            <h2>{{ $group['heading'] }}</h2>
+            <div class="more">
+                @foreach ($group['list'] as $t)
+                    <a href="{{ Seo::url('temples/'.$t->slug) }}">
+                        <div class="ph">@if ($t->primaryPhoto)<img src="{{ Seo::absolute($t->primaryPhoto->thumbnailUrl()) }}" alt="{{ $t->name }}" loading="lazy">@endif</div>
+                        <div><b>{{ $t->name }}</b><span>{{ collect([$t->city, $t->state?->name])->filter()->unique()->implode(', ') }}</span></div>
+                    </a>
+                @endforeach
+            </div>
+            @if ($group['all'])<p><a href="{{ $group['all'] }}">See all →</a></p>@endif
+        @endif
+    @endforeach
 @endsection

@@ -103,6 +103,14 @@ Route::get('/pay/{payment}/done', [PayController::class, 'done'])->name('pay.don
 Route::get('/temples', [\App\Http\Controllers\PublicTempleController::class, 'index'])->name('site.temples');
 Route::get('/temples/{slug}', [\App\Http\Controllers\PublicTempleController::class, 'show'])->name('site.temple');
 Route::get('/states/{slug}', [\App\Http\Controllers\PublicTempleController::class, 'state'])->name('site.state');
+Route::get('/deities/{slug}', [\App\Http\Controllers\PublicTempleController::class, 'deity'])->name('site.deity');
+// Search Console's "HTML file" check: the file named in Admin → Analytics & SEO.
+Route::get('/google{token}.html', function (string $token) {
+    $file = 'google'.$token.'.html';
+    abort_unless(setting('google_site_verification_file') === $file, 404);
+
+    return response('google-site-verification: '.$file, 200, ['Content-Type' => 'text/html; charset=UTF-8']);
+})->where('token', '[0-9a-f]+');
 Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
 Route::get('/sitemap-pages.xml', [\App\Http\Controllers\SitemapController::class, 'pages']);
 Route::get('/sitemap-temples-{page}.xml', [\App\Http\Controllers\SitemapController::class, 'temples'])->whereNumber('page');

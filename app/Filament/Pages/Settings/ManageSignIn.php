@@ -87,7 +87,7 @@ class ManageSignIn extends SettingsPage
                 ->schema([
                     Toggle::make('auth_apple_enabled')->label('Show "Sign in with Apple" on iOS'),
                     Textarea::make('auth_apple_client_ids')->label('Accepted client ids')->rows(2)
-                        ->placeholder('com.example.templepassport')
+                        ->placeholder('com.darshansaathi.templevisit')
                         ->helperText('The iOS bundle id, plus a Services id if Apple sign-in is ever offered on the web.'),
                 ]),
         ]);
