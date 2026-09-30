@@ -38,6 +38,11 @@ class MediaColumn
             // A HEAD request per row against object storage, to decide
             // whether to render an img tag. A missing file shows as a broken
             // thumbnail; a page of round trips shows as a slow admin.
-            ->checkFileExistence(false);
+            ->checkFileExistence(false)
+            // The disk's own public URL (the CDN for Spaces). Filament would
+            // otherwise sign a temporary URL for every non-"public" disk,
+            // which needs working credentials and gains nothing: these files
+            // are public.
+            ->visibility('public');
     }
 }
