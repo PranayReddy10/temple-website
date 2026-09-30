@@ -179,6 +179,17 @@ class Temple extends Model
         return $this->hasMany(PujaBooking::class);
     }
 
+    /** Where the platform pays this temple what devotees paid for its sevas. */
+    public function payoutAccount(): HasOne
+    {
+        return $this->hasOne(TemplePayoutAccount::class);
+    }
+
+    public function settlements(): HasMany
+    {
+        return $this->hasMany(TempleSettlement::class);
+    }
+
     // --- What devotees add ---
 
     public function likes(): HasMany

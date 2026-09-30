@@ -59,6 +59,8 @@ class ManagePayments extends SettingsPage
             'payments_payu_env' => ['string', 'test'],
             'payments_payu_key' => ['string', null],
             'payments_payu_salt' => ['secret', null],
+
+            'finance_platform_fee_percent' => ['string', '0'],
         ];
     }
 
@@ -78,6 +80,19 @@ class ManagePayments extends SettingsPage
                     Select::make('payments_default_gateway')->label('Default gateway')->native(false)->options([
                         'razorpay' => 'Razorpay', 'phonepe' => 'PhonePe', 'cashfree' => 'Cashfree', 'payu' => 'PayU',
                     ])->helperText('The one used when the devotee does not choose. Only enabled gateways are offered.'),
+                ]),
+
+            Section::make('Temple settlements')
+                ->icon('heroicon-o-building-library')
+                ->description('Devotees pay the platform for sevas booked in the app; the platform settles with each temple under Finance → Temple balances.')
+                ->schema([
+                    TextInput::make('finance_platform_fee_percent')
+                        ->label('Platform fee on seva bookings (%)')
+                        ->numeric()
+                        ->minValue(0)
+                        ->maxValue(100)
+                        ->step(0.01)
+                        ->helperText('Kept from each settlement, for example 2 to cover gateway charges. A temple can have its own rate under Temple balances → Payout details & fee. Applies to settlements prepared from now on.'),
                 ]),
 
             Section::make('Razorpay')

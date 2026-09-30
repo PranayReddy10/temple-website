@@ -100,6 +100,37 @@ settings, temple events and daily devotional content.
 - 22 starter temples, seeded honestly as *community* level with no source — they
   are there to be verified, not to pad a count.
 
+## Finance — settling seva bookings with temples
+
+Devotees pay the platform's gateway for sevas booked in the app; the platform
+then pays each temple. **Admin → Finance** (super admins only):
+
+- **Temple balances** — per temple: *ready to settle* (paid, still live, seva
+  day passed, in no settlement), what the temple gets after the platform fee,
+  paid for days still ahead, being paid out, paid to date, and whether its
+  payout details are verified. **Settle** gathers the ready bookings up to a
+  day into a settlement; **Payout details & fee** edits the bank account / UPI
+  and a per-temple fee.
+- **Settlements** — each payout with its bookings and the account to pay.
+  Transfer from the bank, then **Mark paid** with the UTR; **Cancel** a
+  settlement not yet paid to return its bookings to the balance.
+- The default fee is under **Settings → Payment gateways → Temple
+  settlements**.
+
+A booking belongs to at most one settlement, so nothing is paid twice, and a
+settled booking can no longer be cancelled. When a temple's owner changes the
+payout account, its verification is cleared until staff confirm it again.
+Account numbers are encrypted at rest; the temple's team only ever sees the
+last four digits.
+
+The temple's team sees the same figures in the Temple Trust app (today's
+bookings and amount, by seva; month; balance; every settlement with its UTR)
+and read-only under **Settlements** in the temple portal. Super admins can
+also settle from the Trust app. API: `GET /api/v1/trust/temples/{id}/finance`,
+`/settlements`, `PUT /payout-account`, and under `/api/v1/trust/admin/`:
+`finance`, `settlements`, `temples/{id}/settlements`,
+`settlements/{id}/paid|cancel`, `temples/{id}/payout-account/verify`.
+
 ## Telangana temples
 
 `TelanganaTempleSeeder` covers 45 temples across every region of Telangana —

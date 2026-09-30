@@ -97,6 +97,9 @@ class TrustTempleController extends Controller
             'bookings_today' => $temple->pujaBookings()->whereDate('booked_for', $today)->whereIn('status', $live)->count(),
             'bookings_upcoming' => $temple->pujaBookings()->whereDate('booked_for', '>=', $today)->whereIn('status', $live)->count(),
             'received_today' => $temple->pujaBookings()->whereDate('booked_for', $today)->where('status', BookingStatus::Verified)->count(),
+            // Paid for today's sevas, in paise; the finance screen has the rest.
+            'amount_today_paise' => (int) $temple->pujaBookings()->whereDate('booked_for', $today)->whereIn('status', $live)->sum('amount_paise'),
+            'people_today' => (int) $temple->pujaBookings()->whereDate('booked_for', $today)->whereIn('status', $live)->sum('people'),
             'events_upcoming' => $temple->events()->upcoming()->count(),
             'events_in_review' => $temple->events()->where('status', EventStatus::PendingReview)->count(),
             'reviews_to_answer' => $temple->reviews()->approved()->whereNull('temple_reply')->count(),

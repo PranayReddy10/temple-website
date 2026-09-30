@@ -11,6 +11,7 @@ use App\Models\Devotee;
 use App\Models\PujaBooking;
 use App\Support\BookingQr;
 use App\Support\Bookings\PujaBookings;
+use App\Support\Finance\Settlements;
 use App\Support\PassportQr;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
@@ -49,7 +50,11 @@ class TrustBookingController extends Controller
             ->latest('id')
             ->paginate(50);
 
-        return PujaBookingResource::collection($page)->response();
+        // A day's totals ride along, so the list can say how many are
+        // coming and what they paid without adding up one page of it.
+        return PujaBookingResource::collection($page)
+            ->additional(isset($validated['date']) ? ['summary' => app(Settlements::class)->day($record, $validated['date'])] : [])
+            ->response();
     }
 
     /** A scanned code, or a reference typed from the devotee's screen. */

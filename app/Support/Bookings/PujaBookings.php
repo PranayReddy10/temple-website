@@ -212,6 +212,11 @@ final class PujaBookings
             throw ValidationException::withMessages(['status' => 'This booking can no longer be cancelled.']);
         }
 
+        // Its money has already gone to the temple in a settlement.
+        if ($booking->settlement_id !== null) {
+            throw ValidationException::withMessages(['status' => 'This booking is part of a settlement to the temple and can no longer be cancelled.']);
+        }
+
         $booking->forceFill([
             'status' => BookingStatus::Cancelled,
             'cancelled_at' => now(),
