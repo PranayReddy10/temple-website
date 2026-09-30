@@ -23,7 +23,22 @@ class TemplesTable
     public static function configure(Table $table): Table
     {
         return $table
+            // The cover's row, once for the page rather than once per temple.
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('primaryPhoto'))
             ->columns([
+                // What devotees see first, at a glance, before opening the
+                // temple: its thumbnail, or "No cover" (Filter: Without a cover).
+                \App\Filament\Support\MediaColumn::make(
+                    'cover',
+                    fn (Temple $record): ?string => $record->primaryPhoto?->thumbnail_path ?? $record->primaryPhoto?->path,
+                    fn (Temple $record): string => $record->primaryPhoto?->disk ?? config('filesystems.media'),
+                )
+                    ->label('Cover')
+                    ->imageSize(44)
+                    ->square()
+                    ->extraImgAttributes(['loading' => 'lazy', 'class' => 'rounded-md'])
+                    ->placeholder('No cover'),
+
                 TextColumn::make('name')
                     ->label('Temple')
                     ->searchable()
@@ -138,6 +153,11 @@ class TemplesTable
                     ->query(fn (Builder $query): Builder => $query->where(
                         fn (Builder $q) => $q->whereNull('latitude')->orWhereNull('longitude')
                     ))
+                    ->toggle(),
+
+                Filter::make('without_cover')
+                    ->label('Without a cover')
+                    ->query(fn (Builder $query): Builder => $query->whereDoesntHave('primaryPhoto'))
                     ->toggle(),
 
                 // Section 20 of the plan: stale timings must be flagged for review.

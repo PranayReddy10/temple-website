@@ -372,6 +372,22 @@ class TempleAdminDetailTest extends TestCase
             ->assertCanNotSeeTableRecords([$complete, $draft]);
     }
 
+    public function test_the_list_shows_which_temples_have_a_cover(): void
+    {
+        $this->actingAs($this->staff());
+        $with = Temple::create(['name' => 'With Cover', 'status' => TempleStatus::Published]);
+        $with->photos()->create(['disk' => 'public', 'path' => 'temples/1/c.jpg', 'is_published' => true]);
+        $without = Temple::create(['name' => 'Without Cover', 'status' => TempleStatus::Published]);
+
+        Livewire::test(ListTemples::class)
+            ->assertCanSeeTableRecords([$with, $without])
+            ->assertSee('No cover')
+            ->assertSee('temples/1/c.jpg')
+            ->filterTable('without_cover')
+            ->assertCanSeeTableRecords([$without])
+            ->assertCanNotSeeTableRecords([$with]);
+    }
+
     public function test_the_deity_resource_gained_its_relation_managers(): void
     {
         $relations = DeityResource::getRelations();
