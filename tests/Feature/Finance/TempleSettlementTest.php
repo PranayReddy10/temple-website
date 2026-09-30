@@ -321,4 +321,42 @@ class TempleSettlementTest extends TestCase
             ->assertSee('₹250.00')
             ->assertDontSee($theirs->reference);
     }
+
+    public function test_advance_bookings_can_be_settled_and_then_cannot_be_cancelled(): void
+    {
+        $today = $this->paidBooking(0, 10);
+        $ahead = $this->paidBooking(5, 20);
+        $admin = $this->superAdmin();
+
+        $this->trust($admin)->getJson('/api/v1/trust/admin/finance')
+            ->assertOk()
+            ->assertJsonPath('data.temples.0.ready_gross_paise', 3000)
+            ->assertJsonPath('data.temples.0.ahead_gross_paise', 3000);
+
+        $this->trust($admin)->postJson('/api/v1/trust/admin/temples/'.$this->temple->id.'/settlements', ['all' => true])
+            ->assertCreated()
+            ->assertJsonPath('data.bookings_count', 2)
+            ->assertJsonPath('data.gross_paise', 3000);
+
+        $this->assertNotNull($today->refresh()->settlement_id);
+        $this->assertNotNull($ahead->refresh()->settlement_id);
+
+        $this->expectException(ValidationException::class);
+        app(PujaBookings::class)->cancel($ahead, 'devotee', 'Cannot come');
+    }
+
+    public function test_the_admin_can_settle_a_booking_for_today(): void
+    {
+        $this->paidBooking(0, 10);
+        $this->actingAs($this->superAdmin());
+
+        Livewire::test(ListTempleBalances::class)
+            ->assertTableActionVisible('settle', $this->temple)
+            ->mountTableAction('settle', $this->temple)
+            ->assertTableActionDataSet(['up_to' => DevotionalClock::now()->toDateString()])
+            ->callMountedTableAction()
+            ->assertHasNoTableActionErrors();
+
+        $this->assertSame(1000, TempleSettlement::query()->firstOrFail()->gross_paise);
+    }
 }

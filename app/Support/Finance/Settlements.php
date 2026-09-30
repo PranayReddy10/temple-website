@@ -53,6 +53,18 @@ class Settlements
         return DevotionalClock::now()->subDay()->startOfDay();
     }
 
+    /**
+     * The last seva day with a paid booking not yet settled, so a settlement
+     * can take everything, advance bookings included. Once settled a booking
+     * can no longer be cancelled, so paying ahead is safe.
+     */
+    public function latestUnsettledDay(Temple|int $temple): ?CarbonInterface
+    {
+        $day = $this->settleableQuery($temple)->max('booked_for');
+
+        return $day === null ? null : Carbon::parse($day)->startOfDay();
+    }
+
     /** Paid bookings not yet in a settlement, whose day is on or before $upTo. */
     public function settleableQuery(Temple|int $temple, CarbonInterface|string|null $upTo = null): Builder
     {
@@ -193,10 +205,6 @@ class Settlements
         $cutoff = $upTo === null
             ? $this->defaultCutoff()
             : ($upTo instanceof CarbonInterface ? $upTo : Carbon::parse($upTo));
-
-        if ($cutoff->toDateString() > DevotionalClock::now()->toDateString()) {
-            throw ValidationException::withMessages(['up_to' => 'A settlement covers seva days that have come, up to today at the latest.']);
-        }
 
         return DB::transaction(function () use ($temple, $cutoff, $by, $note): TempleSettlement {
             // Locked, so two people settling at once cannot take the same booking.
