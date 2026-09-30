@@ -157,6 +157,12 @@ class AppServiceProvider extends ServiceProvider
     protected static function previewUploadsFromThisHost(): void
     {
         \Filament\Forms\Components\FileUpload::configureUsing(function (\Filament\Forms\Components\FileUpload $upload): void {
+            // Opening a form asked the Space whether each saved file exists,
+            // and its size and type, before the page could render: a round
+            // trip per file, and a hang when the Space is slow to answer or
+            // the key is refused. The preview shows the file either way.
+            $upload->fetchFileInformation(fn (\Filament\Forms\Components\FileUpload $component): bool => $component->getDiskName() !== \App\Support\MediaStorage::SPACES_DISK);
+
             $upload->getUploadedFileUsing(function (\Filament\Forms\Components\FileUpload $component, string $file, string|array|null $storedFileNames): ?array {
                 $disk = $component->getDiskName();
                 $storage = $component->getDisk();
