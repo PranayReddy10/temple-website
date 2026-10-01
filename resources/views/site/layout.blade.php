@@ -53,6 +53,8 @@
         .card { background: #fffdf9; border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
         footer.bottom { border-top: 1px solid var(--line); padding: 24px 0 40px; font-size: .85rem; color: var(--muted); }
         img { max-width: 100%; }
+        nav.legal { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 8px 0; }
+        nav.legal a { color: var(--muted); }
     </style>
 </head>
 <body>
@@ -71,7 +73,15 @@
 </main>
 <footer class="bottom">
     <div class="wrap">
-        <p><a href="{{ \App\Support\Seo::url('temples') }}">All temples</a> · {{ config('brand.tagline') }} · <a href="mailto:{{ config('brand.support_email') }}">{{ config('brand.support_email') }}</a></p>
+        <p><a href="{{ \App\Support\Seo::url('temples') }}">All temples</a> · {{ config('brand.tagline') }} · <a href="mailto:{{ setting('support_email', 'brand.support_email') }}">{{ setting('support_email', 'brand.support_email') }}</a></p>
+        @php($footerPages = rescue(fn () => \App\Models\Page::footer(), collect(), report: false))
+        @if ($footerPages->isNotEmpty())
+            <nav class="legal" aria-label="Policies">
+                @foreach ($footerPages as $fp)
+                    <a href="{{ \App\Support\Seo::url($fp->slug) }}">{{ $fp->title }}</a>
+                @endforeach
+            </nav>
+        @endif
         <p>Timings and rules change; confirm with the temple before travelling.</p>
     </div>
 </footer>

@@ -124,3 +124,11 @@ Route::get('/media-preview', \App\Http\Controllers\MediaPreviewController::class
 Route::get('/storage/{path}', MediaFileController::class)
     ->where('path', '.*')
     ->name('media.file');
+
+// Policy and information pages (privacy, terms, refunds …), edited in
+// Admin → Website → Pages. Last of all, so a page can never take over an
+// address that something else answers.
+Route::post('/account-deletion', [\App\Http\Controllers\PageController::class, 'requestDeletion'])
+    ->middleware('throttle:5,60')
+    ->name('site.account-deletion');
+Route::fallback([\App\Http\Controllers\PageController::class, 'show'])->name('site.page');

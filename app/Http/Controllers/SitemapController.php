@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Page;
 use App\Models\Temple;
 use App\Support\Seo;
 use Illuminate\Http\Response;
@@ -39,6 +40,9 @@ class SitemapController extends Controller
         }
         foreach (PublicTempleController::deitiesWithTemples() as $deity) {
             $xml .= self::entry('url', Seo::url('deities/'.$deity->slug), null, 'weekly', '0.7');
+        }
+        foreach (Page::query()->published()->orderBy('sort_order')->get(['slug', 'updated_at']) as $page) {
+            $xml .= self::entry('url', Seo::url($page->slug), $page->updated_at, 'yearly', '0.3');
         }
 
         return self::xml($xml.'</urlset>');

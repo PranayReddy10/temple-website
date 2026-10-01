@@ -56,6 +56,29 @@ so they answer on darshansaathi.com. The same pages on
 temple.darshansaathi.com carry `noindex` and a canonical link to the
 website's copy.
 
+**Policy pages.** Privacy policy, terms and conditions, refund and
+cancellation, shipping and delivery, account deletion, about, contact,
+community guidelines and disclaimer are created by `php artisan migrate`
+with default text, and edited in Admin → **Website → Pages** (super admins).
+They answer at `darshansaathi.com/{address}`: the web build's `.htaccess`
+sends any one-word address that is not a file to Laravel. Fill in
+Admin → Website → **Business details** (business name, address, Grievance
+Officer, city for disputes): the pages show them wherever they say
+`{business}`, `{address}`, `{grievance_officer}` or `{courts}`; `{email}` is
+the support email under Administration → Settings. Have the text checked by
+a lawyer before relying on it. Addresses to give elsewhere:
+
+| Where | Address |
+|---|---|
+| Play Console → App content → Privacy policy; App Store Connect | `https://darshansaathi.com/privacy-policy` |
+| Play Console → Data safety → Delete account URL | `https://darshansaathi.com/account-deletion` |
+| Razorpay / Cashfree / PhonePe website check | `/terms-and-conditions`, `/refund-and-cancellation`, `/shipping-and-delivery`, `/contact-us`, `/privacy-policy` |
+
+A deletion request sent from the website's form arrives as a support ticket
+(Account or sign-in). Confirm it with the account's owner, then open the
+devotee in Admin → Devotees and use **Delete account**. In the app,
+Profile → Delete account deletes straight away.
+
 **Google Search Console.** Add a *Domain* property for `darshansaathi.com`
 and verify it with the TXT record Google gives (hPanel → *Domains → DNS /
 Nameservers → Add record*, type TXT, name `@`). This covers both addresses.
