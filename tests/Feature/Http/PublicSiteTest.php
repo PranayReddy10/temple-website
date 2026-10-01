@@ -152,4 +152,40 @@ class PublicSiteTest extends TestCase
         $this->get('/sitemap-temples-1.xml')->assertOk()
             ->assertSee('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"', false);
     }
+
+    public function test_a_mistyped_temple_address_goes_to_the_temple_it_clearly_means(): void
+    {
+        $this->temple(['name' => 'Sri Lakshmi Narasimha Swamy Temple, Mattapalli', 'slug' => 'sri-lakshmi-narasimha-swamy-temple-mattapalli', 'city' => 'Mattapalli']);
+        $this->temple(['name' => 'Lakshmi Narasimha Swamy Temple, Yadagirigutta', 'slug' => 'lakshmi-narasimha-swamy-yadadri', 'city' => 'Yadagirigutta']);
+
+        $this->get('https://darshansaathi.com/temples/mattapalli-lakshmi-narasimha-swamy-temple')
+            ->assertStatus(301)
+            ->assertRedirect('https://darshansaathi.com/temples/sri-lakshmi-narasimha-swamy-temple-mattapalli');
+
+        // Two equally likely temples: the 404 page offers both instead.
+        $this->get('https://darshansaathi.com/temples/lakshmi-narasimha-temple')->assertNotFound()
+            ->assertSee('The doors to this page are closed')
+            ->assertSee('Were you looking for')
+            ->assertSee('https://darshansaathi.com/temples/sri-lakshmi-narasimha-swamy-temple-mattapalli', false)
+            ->assertSee('https://darshansaathi.com/temples/lakshmi-narasimha-swamy-yadadri', false)
+            ->assertSee('<meta name="robots" content="noindex, follow">', false);
+
+        // A draft is never found this way.
+        $this->temple(['name' => 'Hidden Draft Temple', 'slug' => 'hidden-draft-temple', 'status' => TempleStatus::Draft, 'published_at' => null]);
+        $this->get('https://darshansaathi.com/temples/hidden-draft')->assertNotFound()->assertDontSee('Hidden Draft Temple');
+    }
+
+    public function test_the_directory_searches_and_any_missing_page_gets_the_temple_404(): void
+    {
+        $this->temple();
+        $this->temple(['name' => 'Ramappa Temple', 'slug' => 'ramappa', 'city' => 'Palampet']);
+
+        $this->get('https://darshansaathi.com/temples?q=palampet')->assertOk()
+            ->assertSee('Temples matching')->assertSee('Ramappa Temple')->assertDontSee('Sri Someshwara Swamy Temple')
+            ->assertSee('noindex', false);
+
+        $this->get('https://darshansaathi.com/no-such-page')->assertNotFound()
+            ->assertSee('The doors to this page are closed')
+            ->assertSee('href="https://darshansaathi.com/temples"', false);
+    }
 }

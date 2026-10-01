@@ -24,6 +24,13 @@
     <p class="muted">{{ number_format($temples->total()) }} {{ \Illuminate\Support\Str::plural('temple', $temples->total()) }} with darshan timings, pujas and sevas, visiting rules and directions.</p>
     @if (! empty($intro))<p>{{ $intro }}</p>@endif
 
+    @if (! $state && ! $deity)
+        <form class="find" action="{{ \App\Support\Seo::url('temples') }}" method="get" role="search">
+            <input type="search" name="q" value="{{ $q ?? '' }}" placeholder="Search by temple name or town" aria-label="Search temples">
+            <button type="submit">Search</button>
+        </form>
+    @endif
+
     @if ($states->isNotEmpty())
         <nav class="states" aria-label="States">
             @foreach ($states as $s)
@@ -38,6 +45,10 @@
                 <a href="{{ \App\Support\Seo::url('deities/'.$d->slug) }}" @class(['on' => $deity?->id === $d->id])>{{ $d->name }} ({{ $d->temples_count }})</a>
             @endforeach
         </nav>
+    @endif
+
+    @if ($temples->isEmpty())
+        <p class="card">No temples match that yet. Try a shorter name, the town, or <a href="{{ \App\Support\Seo::url('temples') }}">browse all temples</a>.</p>
     @endif
 
     <div class="grid">

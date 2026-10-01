@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Deity;
 use App\Models\State;
 use App\Models\Temple;
+use App\Support\TempleFinder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -18,10 +20,12 @@ class PublicTempleController extends Controller
 {
     public function index(Request $request): View
     {
+        $q = trim((string) $request->query('q'));
         $temples = Temple::query()->published()
+            ->when($q !== '', fn ($query) => $query->search($q))
             ->with(['deity:id,name', 'state:id,name', 'primaryPhoto'])
             ->orderByDesc('is_featured')->orderBy('name')
-            ->paginate(48);
+            ->paginate(48)->withQueryString();
 
         return view('site.temples', [
             'temples' => $temples,
@@ -29,7 +33,10 @@ class PublicTempleController extends Controller
             'deities' => self::deitiesWithTemples(),
             'state' => null,
             'deity' => null,
-            'heading' => 'Temples',
+            'q' => $q,
+            // Search results are for people, not for the index.
+            'noindex' => $q !== '',
+            'heading' => $q !== '' ? 'Temples matching "'.$q.'"' : 'Temples',
             'title' => 'Hindu temples: timings, pujas and how to reach',
             'description' => 'Darshan timings, puja and seva details, dress code and directions for '.number_format($temples->total()).' temples across India.',
             'canonical' => \App\Support\Seo::url('temples'.($temples->currentPage() > 1 ? '?page='.$temples->currentPage() : '')),
@@ -91,7 +98,7 @@ class PublicTempleController extends Controller
         ]);
     }
 
-    public function show(string $slug): View
+    public function show(string $slug): View|RedirectResponse
     {
         $temple = Temple::query()->published()->where('slug', $slug)
             ->with([
@@ -99,7 +106,17 @@ class PublicTempleController extends Controller
                 'photos' => fn ($q) => $q->published()->limit(8),
                 'pujas' => fn ($q) => $q->published(),
             ])
-            ->first() ?? throw new NotFoundHttpException;
+            ->first();
+
+        if ($temple === null) {
+            // A slug typed by hand or cut short: the temple it clearly means.
+            $meant = TempleFinder::closest($slug);
+            if ($meant !== null && $meant->slug !== $slug) {
+                return redirect()->to(\App\Support\Seo::url('temples/'.$meant->slug), 301);
+            }
+
+            throw new NotFoundHttpException;
+        }
 
         $place = collect([$temple->city, $temple->district?->name, $temple->state?->name])->filter()->unique()->implode(', ');
         $related = fn ($q) => $q->published()->whereKeyNot($temple->id)
