@@ -3,6 +3,8 @@
 namespace Tests\Feature\Http;
 
 use App\Enums\TempleStatus;
+use App\Models\Deity;
+use App\Models\Setting;
 use App\Models\State;
 use App\Models\Temple;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -82,5 +84,72 @@ class PublicSiteTest extends TestCase
             ->assertSee('<loc>https://darshansaathi.com/temples/someshwara-kolanupaka</loc>', false)
             ->assertDontSee('draft-temple');
         $this->get('/sitemap-temples-2.xml')->assertNotFound();
+    }
+
+    public function test_deity_pages_list_their_temples_and_temple_pages_link_on(): void
+    {
+        $shiva = Deity::create(['name' => 'Lord Shiva', 'slug' => 'shiva', 'description' => 'The auspicious one.']);
+        $this->temple(['deity_id' => $shiva->id]);
+        $this->temple(['name' => 'Ramappa Temple', 'slug' => 'ramappa', 'city' => 'Palampet', 'deity_id' => $shiva->id]);
+        $this->temple(['name' => 'Yadadri Temple', 'slug' => 'yadadri', 'city' => 'Yadagirigutta']);
+        Deity::create(['name' => 'Ganesha', 'slug' => 'ganesha']);
+
+        $this->get('https://darshansaathi.com/deities/shiva')->assertOk()
+            ->assertSee('<title>Shiva temples in India: timings, pujas and how to reach', false)
+            ->assertSee('Ramappa Temple')->assertDontSee('Yadadri Temple')
+            ->assertSee('The auspicious one.');
+        // No temples yet: no thin page for search engines.
+        $this->get('https://darshansaathi.com/deities/ganesha')->assertNotFound();
+
+        $this->get('https://darshansaathi.com/temples/someshwara-kolanupaka')->assertOk()
+            ->assertSee('More Shiva temples')
+            ->assertSee('https://darshansaathi.com/temples/ramappa', false)
+            ->assertSee('More temples in Telangana')
+            ->assertSee('https://darshansaathi.com/temples/yadadri', false)
+            ->assertSee('https://darshansaathi.com/deities/shiva', false);
+
+        $this->get('/sitemap-pages.xml')->assertSee('<loc>https://darshansaathi.com/deities/shiva</loc>', false)
+            ->assertDontSee('deities/ganesha');
+    }
+
+    public function test_opening_hours_are_structured_data(): void
+    {
+        $temple = $this->temple();
+        $temple->timings()->create(['kind' => 'darshan', 'opens_at' => '05:30', 'closes_at' => '12:00']);
+
+        $this->get('https://darshansaathi.com/temples/someshwara-kolanupaka')
+            ->assertSee('"openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Sunday"', false)
+            ->assertSee('"opens":"05:30","closes":"12:00"', false);
+    }
+
+    public function test_search_console_verification_and_analytics_come_from_the_admin_panel(): void
+    {
+        $this->temple();
+        $page = 'https://darshansaathi.com/temples/someshwara-kolanupaka';
+
+        $this->get('https://darshansaathi.com/google0123abcd.html')->assertNotFound();
+        $this->get($page)->assertDontSee('google-site-verification')->assertDontSee('googletagmanager');
+
+        Setting::set('google_site_verification_file', 'google0123abcd.html');
+        Setting::set('google_site_verification', 'tok-123');
+        Setting::set('firebase_measurement_id', 'G-ABC123');
+
+        $this->get('https://darshansaathi.com/google0123abcd.html')->assertOk()->assertSeeText('google-site-verification: google0123abcd.html');
+        $this->get('https://darshansaathi.com/google9999.html')->assertNotFound();
+        $this->get($page)->assertSee('<meta name="google-site-verification" content="tok-123">', false)
+            ->assertDontSee('googletagmanager');
+
+        Setting::set('analytics_enabled', '1', 'boolean');
+        $this->get($page)->assertSee('googletagmanager.com/gtag/js?id=G-ABC123', false);
+        // Not on the admin host's unindexed copy.
+        $this->get('https://temple.darshansaathi.com/temples/someshwara-kolanupaka')->assertDontSee('googletagmanager');
+    }
+
+    public function test_the_temple_sitemap_carries_cover_photos(): void
+    {
+        $this->temple();
+
+        $this->get('/sitemap-temples-1.xml')->assertOk()
+            ->assertSee('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"', false);
     }
 }

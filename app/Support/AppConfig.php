@@ -41,6 +41,7 @@ final class AppConfig
                 'password_reset' => DevoteePasswordReset::enabled(),
             ],
             'push' => self::push($platform),
+            'analytics' => self::analytics($platform),
             'ads' => self::ads($platform, $devotee),
             'payments' => self::payments($platform),
             'support_email' => setting('support_email', 'brand.support_email'),
@@ -99,6 +100,37 @@ final class AppConfig
         return [
             // Only the public ids: the service account never leaves the server.
             'enabled' => $platform !== 'web' && $complete && (bool) setting('push_enabled', null, false),
+            'firebase' => $complete ? $options : null,
+        ];
+    }
+
+    /**
+     * Google Analytics through Firebase: the apps reuse the ids under Push
+     * setup; the web app has its own, with the measurement id of its stream.
+     *
+     * @return array<string, mixed>
+     */
+    private static function analytics(string $platform): array
+    {
+        if ($platform === 'web') {
+            $options = [
+                'project_id' => setting('firebase_project_id'),
+                'messaging_sender_id' => setting('firebase_messaging_sender_id'),
+                'api_key' => setting('firebase_web_api_key'),
+                'app_id' => setting('firebase_web_app_id'),
+                'measurement_id' => setting('firebase_measurement_id'),
+                'auth_domain' => filled(setting('firebase_project_id')) ? setting('firebase_project_id').'.firebaseapp.com' : null,
+            ];
+            $complete = filled($options['measurement_id']);
+        } else {
+            $options = self::push($platform)['firebase'];
+            $complete = $options !== null;
+        }
+
+        $complete = $complete && filled($options['project_id'] ?? null) && filled($options['api_key'] ?? null) && filled($options['app_id'] ?? null);
+
+        return [
+            'enabled' => $complete && (bool) setting('analytics_enabled', null, false),
             'firebase' => $complete ? $options : null,
         ];
     }

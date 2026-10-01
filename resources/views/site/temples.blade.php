@@ -19,14 +19,23 @@
 @endpush
 
 @section('content')
-    <p class="crumbs"><a href="{{ \App\Support\Seo::url('/') }}">Home</a> › @if ($state)<a href="{{ \App\Support\Seo::url('temples') }}">Temples</a> › {{ $state->name }}@else Temples @endif</p>
-    <h1>{{ $state ? 'Temples in '.$state->name : 'Temples' }}</h1>
+    <p class="crumbs"><a href="{{ \App\Support\Seo::url('/') }}">Home</a> › @if ($state || $deity)<a href="{{ \App\Support\Seo::url('temples') }}">Temples</a> › {{ $state?->name ?? $deity->name }}@else Temples @endif</p>
+    <h1>{{ $heading }}</h1>
     <p class="muted">{{ number_format($temples->total()) }} {{ \Illuminate\Support\Str::plural('temple', $temples->total()) }} with darshan timings, pujas and sevas, visiting rules and directions.</p>
+    @if (! empty($intro))<p>{{ $intro }}</p>@endif
 
     @if ($states->isNotEmpty())
         <nav class="states" aria-label="States">
             @foreach ($states as $s)
                 <a href="{{ \App\Support\Seo::url('states/'.$s->slug) }}" @class(['on' => $state?->id === $s->id])>{{ $s->name }} ({{ $s->temples_count }})</a>
+            @endforeach
+        </nav>
+    @endif
+
+    @if ($deities->isNotEmpty())
+        <nav class="states" aria-label="Deities">
+            @foreach ($deities->take(24) as $d)
+                <a href="{{ \App\Support\Seo::url('deities/'.$d->slug) }}" @class(['on' => $deity?->id === $d->id])>{{ $d->name }} ({{ $d->temples_count }})</a>
             @endforeach
         </nav>
     @endif

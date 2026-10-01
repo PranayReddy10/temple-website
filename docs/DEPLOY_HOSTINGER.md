@@ -48,13 +48,41 @@ folder that is meant to be served. Check afterwards that
 
 **Search engines.** The Flutter site is a blank page to them, so the temple
 directory (`/temples`), each temple (`/temples/{slug}`), each state
-(`/states/{slug}`) and the sitemap (`/sitemap.xml`) are rendered by Laravel.
-The web build's `.htaccess` hands exactly those paths, and `/storage` for
-their photos, to `laravel/public/index.php`, so they answer on
-darshansaathi.com. The same pages on temple.darshansaathi.com carry
-`noindex` and a canonical link to the website's copy. After deploying, add
-`https://darshansaathi.com` in Google Search Console and submit
-`https://darshansaathi.com/sitemap.xml`.
+(`/states/{slug}`), each deity (`/deities/{slug}`) and the sitemap
+(`/sitemap.xml`, with each temple's cover photo) are rendered by Laravel.
+The web build's `.htaccess` hands exactly those paths, `/storage` for their
+photos and `google*.html` for Search Console, to `laravel/public/index.php`,
+so they answer on darshansaathi.com. The same pages on
+temple.darshansaathi.com carry `noindex` and a canonical link to the
+website's copy.
+
+**Google Search Console.** Add a *Domain* property for `darshansaathi.com`
+and verify it with the TXT record Google gives (hPanel → *Domains → DNS /
+Nameservers → Add record*, type TXT, name `@`). This covers both addresses.
+Alternatively add a *URL prefix* property for `https://darshansaathi.com/`,
+choose **HTML file**, and paste only the file's name
+(`google…….html`) into Admin → App → **Analytics & SEO**; the site then
+serves it. Then *Sitemaps* → submit `sitemap.xml`. Bing Webmaster Tools can
+import the site straight from Search Console.
+
+**Google Analytics.** In the Firebase project used for push (Admin → App →
+Push setup), open *Project settings → Integrations → Google Analytics* and
+link it. Add a **Web** app to the project and copy its `apiKey`, `appId` and
+`measurementId` into Admin → App → **Analytics & SEO**, then switch on
+*Collect usage analytics*. The Android and iOS apps report with the Push
+setup ids; the web app and these temple pages report to the web stream.
+Screens, temple views, searches, sign-ins, bookings and payments are
+recorded; no names, emails or phone numbers. Mention analytics in the
+privacy policy and in Play Console's *Data safety* form.
+
+**Android package / iOS bundle id: `com.darshansaathi.templevisit`.** The
+Play Store id cannot change after the first upload, so register this one in
+every service before publishing: Firebase (Android app + iOS app with this
+id; put the new app ids under Push setup, and the bundle id in *iOS bundle
+id*), Google Sign-In (an Android OAuth client with this package and the
+Play app-signing SHA-1), Sign in with Apple (the new bundle id under
+Sign-In), and the payment gateways' app whitelisting (Cashfree, PhonePe,
+Razorpay).
 
 The web build calls the API on `temple.darshansaathi.com`; Laravel's
 default CORS settings already allow that for `/api/*`.

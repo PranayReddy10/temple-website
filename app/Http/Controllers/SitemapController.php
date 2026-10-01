@@ -37,6 +37,9 @@ class SitemapController extends Controller
         foreach (PublicTempleController::statesWithTemples() as $state) {
             $xml .= self::entry('url', Seo::url('states/'.$state->slug), null, 'weekly', '0.7');
         }
+        foreach (PublicTempleController::deitiesWithTemples() as $deity) {
+            $xml .= self::entry('url', Seo::url('deities/'.$deity->slug), null, 'weekly', '0.7');
+        }
 
         return self::xml($xml.'</urlset>');
     }
@@ -46,24 +49,28 @@ class SitemapController extends Controller
         $temples = Temple::query()->published()
             ->orderBy('id')
             ->skip(($page - 1) * self::PER_FILE)->take(self::PER_FILE)
-            ->get(['slug', 'updated_at', 'is_featured']);
+            ->with('primaryPhoto')
+            ->get(['id', 'name', 'slug', 'updated_at', 'is_featured']);
 
         abort_if($temples->isEmpty() && $page > 1, 404);
 
-        $xml = self::open();
+        // With each temple's cover, so its photo can show in image search.
+        $xml = self::open(images: true);
         foreach ($temples as $t) {
-            $xml .= self::entry('url', Seo::url('temples/'.$t->slug), $t->updated_at, 'weekly', $t->is_featured ? '0.8' : '0.6');
+            $image = Seo::absolute($t->primaryPhoto?->mediumUrl());
+            $xml .= self::entry('url', Seo::url('temples/'.$t->slug), $t->updated_at, 'weekly', $t->is_featured ? '0.8' : '0.6', $image);
         }
 
         return self::xml($xml.'</urlset>');
     }
 
-    protected static function open(): string
+    protected static function open(bool $images = false): string
     {
-        return '<?xml version="1.0" encoding="UTF-8"?>'."\n".'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
+        return '<?xml version="1.0" encoding="UTF-8"?>'."\n".'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'
+            .($images ? ' xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"' : '').'>'."\n";
     }
 
-    protected static function entry(string $tag, string $loc, mixed $lastmod = null, ?string $freq = null, ?string $priority = null): string
+    protected static function entry(string $tag, string $loc, mixed $lastmod = null, ?string $freq = null, ?string $priority = null, ?string $image = null): string
     {
         $out = "  <{$tag}><loc>".e($loc).'</loc>';
         if ($lastmod !== null) {
@@ -74,6 +81,9 @@ class SitemapController extends Controller
         }
         if ($priority !== null) {
             $out .= "<priority>{$priority}</priority>";
+        }
+        if ($image !== null) {
+            $out .= '<image:image><image:loc>'.e($image).'</image:loc></image:image>';
         }
 
         return $out."</{$tag}>\n";

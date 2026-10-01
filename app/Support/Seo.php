@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
  * /sitemap*.xml and /storage to this application. The same pages also answer
  * on temple.darshansaathi.com; there they point search engines at the
  * website's copy and ask not to be indexed, so nothing is listed twice.
+ * /deities and Search Console's google*.html check are routed here too.
  */
 final class Seo
 {
@@ -41,5 +42,13 @@ final class Seo
     public static function onWebsite(Request $request): bool
     {
         return strcasecmp($request->getHost(), (string) parse_url(self::website(), PHP_URL_HOST)) === 0;
+    }
+
+    /** The website's Google Analytics stream, when analytics is on. */
+    public static function measurementId(): ?string
+    {
+        $id = setting('firebase_measurement_id');
+
+        return (bool) setting('analytics_enabled', null, false) && is_string($id) && preg_match('/^G-[A-Z0-9]+$/', $id) ? $id : null;
     }
 }
