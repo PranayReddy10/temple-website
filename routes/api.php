@@ -324,6 +324,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::middleware('auth:devotee')->group(function (): void {
         Route::get('me', [DevoteeProfileController::class, 'show'])->name('me.show');
         Route::patch('me', [DevoteeProfileController::class, 'update'])->name('me.update');
+        Route::delete('me', [DevoteeProfileController::class, 'destroy'])->name('me.destroy');
 
         // Multipart, so it cannot ride on the JSON PATCH above.
         Route::post('me/avatar', [DevoteeProfileController::class, 'storeAvatar'])->name('me.avatar.store');

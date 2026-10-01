@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Devotees\Pages;
 
 use App\Filament\Resources\Devotees\DevoteeResource;
 use App\Models\Devotee;
+use App\Support\DevoteeAccount;
 use App\Support\DevoteePasswordReset;
 use App\Support\InitialsAvatarProvider;
 use App\Support\Locales;
@@ -47,6 +48,22 @@ class ViewDevotee extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            // A deletion request from the website form (a support ticket),
+            // once support has confirmed it is the owner asking.
+            Action::make('delete_account')
+                ->label('Delete account')
+                ->icon('heroicon-o-trash')
+                ->color('danger')
+                ->visible(fn (): bool => ! $this->record->trashed() && (Auth::user()?->canManageUsers() ?? false))
+                ->requiresConfirmation()
+                ->modalHeading('Delete this account?')
+                ->modalDescription('Deletes their profile, check-ins, photos, memories, reviews, yatras, saved and followed temples, and signs them out everywhere. Bookings and payments are kept for the accounts. This cannot be undone.')
+                ->modalSubmitActionLabel('Delete account')
+                ->action(function (): void {
+                    DevoteeAccount::delete($this->record);
+                    Notification::make()->title('Account deleted')->success()->send();
+                    $this->redirect(DevoteeResource::getUrl('index'));
+                }),
             // "I forgot my password", arriving as a support message.
             Action::make('send_reset_code')
                 ->label('Send reset code')

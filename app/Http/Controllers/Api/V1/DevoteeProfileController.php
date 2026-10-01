@@ -7,6 +7,7 @@ use App\Http\Resources\V1\DevoteeResource;
 use App\Http\Resources\V1\TempleSummaryResource;
 use App\Models\Devotee;
 use App\Models\Temple;
+use App\Support\DevoteeAccount;
 use App\Support\UploadRules;
 use Illuminate\Http\JsonResponse;
 use App\Support\Locales;
@@ -154,5 +155,19 @@ class DevoteeProfileController extends Controller
         $request->user()->savedTemples()->detach($temple->id);
 
         return response()->json(['data' => ['message' => 'Removed.']]);
+    }
+
+    /**
+     * Delete the account, from the app's Profile → Delete account. Asks for
+     * a typed confirmation so a stray request cannot do it. What goes and
+     * what stays: App\Support\DevoteeAccount.
+     */
+    public function destroy(Request $request): JsonResponse
+    {
+        $request->validate(['confirm' => ['required', 'in:DELETE']]);
+
+        DevoteeAccount::delete($request->user());
+
+        return response()->json(['data' => ['deleted' => true]]);
     }
 }
