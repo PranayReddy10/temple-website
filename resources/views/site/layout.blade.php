@@ -6,10 +6,10 @@
     <title>{{ $title }} · {{ config('brand.name') }}</title>
     <meta name="description" content="{{ $description }}">
     <link rel="canonical" href="{{ $canonical }}">
-    @unless (\App\Support\Seo::onWebsite(request()))
-        {{-- The admin host's copy: the website's is the one to list. --}}
+    @if (! \App\Support\Seo::onWebsite(request()) || ! empty($noindex))
+        {{-- The admin host's copy (the website's is the one to list), a search, or a missing page. --}}
         <meta name="robots" content="noindex, follow">
-    @endunless
+    @endif
     <meta property="og:site_name" content="{{ config('brand.name') }}">
     <meta property="og:type" content="website">
     <meta property="og:title" content="{{ $title }}">
@@ -55,6 +55,9 @@
         img { max-width: 100%; }
         nav.legal { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 8px 0; }
         nav.legal a { color: var(--muted); }
+        form.find { display: flex; gap: 8px; margin: 12px 0 16px; max-width: 560px; }
+        form.find input { flex: 1; min-width: 0; font: inherit; padding: 10px 14px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--deep); }
+        form.find button { font: inherit; font-weight: 600; background: var(--kumkum); color: #fff; border: 0; border-radius: 999px; padding: 10px 18px; cursor: pointer; }
     </style>
 </head>
 <body>
