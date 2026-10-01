@@ -90,11 +90,20 @@ class TrustPujaController extends Controller
             'is_published' => ['nullable', 'boolean'],
             'image' => ['nullable', 'image', 'mimes:'.UploadRules::mimesRuleFor('puja_image'), 'max:'.UploadRules::maxKbFor('puja_image')],
             'remove_image' => ['nullable', 'boolean'],
+            // Time slots, sent whole: what is sent replaces what was there.
+            'slots' => ['nullable', 'array', 'max:48'],
+            'slots.*.id' => ['nullable', 'integer'],
+            'slots.*.starts_at' => ['required', 'date_format:H:i'],
+            'slots.*.ends_at' => ['nullable', 'date_format:H:i'],
+            'slots.*.capacity' => ['nullable', 'integer', 'between:1,100000'],
+            'slots.*.days' => ['nullable', 'array'],
+            'slots.*.days.*' => ['integer', 'between:0,6'],
+            'slots.*.is_active' => ['nullable', 'boolean'],
         ]);
 
         // Unset switches fall back to the model's own defaults rather than
         // to null, which the non-null columns would refuse.
-        $data = collect($validated)->except(['image', 'remove_image'])
+        $data = collect($validated)->except(['image', 'remove_image', 'slots'])
             ->reject(fn ($value, string $key): bool => $value === null && in_array($key, [
                 'booking_is_official', 'app_booking_enabled', 'fee_per_person',
                 'max_people_per_booking', 'booking_advance_days', 'sort_order', 'is_published',
@@ -113,9 +122,36 @@ class TrustPujaController extends Controller
 
         $puja->fill($data)->save();
 
+        if ($request->has('slots')) {
+            $this->syncSlots($puja, (array) ($validated['slots'] ?? []));
+        }
+
         if (filled($oldImage[1]) && $oldImage[1] !== $puja->image_path) {
             Storage::disk($oldImage[0] ?? config('filesystems.media'))->delete($oldImage[1]);
         }
+    }
+
+    /** @param  list<array<string, mixed>>  $rows */
+    protected function syncSlots(TemplePuja $puja, array $rows): void
+    {
+        $keep = [];
+        foreach (array_values($rows) as $i => $row) {
+            $slot = isset($row['id']) ? $puja->slots()->find($row['id']) : null;
+            $slot ??= $puja->slots()->make();
+            $slot->fill([
+                'starts_at' => $row['starts_at'],
+                'ends_at' => $row['ends_at'] ?? null,
+                'capacity' => $row['capacity'] ?? null,
+                'days' => array_values(array_map('intval', (array) ($row['days'] ?? []))),
+                'is_active' => $row['is_active'] ?? true,
+                'sort_order' => $i,
+            ])->save();
+            $keep[] = $slot->getKey();
+        }
+
+        // Bookings keep their copied times; the slot itself can go.
+        $puja->slots()->whereNotIn('id', $keep)->delete();
+        $puja->unsetRelation('slots');
     }
 
     /** @return array<string, mixed> */

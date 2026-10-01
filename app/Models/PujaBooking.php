@@ -21,8 +21,8 @@ use Illuminate\Support\Str;
 class PujaBooking extends Model
 {
     protected $fillable = [
-        'temple_id', 'temple_puja_id', 'devotee_id', 'payment_id',
-        'booked_for', 'people',
+        'temple_id', 'temple_puja_id', 'temple_puja_slot_id', 'devotee_id', 'payment_id',
+        'booked_for', 'slot_starts_at', 'slot_ends_at', 'people',
         'devotee_name', 'devotee_phone', 'gotram', 'nakshatram', 'note',
         'amount_paise', 'currency', 'status',
     ];
@@ -44,6 +44,7 @@ class PujaBooking extends Model
             'confirmed_at' => 'datetime',
             'verified_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'expired_at' => 'datetime',
         ];
     }
 
@@ -228,5 +229,30 @@ class PujaBooking extends Model
             $this->temple?->name,
             $this->booked_for?->format('d M Y'),
         ])->filter()->implode(' · ');
+    }
+
+    public function slot(): BelongsTo
+    {
+        return $this->belongsTo(TemplePujaSlot::class, 'temple_puja_slot_id');
+    }
+
+    /** The time slot booked, as on the ticket: "9:00 – 10:00 AM", or null. */
+    public function slotLabel(): ?string
+    {
+        return $this->slot_starts_at ? TemplePujaSlot::window((string) $this->slot_starts_at, $this->slot_ends_at ? (string) $this->slot_ends_at : null) : null;
+    }
+
+    /**
+     * Bookings that hold seats: paid or free and confirmed, and ones still
+     * at the payment step for up to half an hour, so two devotees cannot
+     * both pay for the last seat. An abandoned checkout frees its seats.
+     *
+     * @param  Builder<PujaBooking>  $query
+     */
+    public function scopeHoldingSeats(Builder $query): void
+    {
+        $query->where(fn ($q) => $q
+            ->whereIn('status', [BookingStatus::Confirmed->value, BookingStatus::Verified->value])
+            ->orWhere(fn ($p) => $p->where('status', BookingStatus::PendingPayment->value)->where('created_at', '>=', now()->subMinutes(30))));
     }
 }

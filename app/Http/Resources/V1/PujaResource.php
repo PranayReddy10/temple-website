@@ -54,6 +54,17 @@ class PujaResource extends JsonResource
                 'max_people' => (int) $this->max_people_per_booking,
                 'advance_days' => (int) $this->booking_advance_days,
                 'capacity_per_day' => $this->booking_capacity_per_day,
+                // Time slots, if the temple set them: the app asks
+                // /slots?date= for the places left on a day.
+                'has_slots' => $this->activeSlots()->isNotEmpty(),
+                'slots' => $this->activeSlots()->map(fn ($slot) => [
+                    'id' => $slot->getKey(),
+                    'starts_at' => $slot->startTime(),
+                    'ends_at' => $slot->endTime(),
+                    'label' => $slot->label(),
+                    'capacity' => $slot->capacity,
+                    'days' => $slot->days,
+                ])->values(),
                 'instructions' => $this->booking_instructions,
             ],
         ];

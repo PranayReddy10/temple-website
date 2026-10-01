@@ -44,7 +44,8 @@ class PujaBookingTable
                 TextColumn::make('booked_for')
                     ->label('Day')
                     ->date('D, d M Y')
-                    ->description(fn (PujaBooking $record): ?string => $record->puja?->starts_at ? substr((string) $record->puja->starts_at, 0, 5) : null)
+                    // The booked slot, like a show time; else the seva's own start.
+                    ->description(fn (PujaBooking $record): ?string => $record->slotLabel() ?? ($record->puja?->starts_at ? substr((string) $record->puja->starts_at, 0, 5) : null))
                     ->sortable(),
 
                 TextColumn::make('puja.name')
