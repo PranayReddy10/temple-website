@@ -46,6 +46,13 @@ class PujaBookingResource extends JsonResource
                 'instructions' => $this->puja->booking_instructions,
             ],
             'booked_for' => $this->booked_for?->toDateString(),
+            // The time slot, like a show time; null for a seva without slots.
+            'slot' => $this->slot_starts_at ? [
+                'starts_at' => substr((string) $this->slot_starts_at, 0, 5),
+                'ends_at' => $this->slot_ends_at ? substr((string) $this->slot_ends_at, 0, 5) : null,
+                'label' => $this->slotLabel(),
+            ] : null,
+            'expired_at' => $this->expired_at?->toIso8601String(),
             'people' => $this->people,
             'devotee_name' => $this->devotee_name,
             'devotee_phone' => $this->devotee_phone,

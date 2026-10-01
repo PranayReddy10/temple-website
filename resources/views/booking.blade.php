@@ -40,6 +40,7 @@
         <span @class(['status', 'ok' => $booking->isVerified(), 'live' => $booking->isConfirmed(), 'off' => ! $booking->isLive()])>{{ $booking->status->getLabel() }}</span>
         <dl>
             <dt>Day</dt><dd>{{ $booking->booked_for?->format('l, d M Y') }}</dd>
+            @if ($booking->slotLabel())<dt>Time</dt><dd>{{ $booking->slotLabel() }}</dd>@endif
             <dt>People</dt><dd>{{ $booking->people }}</dd>
             <dt>In the name of</dt><dd>{{ $booking->devotee_name }}</dd>
             <dt>Amount</dt><dd>{{ $booking->amountLabel() }}</dd>

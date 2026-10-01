@@ -36,6 +36,8 @@ class PujaBookingController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
+        $this->bookings->expireOverdue($request->user()->pujaBookings()->getQuery());
+
         return PujaBookingResource::collection(
             $request->user()->pujaBookings()
                 ->with(['puja', 'temple:id,slug,name,city', 'temple.primaryPhoto', 'payment'])
@@ -60,6 +62,7 @@ class PujaBookingController extends Controller
 
         $validated = $request->validate([
             'booked_for' => ['required', 'date_format:Y-m-d'],
+            'slot_id' => ['nullable', 'integer'],
             'people' => ['nullable', 'integer', 'min:1', 'max:500'],
             'devotee_name' => ['nullable', 'string', 'max:120'],
             'devotee_phone' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+ ()-]{6,20}$/'],
@@ -144,8 +147,35 @@ class PujaBookingController extends Controller
         return response()->json(['data' => (new PujaBookingResource($booking->fresh(['puja', 'temple.primaryPhoto', 'payment'])))->resolve($request)]);
     }
 
+    /**
+     * The time slots of a seva on one day, as the app offers them: places
+     * left, full, or already started. Public: availability is not personal.
+     */
+    public function slots(Request $request, Temple $temple, TemplePuja $puja): JsonResponse
+    {
+        if ($puja->temple_id !== $temple->getKey() || ! $puja->is_published) {
+            throw new NotFoundHttpException();
+        }
+
+        $validated = $request->validate(['date' => ['required', 'date_format:Y-m-d']]);
+        $date = \Carbon\CarbonImmutable::parse($validated['date'], \App\Support\DevotionalClock::timezone())->startOfDay();
+
+        return response()->json(['data' => collect($puja->slotAvailability($date))->map(fn (array $s): array => [
+            'id' => $s['slot']->getKey(),
+            'starts_at' => $s['slot']->startTime(),
+            'ends_at' => $s['slot']->endTime(),
+            'label' => $s['slot']->label(),
+            'capacity' => $s['capacity'],
+            'available' => $s['available'],
+            'started' => $s['started'],
+            'bookable' => $s['bookable'],
+        ])->values()]);
+    }
+
     protected function mine(Request $request, string $reference): PujaBooking
     {
+        $this->bookings->expireOverdue($request->user()->pujaBookings()->getQuery()->where('reference', strtoupper($reference)));
+
         return $request->user()->pujaBookings()
             ->with(['puja', 'temple.primaryPhoto', 'payment'])
             ->where('reference', strtoupper($reference))

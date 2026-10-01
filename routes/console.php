@@ -20,3 +20,8 @@ Schedule::command('payments:expire-stale')->hourly();
 // 18:00 in the devotional time zone: early enough to plan, late enough not
 // to wake anyone.
 Schedule::command('notifications:event-reminders')->dailyAt('18:00')->timezone(config('brand.timezone', 'Asia/Kolkata'));
+
+// Seva bookings whose day has passed: an unused ticket expires, an unpaid
+// booking is cancelled.
+Schedule::call(fn () => app(\App\Support\Bookings\PujaBookings::class)->expireOverdue())
+    ->name('bookings:expire-overdue')->hourly()->withoutOverlapping();

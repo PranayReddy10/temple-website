@@ -110,6 +110,11 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     // What devotees said about visiting: published accounts, with the
     // per-dimension summary. There is no overall score, on purpose.
     Route::get('temples/{temple:slug}/reviews', [ReviewController::class, 'index'])->name('temples.reviews.index');
+    // A seva's time slots on one day, with places left.
+    Route::get('temples/{temple:slug}/pujas/{puja}/slots', [PujaBookingController::class, 'slots'])
+        ->withoutScopedBindings()
+        ->whereNumber('puja')
+        ->name('temples.pujas.slots');
 
     /*
     |--------------------------------------------------------------------------

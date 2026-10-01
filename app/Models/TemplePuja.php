@@ -73,6 +73,73 @@ class TemplePuja extends Model
         return $this->hasMany(PujaBooking::class);
     }
 
+    /** Show-time style slots, earliest first. */
+    public function slots(): HasMany
+    {
+        return $this->hasMany(TemplePujaSlot::class)->orderBy('starts_at')->orderBy('sort_order');
+    }
+
+    /** @return \Illuminate\Support\Collection<int, TemplePujaSlot> The active slots that run on this day. */
+    public function slotsOn(\Carbon\CarbonInterface $date): \Illuminate\Support\Collection
+    {
+        return $this->activeSlots()->filter(fn (TemplePujaSlot $s) => $s->runsOn($date))->values();
+    }
+
+    public function hasSlots(): bool
+    {
+        return $this->activeSlots()->isNotEmpty();
+    }
+
+    /** @return \Illuminate\Support\Collection<int, TemplePujaSlot> */
+    public function activeSlots(): \Illuminate\Support\Collection
+    {
+        if (! $this->relationLoaded('slots')) {
+            $this->load('slots');
+        }
+
+        return $this->slots->where('is_active', true)->values();
+    }
+
+    /**
+     * Each slot on a day, as the app shows it: seats left, full, or already
+     * started (today). Seats are people: a booking for 3 takes 3.
+     *
+     * @return list<array{slot: TemplePujaSlot, capacity: ?int, taken: int, available: ?int, started: bool, bookable: bool}>
+     */
+    public function slotAvailability(\Carbon\CarbonInterface $date): array
+    {
+        $slots = $this->slotsOn($date);
+        if ($slots->isEmpty()) {
+            return [];
+        }
+
+        $taken = PujaBooking::query()
+            ->whereIn('temple_puja_slot_id', $slots->pluck('id'))
+            ->whereDate('booked_for', $date)
+            ->holdingSeats()
+            ->selectRaw('temple_puja_slot_id, SUM(people) as seats')
+            ->groupBy('temple_puja_slot_id')
+            ->pluck('seats', 'temple_puja_slot_id');
+
+        $now = \App\Support\DevotionalClock::now();
+        $isToday = $date->toDateString() === $now->toDateString();
+
+        return $slots->map(function (TemplePujaSlot $slot) use ($taken, $isToday, $now): array {
+            $used = (int) ($taken[$slot->getKey()] ?? 0);
+            $available = $slot->capacity === null ? null : max(0, $slot->capacity - $used);
+            $started = $isToday && $slot->startTime() <= $now->format('H:i');
+
+            return [
+                'slot' => $slot,
+                'capacity' => $slot->capacity,
+                'taken' => $used,
+                'available' => $available,
+                'started' => $started,
+                'bookable' => ! $started && ($available === null || $available > 0),
+            ];
+        })->all();
+    }
+
     /**
      * Resolves against the disk recorded on the row, not the currently
      * configured media disk, so images uploaded before a move to Spaces keep

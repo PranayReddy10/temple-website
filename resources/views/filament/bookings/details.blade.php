@@ -17,7 +17,7 @@
         <dl style="display:grid;grid-template-columns:auto 1fr;gap:.35rem .9rem;font-size:.9rem;margin:0">
             <dt style="opacity:.65">Seva</dt><dd style="margin:0;font-weight:600">{{ $booking->puja?->name ?? '—' }} <span style="opacity:.65;font-weight:400">· {{ $booking->puja?->kind?->getLabel() }}</span></dd>
             <dt style="opacity:.65">Temple</dt><dd style="margin:0">{{ $booking->temple?->name }}{{ $booking->temple?->city ? ', '.$booking->temple->city : '' }}</dd>
-            <dt style="opacity:.65">Day</dt><dd style="margin:0;font-weight:600">{{ $booking->booked_for?->format('l, d M Y') }}@if ($booking->puja?->starts_at) · {{ substr((string) $booking->puja->starts_at, 0, 5) }}@endif</dd>
+            <dt style="opacity:.65">Day</dt><dd style="margin:0;font-weight:600">{{ $booking->booked_for?->format('l, d M Y') }}@if ($booking->slotLabel()) · {{ $booking->slotLabel() }}@elseif ($booking->puja?->starts_at) · {{ substr((string) $booking->puja->starts_at, 0, 5) }}@endif</dd>
             <dt style="opacity:.65">People</dt><dd style="margin:0">{{ $booking->people }}</dd>
             <dt style="opacity:.65">In the name of</dt><dd style="margin:0">{{ $booking->devotee_name }}@if ($booking->devotee_phone) · {{ $booking->devotee_phone }}@endif</dd>
             @if ($booking->gotram || $booking->nakshatram)
