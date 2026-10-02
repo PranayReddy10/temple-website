@@ -13,6 +13,7 @@ use App\Support\BookingQr;
 use App\Support\Bookings\PujaBookings;
 use App\Support\Finance\Settlements;
 use App\Support\PassportQr;
+use App\Support\StaffCheckIn;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -107,6 +108,43 @@ class TrustBookingController extends Controller
         }
 
         return response()->json(['data' => (new PublicPassportResource($devotee->load('homeState:id,name')))->resolve($request)]);
+    }
+
+    /**
+     * Marks the devotee whose passport was scanned as visited today, at one
+     * of this account's temples: the stamp lands in their passport, verified
+     * and signed by the counter. The same rule as the portal's Scan passport
+     * (StaffCheckIn), so a temple the account does not manage is refused.
+     */
+    public function markVisited(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'max:500'],
+            'temple_id' => ['required', 'integer'],
+        ]);
+
+        $token = PassportQr::parse($validated['code']);
+        $devotee = $token === null ? null : Devotee::findByPassportCode($token);
+        abort_if($devotee === null, 404, 'Scan the passport again.');
+
+        $temple = $this->trustUser($request)->temples()->whereKey($validated['temple_id'])->first();
+        abort_if($temple === null, 404, 'You can mark visits only at temples you manage.');
+
+        try {
+            $result = StaffCheckIn::mark($devotee, $temple, $this->trustUser($request));
+        } catch (AuthorizationException $e) {
+            abort(403, $e->getMessage());
+        }
+
+        return response()->json(['data' => [
+            'outcome' => $result['outcome'],
+            'message' => match ($result['outcome']) {
+                StaffCheckIn::CREATED => $devotee->name.' is marked as visited today. The stamp is in their passport.',
+                StaffCheckIn::VERIFIED => 'Their visit today is now verified.',
+                default => $devotee->name.' already has today\'s stamp for '.$temple->name.'.',
+            },
+            'temple' => ['id' => $temple->getKey(), 'name' => $temple->name],
+        ]]);
     }
 
     protected function find(Request $request, string $code): ?PujaBooking
