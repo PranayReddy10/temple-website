@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\V1\Trust\TrustPhotoController;
 use App\Http\Controllers\Api\V1\Trust\TrustPujaController;
 use App\Http\Controllers\Api\V1\Trust\TrustReviewController;
 use App\Http\Controllers\Api\V1\Trust\TrustScheduleController;
+use App\Http\Controllers\Api\V1\Trust\TrustSupportController;
 use App\Http\Controllers\Api\V1\Trust\TrustTempleController;
 use App\Http\Controllers\Api\V1\Trust\TrustTempleRegistrationController;
 use App\Http\Controllers\Api\V1\VisitPhotoController;
@@ -257,6 +258,13 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::patch('me', [TrustAuthController::class, 'update'])->name('me.update');
 
             Route::get('options', TrustOptionsController::class)->name('options');
+
+            // Help from the team: the admin panel's Support & Reports queue.
+            Route::get('support/options', [TrustSupportController::class, 'options'])->name('support.options');
+            Route::get('support', [TrustSupportController::class, 'index'])->name('support.index');
+            Route::post('support', [TrustSupportController::class, 'store'])->middleware('throttle:10,1')->name('support.store');
+            Route::get('support/{reference}', [TrustSupportController::class, 'show'])->name('support.show');
+            Route::post('support/{reference}/replies', [TrustSupportController::class, 'reply'])->middleware('throttle:20,1')->name('support.reply');
 
             // Asking to manage a temple already listed.
             Route::get('claimable-temples', [TrustClaimController::class, 'search'])->name('claims.search');

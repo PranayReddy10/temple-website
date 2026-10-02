@@ -72,6 +72,9 @@ class TrustTempleController extends Controller
             'pincode' => ['nullable', 'string', 'regex:/^[1-9][0-9]{5}$/'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
+            // A new position only from the phone, at the temple (see
+            // TrustTempleRegistrationController::LOCATION_ACCURACY_M).
+            'location_accuracy' => ['nullable', 'required_with:latitude', 'numeric', 'min:0', 'max:'.TrustTempleRegistrationController::LOCATION_ACCURACY_M],
             'official_website' => ['nullable', 'url:http,https', 'max:255'],
             'contact_phone' => ['nullable', 'string', 'max:40'],
             'contact_email' => ['nullable', 'email', 'max:255'],
@@ -83,7 +86,7 @@ class TrustTempleController extends Controller
             'queue_information' => ['nullable', 'string', 'max:5000'],
         ]);
 
-        $record->fill($validated)->save();
+        $record->fill(collect($validated)->except('location_accuracy')->all())->save();
 
         return $this->show($request, $temple);
     }

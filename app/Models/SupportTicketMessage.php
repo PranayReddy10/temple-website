@@ -61,6 +61,9 @@ class SupportTicketMessage extends Model
     /** Whether this came from the team rather than from the person who wrote in. */
     public function isFromStaff(): bool
     {
-        return $this->author_type === User::class;
+        // Temple teams are users too (they write in from the trust app):
+        // only an editorial or admin role is the team answering.
+        return $this->author_type === User::class
+            && ($this->author instanceof User ? ($this->author->role?->isStaff() ?? false) : true);
     }
 }
