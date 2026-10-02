@@ -28,6 +28,9 @@ class TrustTempleRegistrationController extends Controller
     /** A temple's own people, not a passing devotee. */
     public const ROLES = ['trustee', 'priest', 'committee', 'staff'];
 
+    /** The most a GPS fix may be off by, in metres, for a temple's position. */
+    public const LOCATION_ACCURACY_M = 150;
+
     public function index(Request $request): JsonResponse
     {
         $rows = TempleSuggestion::query()
@@ -51,11 +54,17 @@ class TrustTempleRegistrationController extends Controller
 
         $rules = TempleSuggestionController::rules($request);
         $rules['submitter_role'] = ['required', Rule::in(self::ROLES)];
+        // Registered from the temple itself: the phone's own position, taken
+        // there, with how precise the fix was. The app offers no way to type
+        // coordinates; a fix vaguer than LOCATION_ACCURACY_M is refused.
+        $rules['latitude'] = ['required', 'numeric', 'between:-90,90'];
+        $rules['longitude'] = ['required', 'numeric', 'between:-180,180'];
+        $rules['location_accuracy'] = ['required', 'numeric', 'min:0', 'max:'.self::LOCATION_ACCURACY_M];
 
         $validated = $request->validate($rules);
 
         $suggestion = DB::transaction(function () use ($request, $validated, $user): TempleSuggestion {
-            $suggestion = new TempleSuggestion(collect($validated)->except('photos')->all());
+            $suggestion = new TempleSuggestion(collect($validated)->except(['photos', 'location_accuracy'])->all());
             $suggestion->user_id = $user->getKey();
             $suggestion->submitter_name ??= $user->name;
             $suggestion->save();

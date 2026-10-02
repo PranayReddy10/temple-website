@@ -169,6 +169,23 @@ class TrustAppApiTest extends TestCase
             'description' => 'A small Chalukya-era Shiva temple cared for by the village trust.',
             'submitter_role' => 'trustee',
             'photos' => [UploadedFile::fake()->image('front.jpg')],
+        ], self::JSON)->assertUnprocessable()->assertJsonValidationErrors(['latitude', 'location_accuracy']);
+
+        // Taken at the temple, but too vague a fix.
+        $this->as($token)->post('/api/v1/trust/registrations', [
+            'name' => 'Sri Someshwara Swamy Temple', 'city' => 'Kolanupaka',
+            'description' => 'A small Chalukya-era Shiva temple cared for by the village trust.',
+            'submitter_role' => 'trustee', 'photos' => [UploadedFile::fake()->image('front.jpg')],
+            'latitude' => 17.6936, 'longitude' => 78.9686, 'location_accuracy' => 900,
+        ], self::JSON)->assertUnprocessable()->assertJsonValidationErrors('location_accuracy');
+
+        $this->as($token)->post('/api/v1/trust/registrations', [
+            'name' => 'Sri Someshwara Swamy Temple',
+            'city' => 'Kolanupaka',
+            'description' => 'A small Chalukya-era Shiva temple cared for by the village trust.',
+            'submitter_role' => 'trustee',
+            'photos' => [UploadedFile::fake()->image('front.jpg')],
+            'latitude' => 17.6936, 'longitude' => 78.9686, 'location_accuracy' => 12,
         ], self::JSON)->assertCreated()->assertJsonPath('data.status.value', 'pending');
 
         // A devotee's role is not a temple team's.
@@ -202,6 +219,12 @@ class TrustAppApiTest extends TestCase
             'name' => 'Renamed',
             'verification_status' => 'official',
         ])->assertOk()->assertJsonPath('data.profile.contact_phone', '08743 232428');
+
+        // A new position comes from the phone at the temple, with its accuracy.
+        $this->as($token)->patchJson('/api/v1/trust/temples/'.$this->temple->id, ['latitude' => 17.67, 'longitude' => 80.89])
+            ->assertUnprocessable()->assertJsonValidationErrors('location_accuracy');
+        $this->as($token)->patchJson('/api/v1/trust/temples/'.$this->temple->id, ['latitude' => 17.67, 'longitude' => 80.89, 'location_accuracy' => 8])
+            ->assertOk();
 
         $this->temple->refresh();
         $this->assertSame('Sri Rama Temple', $this->temple->name);
@@ -396,6 +419,7 @@ class TrustAppApiTest extends TestCase
             'name' => 'Village Shiva Temple', 'city' => 'Kolanupaka',
             'description' => 'A small Chalukya-era Shiva temple cared for by the village trust.',
             'submitter_role' => 'trustee', 'photos' => [UploadedFile::fake()->image('front.jpg')],
+            'latitude' => 17.6936, 'longitude' => 78.9686, 'location_accuracy' => 10,
         ], self::JSON)->assertCreated();
 
         $admin = $this->superAdmin();
