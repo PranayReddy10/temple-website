@@ -160,7 +160,7 @@ class TrustAppApiTest extends TestCase
             ->assertJsonPath('data.name', 'Sri Rama Temple')
             ->assertJsonStructure(['data' => ['profile', 'stats' => [
                 'bookings_today', 'events_in_review', 'reviews_to_answer',
-                'hundi_today_paise', 'hundi_today_count', 'hundi_month_paise', 'hundi_enabled',
+                'hundi_today_paise', 'hundi_today_count', 'hundi_month_paise', 'hundi_enabled', 'payments',
                 'fee_percent', 'donation_fee_percent',
             ]]]);
     }

@@ -145,6 +145,8 @@ class TrustTempleController extends Controller
             'hundi_today_count' => $hundi()->whereDate('paid_on', $today)->count(),
             'hundi_month_paise' => (int) $hundi()->whereDate('paid_on', '>=', $now->copy()->startOfMonth()->toDateString())->sum('amount_paise'),
             'hundi_enabled' => (bool) $temple->accepts_donations,
+            // missing · pending · approved · rejected: may devotees pay here?
+            'payments' => $temple->payoutAccount?->kycStatus() ?? 'missing',
             // What the platform keeps, so the team sees its share up front.
             'fee_percent' => app(Settlements::class)->feePercentFor($temple),
             'donation_fee_percent' => app(Settlements::class)->donationFeePercent(),
