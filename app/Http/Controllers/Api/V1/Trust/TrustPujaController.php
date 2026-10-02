@@ -163,6 +163,15 @@ class TrustPujaController extends Controller
             'raw' => [
                 'booking_is_official' => (bool) $puja->booking_is_official,
                 'app_booking_enabled' => (bool) $puja->app_booking_enabled,
+                // Every slot, switched off ones too, for the team's editor.
+                'slots' => $puja->slots->map(fn ($slot) => [
+                    'id' => $slot->getKey(),
+                    'starts_at' => $slot->startTime(),
+                    'ends_at' => $slot->endTime(),
+                    'capacity' => $slot->capacity,
+                    'days' => $slot->days ?? [],
+                    'is_active' => (bool) $slot->is_active,
+                ])->values(),
             ],
         ];
     }

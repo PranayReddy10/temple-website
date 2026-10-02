@@ -271,6 +271,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('bookings/scan', [TrustBookingController::class, 'scan'])->middleware('throttle:60,1')->name('bookings.scan');
             Route::post('bookings/verify', [TrustBookingController::class, 'verify'])->middleware('throttle:60,1')->name('bookings.verify');
             Route::post('passports/lookup', [TrustBookingController::class, 'passport'])->middleware('throttle:60,1')->name('passports.lookup');
+            Route::post('passports/visit', [TrustBookingController::class, 'markVisited'])->middleware('throttle:60,1')->name('passports.visit');
 
             Route::get('temples', [TrustTempleController::class, 'index'])->name('temples.index');
 
@@ -301,6 +302,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::prefix('temples/{temple}')->whereNumber('temple')->name('temples.')->group(function (): void {
                 Route::get('/', [TrustTempleController::class, 'show'])->name('show');
                 Route::patch('/', [TrustTempleController::class, 'update'])->name('update');
+                Route::get('qr', [TrustTempleController::class, 'qr'])->name('qr');
 
                 Route::get('timings', [TrustScheduleController::class, 'timings'])->name('timings.index');
                 Route::post('timings', [TrustScheduleController::class, 'storeTiming'])->name('timings.store');

@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\Trust\TrustTempleResource;
 use App\Models\Temple;
 use App\Support\DevotionalClock;
+use App\Support\TempleQr;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -88,6 +89,24 @@ class TrustTempleController extends Controller
     }
 
     /** @return array<string, int> */
+    /**
+     * The temple's check-in code, to show at the gate or print: the signed
+     * URL a devotee's app scans, the code as SVG, and the printable poster
+     * on the web (which asks the portal sign-in in the browser).
+     */
+    public function qr(Request $request, int $temple): JsonResponse
+    {
+        $record = $this->managedTemple($request, $temple);
+
+        return response()->json(['data' => [
+            'url' => TempleQr::url($record),
+            'svg' => TempleQr::svg($record),
+            'print_url' => route('temples.qr.print', $record),
+            'download_url' => route('temples.qr.download', $record),
+            'is_published' => $record->status === TempleStatus::Published,
+        ]]);
+    }
+
     protected function stats(Temple $temple): array
     {
         $today = DevotionalClock::now()->toDateString();
