@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\DevoteeProfileController;
 use App\Http\Controllers\Api\V1\DevotionalDayController;
 use App\Http\Controllers\Api\V1\EngagementController;
 use App\Http\Controllers\Api\V1\EventController;
+use App\Http\Controllers\Api\V1\FestivalController;
 use App\Http\Controllers\Api\V1\FacilityController;
 use App\Http\Controllers\Api\V1\GeocodeController;
 use App\Http\Controllers\Api\V1\LocaleController;
@@ -111,6 +112,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
     Route::get('events', [EventController::class, 'index'])->name('events.index');
     Route::get('events/{event}', [EventController::class, 'show'])->whereNumber('event')->name('events.show');
+    // India's festival and vrat calendar.
+    Route::get('festivals', [FestivalController::class, 'index'])->name('festivals.index');
 
     // What devotees said about visiting: published accounts, with the
     // per-dimension summary. There is no overall score, on purpose.

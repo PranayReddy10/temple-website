@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             TelanganaTempleSeeder::class,
             TempleDetailSeeder::class,
             DevotionalDaySeeder::class,
+            FestivalSeeder::class,
         ]);
     }
 }
