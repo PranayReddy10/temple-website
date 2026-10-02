@@ -19,7 +19,9 @@ class VerifyTempleQr extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-qr-code';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Temples';
+    protected static string|\UnitEnum|null $navigationGroup = 'Bookings & Counter';
+
+    protected static ?int $navigationSort = 5;
 
     protected static ?string $title = 'Verify a temple QR code';
 

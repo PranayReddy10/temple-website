@@ -24,9 +24,9 @@ class PujaBookingResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-ticket';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Temples';
+    protected static string|\UnitEnum|null $navigationGroup = 'Bookings & Counter';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $navigationLabel = 'Seva bookings';
 

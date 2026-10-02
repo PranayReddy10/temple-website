@@ -6,6 +6,7 @@ use App\Enums\BookingStatus;
 use App\Enums\EventStatus;
 use App\Enums\TempleStatus;
 use App\Enums\UserRole;
+use App\Filament\Temple\Pages\ScanBooking;
 use App\Models\Devotee;
 use App\Models\EventRegistration;
 use App\Models\Payment;
@@ -18,8 +19,10 @@ use App\Models\User;
 use App\Support\DevotionalClock;
 use App\Support\Finance\Settlements;
 use App\Support\Payments\Payments;
+use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
@@ -265,5 +268,53 @@ class EventTicketsAndHundiTest extends TestCase
         $this->get('/admin/finance/temple-balances')->assertOk()->assertSee('Sri Rama Temple');
         $this->get('/admin/temple-events')->assertOk();
         $this->get('/admin/temple-events/'.$event->id.'/edit')->assertOk()->assertSee('Gathering and tickets');
+    }
+
+    public function test_the_temple_portal_scanner_receives_an_event_ticket_once(): void
+    {
+        $other = Temple::create(['name' => 'Another', 'slug' => 'another', 'status' => TempleStatus::Published, 'published_at' => now()]);
+        $event = $this->event(['type' => 'program', 'title' => 'Music evening', 'recurrence' => 'none']);
+        $devotee = Devotee::factory()->create();
+        $ticket = EventRegistration::create([
+            'temple_event_id' => $event->id, 'temple_id' => $this->temple->id, 'devotee_id' => $devotee->id,
+            'occurs_on' => DevotionalClock::now()->toDateString(), 'people' => 2, 'devotee_name' => 'Ravi Kumar', 'amount_paise' => 0, 'status' => BookingStatus::Confirmed,
+        ]);
+        $team = User::factory()->create(['role' => UserRole::TempleAdmin, 'is_active' => true]);
+        TempleUser::create(['temple_id' => $this->temple->id, 'user_id' => $team->id, 'role' => 'manager', 'requested_at' => now(), 'approved_at' => now()]);
+        $this->actingAs($team, 'web');
+
+        Livewire::test(ScanBooking::class)
+            ->call('scan', $ticket->qrUrl())
+            ->assertSet('scannedKind', 'event')
+            ->assertSee('Music evening')
+            ->assertSee('Receive this ticket')
+            ->call('verify')
+            ->assertSet('outcome', 'verified');
+
+        $this->assertTrue($ticket->refresh()->isVerified());
+
+        Livewire::test(ScanBooking::class)
+            ->call('scan', $ticket->reference)
+            ->assertSet('outcome', 'already_verified');
+
+        // Another temple's team does not know the code.
+        $stranger = User::factory()->create(['role' => UserRole::TempleAdmin, 'is_active' => true]);
+        TempleUser::create(['temple_id' => $other->id, 'user_id' => $stranger->id, 'role' => 'owner', 'requested_at' => now(), 'approved_at' => now()]);
+        $this->actingAs($stranger, 'web');
+        Livewire::test(ScanBooking::class)
+            ->call('scan', $ticket->qrUrl())
+            ->assertSet('scannedCode', null)
+            ->assertSee('No booking or ticket of yours matches this code');
+    }
+
+    public function test_the_admin_sidebar_keeps_app_settings_last(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => UserRole::SuperAdmin, 'is_active' => true]), 'web');
+
+        $groups = collect(Filament::getPanel('admin')->getNavigationGroups())->map(fn ($g) => $g->getLabel())->values()->all();
+
+        $this->assertSame('Temples', $groups[0]);
+        $this->assertSame('App', end($groups));
+        $this->get('/admin')->assertOk();
     }
 }

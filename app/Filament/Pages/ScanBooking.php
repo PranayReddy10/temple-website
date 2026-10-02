@@ -17,13 +17,13 @@ class ScanBooking extends Page
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-qr-code';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Temples';
+    protected static string|\UnitEnum|null $navigationGroup = 'Bookings & Counter';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 3;
 
-    protected static ?string $title = 'Scan a seva booking';
+    protected static ?string $title = 'Scan a seva booking or event ticket';
 
-    protected static ?string $navigationLabel = 'Scan booking code';
+    protected static ?string $navigationLabel = 'Scan booking / ticket';
 
     protected static ?string $slug = 'scan-booking';
 

@@ -29,9 +29,9 @@ class EventTicketResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-musical-note';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Finance';
+    protected static string|\UnitEnum|null $navigationGroup = 'Bookings & Counter';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $navigationLabel = 'Event tickets';
 

@@ -27,7 +27,7 @@ class DevoteeAnalytics extends Page
 
     protected static string|\UnitEnum|null $navigationGroup = 'Devotees';
 
-    protected static ?int $navigationSort = 0;
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $navigationLabel = 'Analytics';
 

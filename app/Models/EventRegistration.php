@@ -131,6 +131,11 @@ class EventRegistration extends Model
         return $this->status->isLive();
     }
 
+    public function isConfirmed(): bool
+    {
+        return $this->status === BookingStatus::Confirmed;
+    }
+
     public function isVerified(): bool
     {
         return $this->status === BookingStatus::Verified;

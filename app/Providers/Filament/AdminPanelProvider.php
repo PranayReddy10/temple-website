@@ -74,15 +74,23 @@ class AdminPanelProvider extends PanelProvider
             // Groups are deliberately icon-free: Filament allows an icon on the
             // group or on its items, not both, and the per-resource icons are
             // the more useful of the two.
+            // Every group named, in the order work happens: the temples, who
+            // is coming and the counter, the money, devotees and content,
+            // then configuration, with the app's own settings last. A group
+            // left out of this list would land wherever Filament puts it.
             ->navigationGroups([
                 NavigationGroup::make('Temples'),
+                NavigationGroup::make('Bookings & Counter'),
                 NavigationGroup::make('Finance'),
-                NavigationGroup::make('Daily Devotion'),
                 NavigationGroup::make('Devotees'),
+                NavigationGroup::make('Daily Devotion'),
                 NavigationGroup::make('Community'),
-                NavigationGroup::make('Master Data'),
                 NavigationGroup::make('Support'),
+                NavigationGroup::make('Monetisation'),
+                NavigationGroup::make('Website'),
+                NavigationGroup::make('Master Data'),
                 NavigationGroup::make('Administration'),
+                NavigationGroup::make('App'),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')

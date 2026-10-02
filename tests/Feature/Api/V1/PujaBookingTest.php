@@ -435,7 +435,7 @@ class PujaBookingTest extends TestCase
         Livewire::test(\App\Filament\Temple\Pages\ScanBooking::class)
             ->call('scan', 'https://example.com/passport/ABCDEFGHIJKLMNOPQRST')
             ->assertSet('scannedCode', null)
-            ->assertSee('not a seva booking code');
+            ->assertSee('not a seva booking or event ticket code');
     }
 
     public function test_another_temples_scanner_does_not_know_the_code(): void
@@ -450,7 +450,7 @@ class PujaBookingTest extends TestCase
         Livewire::test(\App\Filament\Temple\Pages\ScanBooking::class)
             ->call('scan', $code)
             ->assertSet('scannedCode', null)
-            ->assertSee('No booking of yours matches this code');
+            ->assertSee('No booking or ticket of yours matches this code');
 
         // Staff, in the admin, see every temple's.
         $this->actingAs(User::factory()->create(['role' => UserRole::SuperAdmin, 'is_active' => true]), 'web');

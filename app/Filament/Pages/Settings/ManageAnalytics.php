@@ -20,9 +20,9 @@ class ManageAnalytics extends SettingsPage
 {
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'App';
+    protected static string|\UnitEnum|null $navigationGroup = 'Website';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 3;
 
     protected static ?string $title = 'Analytics & SEO';
 
