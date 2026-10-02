@@ -158,7 +158,11 @@ class TrustAppApiTest extends TestCase
         $this->as($token)->getJson('/api/v1/trust/temples/'.$this->temple->id)
             ->assertOk()
             ->assertJsonPath('data.name', 'Sri Rama Temple')
-            ->assertJsonStructure(['data' => ['profile', 'stats' => ['bookings_today', 'events_in_review', 'reviews_to_answer']]]);
+            ->assertJsonStructure(['data' => ['profile', 'stats' => [
+                'bookings_today', 'events_in_review', 'reviews_to_answer',
+                'hundi_today_paise', 'hundi_today_count', 'hundi_month_paise', 'hundi_enabled',
+                'fee_percent', 'donation_fee_percent',
+            ]]]);
     }
 
     public function test_asking_to_manage_a_temple_needs_a_live_fix_at_the_temple(): void

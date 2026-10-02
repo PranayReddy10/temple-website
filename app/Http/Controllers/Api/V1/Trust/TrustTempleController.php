@@ -10,7 +10,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\Trust\TrustTempleResource;
 use App\Models\District;
 use App\Models\Temple;
+use App\Models\TempleDonation;
 use App\Support\DevotionalClock;
+use App\Support\Finance\Settlements;
 use App\Support\TempleQr;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -134,7 +136,18 @@ class TrustTempleController extends Controller
         $today = DevotionalClock::now()->toDateString();
         $live = [BookingStatus::Confirmed->value, BookingStatus::Verified->value];
 
+        $now = DevotionalClock::now();
+        $hundi = fn () => $temple->donations()->where('status', TempleDonation::PAID);
+
         return [
+            // Online hundi: gifts devotees made in the app.
+            'hundi_today_paise' => (int) $hundi()->whereDate('paid_on', $today)->sum('amount_paise'),
+            'hundi_today_count' => $hundi()->whereDate('paid_on', $today)->count(),
+            'hundi_month_paise' => (int) $hundi()->whereDate('paid_on', '>=', $now->copy()->startOfMonth()->toDateString())->sum('amount_paise'),
+            'hundi_enabled' => (bool) $temple->accepts_donations,
+            // What the platform keeps, so the team sees its share up front.
+            'fee_percent' => app(Settlements::class)->feePercentFor($temple),
+            'donation_fee_percent' => app(Settlements::class)->donationFeePercent(),
             'bookings_today' => $temple->pujaBookings()->whereDate('booked_for', $today)->whereIn('status', $live)->count(),
             'bookings_upcoming' => $temple->pujaBookings()->whereDate('booked_for', '>=', $today)->whereIn('status', $live)->count(),
             'received_today' => $temple->pujaBookings()->whereDate('booked_for', $today)->where('status', BookingStatus::Verified)->count(),
