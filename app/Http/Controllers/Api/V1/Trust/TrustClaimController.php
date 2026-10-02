@@ -69,7 +69,26 @@ class TrustClaimController extends Controller
             'temple_id' => ['required', 'integer', Rule::exists('temples', 'id')->where('status', 'published')],
             'role' => ['required', Rule::in(array_keys(TempleAccessForm::levels()))],
             'note' => ['required', 'string', 'min:10', 'max:2000'],
+            // Asked from the temple itself: a live GPS fix, never typed.
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'location_accuracy' => ['required', 'numeric', 'min:0', 'max:'.TrustTempleRegistrationController::LOCATION_ACCURACY_M],
+        ], [
+            'location_accuracy.max' => 'The GPS fix is too vague. Step into the open at the temple and try again.',
         ]);
+
+        $temple = Temple::query()->findOrFail($validated['temple_id']);
+        $distance = $temple->hasCoordinates()
+            ? TempleUser::metresBetween((float) $validated['latitude'], (float) $validated['longitude'], (float) $temple->latitude, (float) $temple->longitude)
+            : null;
+
+        if ($distance !== null && $distance > TempleUser::CLAIM_RADIUS_M) {
+            throw ValidationException::withMessages(['latitude' => sprintf(
+                'You are %s from %s. Ask to manage it while you are at the temple.',
+                $distance >= 1000 ? number_format($distance / 1000, 1).' km' : $distance.' m',
+                $temple->name,
+            )]);
+        }
 
         $user = $this->trustUser($request);
         $claim = TempleUser::query()
@@ -90,6 +109,10 @@ class TrustClaimController extends Controller
         $claim->forceFill([
             'role' => $validated['role'],
             'claim_note' => $validated['note'],
+            'claim_latitude' => $validated['latitude'],
+            'claim_longitude' => $validated['longitude'],
+            'claim_accuracy_m' => (int) round((float) $validated['location_accuracy']),
+            'claim_distance_m' => $distance,
             'requested_at' => now(),
             'approved_at' => null,
             'approved_by' => null,

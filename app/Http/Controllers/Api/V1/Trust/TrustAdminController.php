@@ -192,6 +192,14 @@ class TrustAdminController extends Controller
             'status' => $c->status(),
             'role' => $c->role,
             'note' => $c->claim_note,
+            'location' => $c->hasClaimLocation() ? [
+                'latitude' => (float) $c->claim_latitude,
+                'longitude' => (float) $c->claim_longitude,
+                'accuracy_m' => $c->claim_accuracy_m,
+                'distance_m' => $c->claim_distance_m,
+                'summary' => $c->claimLocationSummary(),
+                'map_url' => $c->claimMapUrl(),
+            ] : null,
             'rejection_reason' => $c->rejection_reason,
             'requested_at' => $c->requested_at?->toIso8601String(),
             'temple' => $c->temple === null ? null : [

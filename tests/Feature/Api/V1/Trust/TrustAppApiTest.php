@@ -142,11 +142,11 @@ class TrustAppApiTest extends TestCase
             ->assertJsonPath('data.0.claim_status', null);
 
         $this->as($token)->postJson('/api/v1/trust/claims', [
-            'temple_id' => $this->temple->id, 'role' => 'owner', 'note' => 'I am the secretary of the temple trust.',
+            'temple_id' => $this->temple->id, 'role' => 'owner', 'note' => 'I am the secretary of the temple trust.', 'latitude' => 17.6936, 'longitude' => 78.9686, 'location_accuracy' => 12,
         ])->assertCreated()->assertJsonPath('data.status', 'pending');
 
         $this->as($token)->postJson('/api/v1/trust/claims', [
-            'temple_id' => $this->temple->id, 'role' => 'owner', 'note' => 'Asking again, just in case.',
+            'temple_id' => $this->temple->id, 'role' => 'owner', 'note' => 'Asking again, just in case.', 'latitude' => 17.6936, 'longitude' => 78.9686, 'location_accuracy' => 12,
         ])->assertUnprocessable();
 
         $this->as($token)->getJson('/api/v1/trust/temples/'.$this->temple->id)->assertNotFound();
@@ -157,6 +157,31 @@ class TrustAppApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.name', 'Sri Rama Temple')
             ->assertJsonStructure(['data' => ['profile', 'stats' => ['bookings_today', 'events_in_review', 'reviews_to_answer']]]);
+    }
+
+    public function test_asking_to_manage_a_temple_needs_a_live_fix_at_the_temple(): void
+    {
+        $this->temple->update(['latitude' => 17.6800000, 'longitude' => 80.8900000]);
+        $token = $this->register();
+        $ask = fn (array $gps) => $this->as($token)->postJson('/api/v1/trust/claims', [
+            'temple_id' => $this->temple->id, 'role' => 'owner', 'note' => 'I am the secretary of the temple trust.',
+        ] + $gps);
+
+        $ask([])->assertUnprocessable()->assertJsonValidationErrors(['latitude', 'longitude', 'location_accuracy']);
+
+        // Too vague, and from Hyderabad: both refused.
+        $ask(['latitude' => 17.6801, 'longitude' => 80.8901, 'location_accuracy' => 900])
+            ->assertUnprocessable()->assertJsonValidationErrors('location_accuracy');
+        $ask(['latitude' => 17.3850, 'longitude' => 78.4867, 'location_accuracy' => 8])
+            ->assertUnprocessable()->assertJsonValidationErrors('latitude');
+
+        // Standing at the gate, ~30 m away.
+        $ask(['latitude' => 17.6802, 'longitude' => 80.8902, 'location_accuracy' => 8])->assertCreated();
+
+        $claim = TempleUser::query()->sole();
+        $this->assertEqualsWithDelta(30, $claim->claim_distance_m, 5);
+        $this->assertSame(8, $claim->claim_accuracy_m);
+        $this->assertStringStartsWith('At the temple', $claim->claimLocationSummary());
     }
 
     public function test_a_missing_temple_is_registered_and_handed_back_as_a_pending_claim(): void
@@ -413,7 +438,7 @@ class TrustAppApiTest extends TestCase
     {
         $team = $this->register();
         $this->as($team)->postJson('/api/v1/trust/claims', [
-            'temple_id' => $this->temple->id, 'role' => 'owner', 'note' => 'Secretary of the temple trust.',
+            'temple_id' => $this->temple->id, 'role' => 'owner', 'note' => 'Secretary of the temple trust.', 'latitude' => 17.6936, 'longitude' => 78.9686, 'location_accuracy' => 12,
         ])->assertCreated();
         $this->as($team)->post('/api/v1/trust/registrations', [
             'name' => 'Village Shiva Temple', 'city' => 'Kolanupaka',
