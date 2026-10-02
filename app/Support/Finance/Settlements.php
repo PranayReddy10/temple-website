@@ -2,9 +2,11 @@
 
 namespace App\Support\Finance;
 
+use App\Models\EventRegistration;
 use App\Models\PujaBooking;
 use App\Models\Setting;
 use App\Models\Temple;
+use App\Models\TempleDonation;
 use App\Models\TempleSettlement;
 use App\Models\User;
 use App\Support\DevotionalClock;
@@ -15,24 +17,37 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * What the platform owes each temple for its seva bookings, and paying it.
+ * What the platform owes each temple, and paying it.
  *
- * Devotees pay the platform's gateway. A booking becomes the temple's money
- * once it is paid and still live; it is settled once its seva day has come,
- * so a cancellation before the day never has to be clawed back. Preparing a
- * settlement locks its bookings to it; marking it paid records the transfer;
- * cancelling it releases them into the next one. Nothing here moves money:
- * the transfer is made from the bank and recorded.
+ * Three kinds of money come in through the platform's gateway for a temple:
+ * seva bookings, event tickets and online hundi gifts. Each becomes the
+ * temple's once paid; a settlement gathers all three up to a day (the
+ * booking's or ticket's day, the day a gift was made), keeps the platform
+ * fee (one rate for sevas and tickets, its own for gifts), and is marked paid
+ * once the transfer is made. Preparing a settlement locks its items to it;
+ * cancelling releases them into the next one. Nothing here moves money.
  *
- * The admin panel and the trust app both go through here, so either can
- * finish what the other started.
+ * The admin panel and the trust app both go through here.
  */
 class Settlements
 {
-    /** Default fee in percent, when a temple has none of its own. */
+    /** The three sources: model, the column that dates an item, and its key in the breakdown. */
+    public const SOURCES = [
+        'bookings' => [PujaBooking::class, 'booked_for'],
+        'tickets' => [EventRegistration::class, 'occurs_on'],
+        'donations' => [TempleDonation::class, 'paid_on'],
+    ];
+
+    /** Default fee on sevas and tickets, in percent, when a temple has none of its own. */
     public function defaultFeePercent(): float
     {
         return max(0.0, min(100.0, (float) Setting::get('finance_platform_fee_percent', 0)));
+    }
+
+    /** Fee on hundi gifts, in percent: its own setting, usually lower or none. */
+    public function donationFeePercent(): float
+    {
+        return max(0.0, min(100.0, (float) Setting::get('finance_donation_fee_percent', 0)));
     }
 
     public function feePercentFor(Temple $temple): float
@@ -47,67 +62,98 @@ class Settlements
         return (int) round($grossPaise * $percent / 100);
     }
 
-    /** The last seva day a settlement made now would cover: yesterday. */
+    /** The fee on a mix: sevas and tickets at the temple's rate, gifts at the donation rate. */
+    public function feeFor(Temple $temple, int $servicesPaise, int $donationsPaise): int
+    {
+        return self::feeOf($servicesPaise, $this->feePercentFor($temple)) + self::feeOf($donationsPaise, $this->donationFeePercent());
+    }
+
+    /** The last day a settlement made now covers by default: yesterday. */
     public function defaultCutoff(): CarbonInterface
     {
         return DevotionalClock::now()->subDay()->startOfDay();
     }
 
-    /**
-     * The last seva day with a paid booking not yet settled, so a settlement
-     * can take everything, advance bookings included. Once settled a booking
-     * can no longer be cancelled, so paying ahead is safe.
-     */
-    public function latestUnsettledDay(Temple|int $temple): ?CarbonInterface
+    /** Unsettled paid items of one kind for a temple, dated on or before $upTo. */
+    public function sourceQuery(string $source, Temple|int $temple, CarbonInterface|string|null $upTo = null, CarbonInterface|string|null $after = null): Builder
     {
-        $day = $this->settleableQuery($temple)->max('booked_for');
-
-        return $day === null ? null : Carbon::parse($day)->startOfDay();
-    }
-
-    /** Paid bookings not yet in a settlement, whose day is on or before $upTo. */
-    public function settleableQuery(Temple|int $temple, CarbonInterface|string|null $upTo = null): Builder
-    {
+        [$model, $column] = self::SOURCES[$source];
         $id = $temple instanceof Temple ? $temple->getKey() : $temple;
+        $date = fn ($d) => $d instanceof CarbonInterface ? $d->toDateString() : $d;
 
-        return PujaBooking::query()
+        return $model::query()
             ->where('temple_id', $id)
             ->settleable()
-            ->when($upTo !== null, fn (Builder $q) => $q->whereDate('booked_for', '<=', $upTo instanceof CarbonInterface ? $upTo->toDateString() : $upTo));
+            ->when($upTo !== null, fn (Builder $q) => $q->whereDate($column, '<=', $date($upTo)))
+            ->when($after !== null, fn (Builder $q) => $q->whereDate($column, '>', $date($after)));
+    }
+
+    /** Kept for callers that only ever meant seva bookings. */
+    public function settleableQuery(Temple|int $temple, CarbonInterface|string|null $upTo = null): Builder
+    {
+        return $this->sourceQuery('bookings', $temple, $upTo);
+    }
+
+    /** The last day with anything unsettled, so a settlement can take everything. */
+    public function latestUnsettledDay(Temple|int $temple): ?CarbonInterface
+    {
+        $days = collect(self::SOURCES)->map(fn ($s, $key) => $this->sourceQuery($key, $temple)->max($s[1]))->filter();
+
+        return $days->isEmpty() ? null : Carbon::parse($days->max())->startOfDay();
     }
 
     /**
-     * A temple's position: what is ready to settle, what is paid but its day
-     * has not come, what is being paid out, and what has been paid.
+     * Count and gross of each kind for a temple, up to and/or after a day.
+     *
+     * @return array{bookings: array{count: int, paise: int}, tickets: array{count: int, paise: int}, donations: array{count: int, paise: int}}
+     */
+    public function totals(Temple|int $temple, CarbonInterface|string|null $upTo = null, CarbonInterface|string|null $after = null): array
+    {
+        $out = [];
+        foreach (array_keys(self::SOURCES) as $key) {
+            $row = $this->sourceQuery($key, $temple, $upTo, $after)->selectRaw('count(*) as n, coalesce(sum(amount_paise), 0) as gross')->first();
+            $out[$key] = ['count' => (int) $row->n, 'paise' => (int) $row->gross];
+        }
+
+        return $out;
+    }
+
+    /**
+     * A temple's position: what is ready to settle (up to yesterday), what
+     * is paid for days still ahead, what is being paid out, what has been paid.
      */
     public function balance(Temple $temple): array
     {
-        $percent = $this->feePercentFor($temple);
         $cutoff = $this->defaultCutoff()->toDateString();
+        $ready = $this->totals($temple, $cutoff);
+        $ahead = $this->totals($temple, null, $cutoff);
 
-        $ready = $this->settleableQuery($temple, $cutoff)->selectRaw('count(*) as n, coalesce(sum(amount_paise), 0) as gross')->first();
-        $all = $this->settleableQuery($temple)->selectRaw('count(*) as n, coalesce(sum(amount_paise), 0) as gross')->first();
-
-        $readyGross = (int) $ready->gross;
-        $allGross = (int) $all->gross;
-        $readyFee = self::feeOf($readyGross, $percent);
+        $readyServices = $ready['bookings']['paise'] + $ready['tickets']['paise'];
+        $readyGross = $readyServices + $ready['donations']['paise'];
+        $readyFee = $this->feeFor($temple, $readyServices, $ready['donations']['paise']);
 
         $pending = $temple->settlements()->pending()->selectRaw('count(*) as n, coalesce(sum(net_paise), 0) as net')->first();
         $paid = $temple->settlements()->paid()->selectRaw('count(*) as n, coalesce(sum(net_paise), 0) as net, coalesce(sum(fee_paise), 0) as fee, max(paid_at) as last_paid_at')->first();
 
         return [
-            'fee_percent' => $percent,
+            'fee_percent' => $this->feePercentFor($temple),
+            'donation_fee_percent' => $this->donationFeePercent(),
             'cutoff' => $cutoff,
             'ready' => [
-                'bookings' => (int) $ready->n,
+                'bookings' => $ready['bookings']['count'],
+                'tickets' => $ready['tickets']['count'],
+                'donations' => $ready['donations']['count'],
+                'bookings_paise' => $ready['bookings']['paise'],
+                'tickets_paise' => $ready['tickets']['paise'],
+                'donations_paise' => $ready['donations']['paise'],
                 'gross_paise' => $readyGross,
                 'fee_paise' => $readyFee,
                 'net_paise' => $readyGross - $readyFee,
             ],
-            // Paid by devotees, for days still ahead: settled after the day.
+            // Paid for days still to come (and gifts made today).
             'upcoming' => [
-                'bookings' => (int) $all->n - (int) $ready->n,
-                'gross_paise' => $allGross - $readyGross,
+                'bookings' => $ahead['bookings']['count'] + $ahead['tickets']['count'] + $ahead['donations']['count'],
+                'gross_paise' => $ahead['bookings']['paise'] + $ahead['tickets']['paise'] + $ahead['donations']['paise'],
             ],
             'in_payout' => [
                 'settlements' => (int) $pending->n,
@@ -123,8 +169,9 @@ class Settlements
     }
 
     /**
-     * Bookings and money for one seva day, for the counter and the office:
-     * everything booked for the day, what was paid, and who has come.
+     * One day at the temple, for the counter and the office: sevas booked
+     * for the day and what they paid, who has come, event tickets for the
+     * day, and the hundi gifts made that day.
      */
     public function day(Temple $temple, CarbonInterface|string $day): array
     {
@@ -157,11 +204,18 @@ class Settlements
             ->values()
             ->all();
 
+        $tickets = $temple->eventRegistrations()->live()->whereDate('occurs_on', $date)
+            ->selectRaw('count(*) as n, coalesce(sum(people), 0) as people, coalesce(sum(amount_paise), 0) as amount')->first();
+        $gifts = $temple->donations()->paid()->whereDate('paid_on', $date)
+            ->selectRaw('count(*) as n, coalesce(sum(amount_paise), 0) as amount')->first();
+
         $liveBookings = $n('confirmed', 'n') + $n('verified', 'n');
         $liveAmount = $n('confirmed', 'amount') + $n('verified', 'amount');
+        $total = $liveAmount + (int) $tickets->amount + (int) $gifts->amount;
 
         return [
             'date' => $date,
+            // Seva bookings, as before.
             'bookings' => $liveBookings,
             'people' => $n('confirmed', 'people') + $n('verified', 'people'),
             'received' => $n('verified', 'n'),
@@ -172,31 +226,52 @@ class Settlements
             'cancelled' => $n('cancelled', 'n') + $n('refunded', 'n'),
             'refunded_paise' => $n('refunded', 'amount'),
             'by_seva' => $bySeva,
+            'tickets' => [
+                'count' => (int) $tickets->n,
+                'people' => (int) $tickets->people,
+                'amount_paise' => (int) $tickets->amount,
+                'amount' => TempleSettlement::rupees((int) $tickets->amount),
+            ],
+            'donations' => [
+                'count' => (int) $gifts->n,
+                'amount_paise' => (int) $gifts->amount,
+                'amount' => TempleSettlement::rupees((int) $gifts->amount),
+            ],
+            'total_paise' => $total,
+            'total' => TempleSettlement::rupees($total),
         ];
     }
 
-    /** Booked and paid over a range of seva days. */
+    /** Sevas, tickets and gifts over a range of days. */
     public function period(Temple $temple, CarbonInterface $from, CarbonInterface $to): array
     {
-        $row = $temple->pujaBookings()
-            ->live()
-            ->whereDate('booked_for', '>=', $from->toDateString())
-            ->whereDate('booked_for', '<=', $to->toDateString())
-            ->selectRaw('count(*) as n, coalesce(sum(people), 0) as people, coalesce(sum(amount_paise), 0) as amount')
-            ->first();
+        [$f, $t] = [$from->toDateString(), $to->toDateString()];
+
+        $row = $temple->pujaBookings()->live()->whereDate('booked_for', '>=', $f)->whereDate('booked_for', '<=', $t)
+            ->selectRaw('count(*) as n, coalesce(sum(people), 0) as people, coalesce(sum(amount_paise), 0) as amount')->first();
+        $tickets = $temple->eventRegistrations()->live()->whereDate('occurs_on', '>=', $f)->whereDate('occurs_on', '<=', $t)
+            ->selectRaw('count(*) as n, coalesce(sum(people), 0) as people, coalesce(sum(amount_paise), 0) as amount')->first();
+        $gifts = $temple->donations()->paid()->whereDate('paid_on', '>=', $f)->whereDate('paid_on', '<=', $t)
+            ->selectRaw('count(*) as n, coalesce(sum(amount_paise), 0) as amount')->first();
+
+        $total = (int) $row->amount + (int) $tickets->amount + (int) $gifts->amount;
 
         return [
-            'from' => $from->toDateString(),
-            'to' => $to->toDateString(),
+            'from' => $f,
+            'to' => $t,
             'bookings' => (int) $row->n,
             'people' => (int) $row->people,
             'amount_paise' => (int) $row->amount,
             'amount' => TempleSettlement::rupees((int) $row->amount),
+            'tickets' => ['count' => (int) $tickets->n, 'people' => (int) $tickets->people, 'amount_paise' => (int) $tickets->amount, 'amount' => TempleSettlement::rupees((int) $tickets->amount)],
+            'donations' => ['count' => (int) $gifts->n, 'amount_paise' => (int) $gifts->amount, 'amount' => TempleSettlement::rupees((int) $gifts->amount)],
+            'total_paise' => $total,
+            'total' => TempleSettlement::rupees($total),
         ];
     }
 
     /**
-     * Gathers a temple's paid bookings up to $upTo into a settlement to pay.
+     * Gathers everything paid and unsettled up to $upTo into a settlement.
      *
      * @throws ValidationException when there is nothing to settle
      */
@@ -207,24 +282,35 @@ class Settlements
             : ($upTo instanceof CarbonInterface ? $upTo : Carbon::parse($upTo));
 
         return DB::transaction(function () use ($temple, $cutoff, $by, $note): TempleSettlement {
-            // Locked, so two people settling at once cannot take the same booking.
-            $bookings = $this->settleableQuery($temple, $cutoff)->lockForUpdate()->get(['id', 'amount_paise', 'booked_for']);
-
-            if ($bookings->isEmpty()) {
-                throw ValidationException::withMessages(['up_to' => 'Nothing to settle: no paid bookings up to '.$cutoff->format('d M Y').' that are not already settled.']);
+            // Locked, so two people settling at once cannot take the same item.
+            $items = [];
+            foreach (self::SOURCES as $key => [, $column]) {
+                $items[$key] = $this->sourceQuery($key, $temple, $cutoff)->lockForUpdate()->get(['id', 'amount_paise', $column]);
             }
 
-            $percent = $this->feePercentFor($temple);
-            $gross = (int) $bookings->sum('amount_paise');
-            $fee = self::feeOf($gross, $percent);
+            if (collect($items)->every(fn ($c) => $c->isEmpty())) {
+                throw ValidationException::withMessages(['up_to' => 'Nothing to settle: no paid bookings, tickets or hundi gifts up to '.$cutoff->format('d M Y').' that are not already settled.']);
+            }
+
+            $paise = collect($items)->map(fn ($c) => (int) $c->sum('amount_paise'));
+            $services = $paise['bookings'] + $paise['tickets'];
+            $gross = $services + $paise['donations'];
+            $fee = $this->feeFor($temple, $services, $paise['donations']);
+            $from = collect(self::SOURCES)->map(fn ($s, $key) => $items[$key]->min($s[1]))->filter()->min();
             $account = $temple->payoutAccount;
 
             $settlement = $temple->settlements()->create([
-                'period_from' => $bookings->min('booked_for'),
+                'period_from' => $from,
                 'period_to' => $cutoff->toDateString(),
-                'bookings_count' => $bookings->count(),
+                'bookings_count' => $items['bookings']->count(),
+                'bookings_paise' => $paise['bookings'],
+                'tickets_count' => $items['tickets']->count(),
+                'tickets_paise' => $paise['tickets'],
+                'donations_count' => $items['donations']->count(),
+                'donations_paise' => $paise['donations'],
                 'gross_paise' => $gross,
-                'fee_percent' => $percent,
+                'fee_percent' => $this->feePercentFor($temple),
+                'donation_fee_percent' => $this->donationFeePercent(),
                 'fee_paise' => $fee,
                 'net_paise' => $gross - $fee,
                 'payout_to' => $account?->isComplete() ? json_encode([
@@ -239,7 +325,11 @@ class Settlements
                 'created_by' => $by?->getKey(),
             ]);
 
-            PujaBooking::query()->whereKey($bookings->modelKeys())->update(['settlement_id' => $settlement->getKey()]);
+            foreach (self::SOURCES as $key => [$model]) {
+                if ($items[$key]->isNotEmpty()) {
+                    $model::query()->whereKey($items[$key]->modelKeys())->update(['settlement_id' => $settlement->getKey()]);
+                }
+            }
 
             return $settlement;
         });
@@ -272,7 +362,7 @@ class Settlements
         return $settlement;
     }
 
-    /** Releases its bookings, to be settled again in the next one. */
+    /** Releases its items, to be settled again in the next one. */
     public function cancel(TempleSettlement $settlement, ?string $reason = null): TempleSettlement
     {
         if (! $settlement->isPending()) {
@@ -280,7 +370,9 @@ class Settlements
         }
 
         return DB::transaction(function () use ($settlement, $reason): TempleSettlement {
-            $settlement->bookings()->update(['settlement_id' => null]);
+            foreach (self::SOURCES as [$model]) {
+                $model::query()->where('settlement_id', $settlement->getKey())->update(['settlement_id' => null]);
+            }
             $settlement->forceFill(['status' => TempleSettlement::CANCELLED, 'cancel_reason' => $reason])->save();
 
             return $settlement;

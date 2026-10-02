@@ -96,6 +96,12 @@ class Payments
                     if ($locked->booking !== null) {
                         app(\App\Support\Bookings\PujaBookings::class)->paymentFailed($locked->booking, $locked->failure_reason);
                     }
+                    if ($locked->registration !== null) {
+                        app(\App\Support\Events\EventRegistrations::class)->paymentFailed($locked->registration, $locked->failure_reason);
+                    }
+                    if ($locked->donation !== null) {
+                        app(\App\Support\Donations\Donations::class)->failed($locked->donation);
+                    }
                 }
 
                 return $locked;
@@ -127,6 +133,23 @@ class Payments
                     $booking->save();
                     app(\App\Support\Bookings\PujaBookings::class)->confirm($booking);
                 }
+            }
+
+            // Event tickets and hundi gifts, the same way: the money is in.
+            if ($locked->registration !== null) {
+                app(\App\Support\Events\EventRegistrations::class)->confirm($locked->registration);
+            } elseif ($locked->purpose === Payment::EVENT_TICKET && filled($locked->meta['registration'] ?? null)) {
+                $registration = \App\Models\EventRegistration::query()->where('reference', $locked->meta['registration'])
+                    ->where('devotee_id', $locked->devotee_id)->first();
+                if ($registration !== null && $registration->status === \App\Enums\BookingStatus::PendingPayment) {
+                    $registration->payment()->associate($locked);
+                    $registration->save();
+                    app(\App\Support\Events\EventRegistrations::class)->confirm($registration);
+                }
+            }
+
+            if ($locked->donation !== null) {
+                app(\App\Support\Donations\Donations::class)->paid($locked->donation);
             }
 
             return $locked;
@@ -162,6 +185,12 @@ class Payments
 
             if ($payment->booking !== null) {
                 app(\App\Support\Bookings\PujaBookings::class)->refunded($payment->booking);
+            }
+            if ($payment->registration !== null) {
+                app(\App\Support\Events\EventRegistrations::class)->refunded($payment->registration);
+            }
+            if ($payment->donation !== null) {
+                app(\App\Support\Donations\Donations::class)->refunded($payment->donation);
             }
         });
     }

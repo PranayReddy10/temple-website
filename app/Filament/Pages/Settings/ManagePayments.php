@@ -61,6 +61,7 @@ class ManagePayments extends SettingsPage
             'payments_payu_salt' => ['secret', null],
 
             'finance_platform_fee_percent' => ['string', '0'],
+            'finance_donation_fee_percent' => ['string', '0'],
         ];
     }
 
@@ -87,12 +88,19 @@ class ManagePayments extends SettingsPage
                 ->description('Devotees pay the platform for sevas booked in the app; the platform settles with each temple under Finance → Temple balances.')
                 ->schema([
                     TextInput::make('finance_platform_fee_percent')
-                        ->label('Platform fee on seva bookings (%)')
+                        ->label('Platform fee on seva bookings and event tickets (%)')
                         ->numeric()
                         ->minValue(0)
                         ->maxValue(100)
                         ->step(0.01)
                         ->helperText('Kept from each settlement, for example 2 to cover gateway charges. A temple can have its own rate under Temple balances → Payout details & fee. Applies to settlements prepared from now on.'),
+                    TextInput::make('finance_donation_fee_percent')
+                        ->label('Platform fee on online hundi gifts (%)')
+                        ->numeric()
+                        ->minValue(0)
+                        ->maxValue(100)
+                        ->step(0.01)
+                        ->helperText('Usually 0, or just the gateway\'s charge. Applies to settlements prepared from now on.'),
                 ]),
 
             Section::make('Razorpay')

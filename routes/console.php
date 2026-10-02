@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\Bookings\PujaBookings;
+use App\Support\Events\EventRegistrations;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -23,5 +25,9 @@ Schedule::command('notifications:event-reminders')->dailyAt('18:00')->timezone(c
 
 // Seva bookings whose day has passed: an unused ticket expires, an unpaid
 // booking is cancelled.
-Schedule::call(fn () => app(\App\Support\Bookings\PujaBookings::class)->expireOverdue())
+Schedule::call(fn () => app(PujaBookings::class)->expireOverdue())
     ->name('bookings:expire-overdue')->hourly()->withoutOverlapping();
+
+// The same for event tickets and "I'll join" places.
+Schedule::call(fn () => app(EventRegistrations::class)->expireOverdue())
+    ->name('event-tickets:expire-overdue')->hourly()->withoutOverlapping();

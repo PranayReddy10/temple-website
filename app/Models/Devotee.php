@@ -178,6 +178,16 @@ class Devotee extends Authenticatable
         return $this->hasMany(PujaBooking::class)->latest();
     }
 
+    public function eventRegistrations(): HasMany
+    {
+        return $this->hasMany(EventRegistration::class)->latest();
+    }
+
+    public function donations(): HasMany
+    {
+        return $this->hasMany(TempleDonation::class)->latest();
+    }
+
     public function supportTickets(): HasMany
     {
         return $this->hasMany(SupportTicket::class);

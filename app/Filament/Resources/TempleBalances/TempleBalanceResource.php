@@ -83,11 +83,21 @@ class TempleBalanceResource extends Resource
             ->with('payoutAccount')
             ->where(fn (Builder $q) => $q
                 ->whereHas('pujaBookings', fn (Builder $b) => $b->where('amount_paise', '>', 0)->whereIn('status', $live))
+                ->orWhereHas('eventRegistrations', fn (Builder $b) => $b->where('amount_paise', '>', 0)->whereIn('status', $live))
+                ->orWhereHas('donations', fn (Builder $b) => $b->paid())
                 ->orWhereHas('payoutAccount')
                 ->orWhereHas('settlements'))
-            ->withCount(['pujaBookings as ready_count' => fn (Builder $q) => $q->settleable()->whereDate('booked_for', '<=', $cutoff)])
-            ->withSum(['pujaBookings as ready_gross' => fn (Builder $q) => $q->settleable()->whereDate('booked_for', '<=', $cutoff)], 'amount_paise')
-            ->withSum(['pujaBookings as ahead_gross' => fn (Builder $q) => $q->settleable()->whereDate('booked_for', '>', $cutoff)], 'amount_paise')
+            // Seva bookings (b), event tickets (t) and hundi gifts (d), each
+            // ready (dated up to yesterday) and ahead.
+            ->withCount(['pujaBookings as rb_count' => fn (Builder $q) => $q->settleable()->whereDate('booked_for', '<=', $cutoff)])
+            ->withCount(['eventRegistrations as rt_count' => fn (Builder $q) => $q->settleable()->whereDate('occurs_on', '<=', $cutoff)])
+            ->withCount(['donations as rd_count' => fn (Builder $q) => $q->settleable()->whereDate('paid_on', '<=', $cutoff)])
+            ->withSum(['pujaBookings as rb_gross' => fn (Builder $q) => $q->settleable()->whereDate('booked_for', '<=', $cutoff)], 'amount_paise')
+            ->withSum(['eventRegistrations as rt_gross' => fn (Builder $q) => $q->settleable()->whereDate('occurs_on', '<=', $cutoff)], 'amount_paise')
+            ->withSum(['donations as rd_gross' => fn (Builder $q) => $q->settleable()->whereDate('paid_on', '<=', $cutoff)], 'amount_paise')
+            ->withSum(['pujaBookings as ab_gross' => fn (Builder $q) => $q->settleable()->whereDate('booked_for', '>', $cutoff)], 'amount_paise')
+            ->withSum(['eventRegistrations as at_gross' => fn (Builder $q) => $q->settleable()->whereDate('occurs_on', '>', $cutoff)], 'amount_paise')
+            ->withSum(['donations as ad_gross' => fn (Builder $q) => $q->settleable()->whereDate('paid_on', '>', $cutoff)], 'amount_paise')
             ->withSum(['settlements as in_payout' => fn (Builder $q) => $q->pending()], 'net_paise')
             ->withSum(['settlements as paid_total' => fn (Builder $q) => $q->paid()], 'net_paise');
     }
@@ -96,6 +106,9 @@ class TempleBalanceResource extends Resource
     {
         $rupees = fn ($paise): string => TempleSettlement::rupees((int) $paise);
         $fee = fn (Temple $t): float => app(Settlements::class)->feePercentFor($t);
+        $ready = fn (Temple $t): int => (int) $t->rb_gross + (int) $t->rt_gross + (int) $t->rd_gross;
+        $ahead = fn (Temple $t): int => (int) $t->ab_gross + (int) $t->at_gross + (int) $t->ad_gross;
+        $sortBy = fn (string $cols) => fn (Builder $query, string $direction): Builder => $query->orderByRaw('('.collect(explode(',', $cols))->map(fn ($c) => "coalesce({$c}, 0)")->implode(' + ').') '.($direction === 'asc' ? 'asc' : 'desc'));
 
         return $table
             ->columns([
@@ -108,30 +121,34 @@ class TempleBalanceResource extends Resource
 
                 TextColumn::make('ready_gross')
                     ->label('Ready to settle')
-                    ->state(fn (Temple $t): string => $rupees($t->ready_gross))
-                    ->description(fn (Temple $t): string => $t->ready_count.' bookings · gross')
-                    ->color(fn (Temple $t): string => (int) $t->ready_gross > 0 ? 'warning' : 'gray')
+                    ->state(fn (Temple $t): string => $rupees($ready($t)))
+                    ->description(fn (Temple $t): string => collect([
+                        $t->rb_count ? $t->rb_count.' sevas' : null,
+                        $t->rt_count ? $t->rt_count.' tickets' : null,
+                        $t->rd_count ? $t->rd_count.' hundi' : null,
+                    ])->filter()->implode(' · ') ?: 'gross')
+                    ->color(fn (Temple $t): string => $ready($t) > 0 ? 'warning' : 'gray')
                     ->alignEnd()
-                    ->sortable(),
+                    ->sortable(query: $sortBy('rb_gross,rt_gross,rd_gross')),
 
                 TextColumn::make('net_ready')
                     ->label('Temple gets')
-                    ->state(function (Temple $t) use ($rupees, $fee): string {
-                        $gross = (int) $t->ready_gross;
+                    ->state(function (Temple $t) use ($rupees, $ready): string {
+                        $services = (int) $t->rb_gross + (int) $t->rt_gross;
 
-                        return $rupees($gross - Settlements::feeOf($gross, $fee($t)));
+                        return $rupees($ready($t) - app(Settlements::class)->feeFor($t, $services, (int) $t->rd_gross));
                     })
-                    ->description(fn (Temple $t): string => 'after '.rtrim(rtrim(number_format($fee($t), 2), '0'), '.').'% fee')
+                    ->description(fn (Temple $t): string => 'after '.rtrim(rtrim(number_format($fee($t), 2), '0'), '.').'% fee'.((int) $t->rd_gross > 0 ? ' ('.rtrim(rtrim(number_format(app(Settlements::class)->donationFeePercent(), 2), '0'), '.').'% on hundi)' : ''))
                     ->weight('medium')
                     ->alignEnd(),
 
                 TextColumn::make('ahead_gross')
                     ->label('Paid, day ahead')
-                    ->state(fn (Temple $t): string => $rupees($t->ahead_gross))
-                    ->tooltip('Paid by devotees for seva days still to come; settled after the day.')
+                    ->state(fn (Temple $t): string => $rupees($ahead($t)))
+                    ->tooltip('Paid for seva and event days still to come, and today\'s hundi gifts.')
                     ->color('gray')
                     ->alignEnd()
-                    ->sortable(),
+                    ->sortable(query: $sortBy('ab_gross,at_gross,ad_gross')),
 
                 TextColumn::make('in_payout')
                     ->label('Being paid')
@@ -163,6 +180,8 @@ class TempleBalanceResource extends Resource
                     ->label('Unsettled money or being paid')
                     ->query(fn (Builder $query): Builder => $query->where(fn (Builder $q) => $q
                         ->whereHas('pujaBookings', fn (Builder $b) => $b->settleable())
+                        ->orWhereHas('eventRegistrations', fn (Builder $b) => $b->settleable())
+                        ->orWhereHas('donations', fn (Builder $b) => $b->settleable())
                         ->orWhereHas('settlements', fn (Builder $s) => $s->pending())))
                     ->toggle()
                     ->default(),
@@ -195,7 +214,7 @@ class TempleBalanceResource extends Resource
             ->label('Settle')
             ->icon('heroicon-o-banknotes')
             ->color('success')
-            ->visible(fn (Temple $t): bool => (int) $t->ready_gross + (int) $t->ahead_gross > 0)
+            ->visible(fn (Temple $t): bool => (int) $t->rb_gross + (int) $t->rt_gross + (int) $t->rd_gross + (int) $t->ab_gross + (int) $t->at_gross + (int) $t->ad_gross > 0)
             ->modalHeading(fn (Temple $t): string => 'Settle with '.$t->name)
             ->modalDescription(function (Temple $t): string {
                 $account = $t->payoutAccount;
@@ -213,9 +232,9 @@ class TempleBalanceResource extends Resource
                     // Everything unsettled by default, advance bookings included.
                     ->default(fn (Temple $record) => (app(Settlements::class)->latestUnsettledDay($record) ?? DevotionalClock::now())->toDateString())
                     ->required()
-                    ->helperText(fn (Temple $record): string => 'Every paid booking up to this day that is not settled yet is included: '
-                        .TempleSettlement::rupees((int) $record->ready_gross).' for days already past'
-                        .((int) $record->ahead_gross > 0 ? ' and '.TempleSettlement::rupees((int) $record->ahead_gross).' paid in advance for days ahead' : '')
+                    ->helperText(fn (Temple $record): string => 'Every paid seva booking, event ticket and hundi gift up to this day that is not settled yet is included: '
+                        .TempleSettlement::rupees((int) $record->rb_gross + (int) $record->rt_gross + (int) $record->rd_gross).' up to yesterday'
+                        .(((int) $record->ab_gross + (int) $record->at_gross + (int) $record->ad_gross) > 0 ? ' and '.TempleSettlement::rupees((int) $record->ab_gross + (int) $record->at_gross + (int) $record->ad_gross).' for today and days ahead' : '')
                         .'. Choose an earlier day to leave advance bookings for later. Once settled, a booking can no longer be cancelled.'),
                 Textarea::make('note')->label('Note (the temple sees this)')->rows(2)->maxLength(500),
             ])
@@ -231,7 +250,7 @@ class TempleBalanceResource extends Resource
 
                 Notification::make()
                     ->title('Settlement '.$s->reference.' prepared: '.TempleSettlement::rupees($s->net_paise).' to pay')
-                    ->body($s->bookings_count.' bookings, '.$s->periodLabel().'. Transfer it, then mark it paid with the UTR under Settlements.')
+                    ->body($s->itemsLabel().', '.$s->periodLabel().'. Transfer it, then mark it paid with the UTR under Settlements.')
                     ->success()
                     ->send();
             });
@@ -250,6 +269,7 @@ class TempleBalanceResource extends Resource
                 'upi_id' => $t->payoutAccount?->upi_id,
                 'platform_fee_percent' => $t->payoutAccount?->platform_fee_percent,
                 'verified' => $t->payoutAccount?->isVerified() ?? false,
+                'accepts_donations' => (bool) Temple::query()->whereKey($t->getKey())->value('accepts_donations'),
             ])
             ->schema([
                 Section::make('Where the temple is paid')
@@ -265,6 +285,12 @@ class TempleBalanceResource extends Resource
                         TextInput::make('bank_name')->label('Bank and branch')->maxLength(120),
                         TextInput::make('upi_id')->label('UPI ID')->regex('/^[A-Za-z0-9.\-_]{2,256}@[A-Za-z]{2,64}$/')->placeholder('name@bank'),
                         Toggle::make('verified')->label('Details verified with the temple')->inline(false),
+                    ]),
+                Section::make('Online hundi')
+                    ->schema([
+                        Toggle::make('accepts_donations')
+                            ->label('Accept online hundi gifts')
+                            ->helperText('Usually switched on by the temple\'s owner in the Darshan Saathi Trust app.'),
                     ]),
                 Section::make('Platform fee')
                     ->schema([
@@ -297,6 +323,8 @@ class TempleBalanceResource extends Resource
                 $account->forceFill($data['verified'] && $account->isComplete()
                     ? ['verified_at' => $account->verified_at ?? now(), 'verified_by' => $account->verified_by ?? Auth::id()]
                     : ['verified_at' => null, 'verified_by' => null])->saveQuietly();
+
+                Temple::query()->whereKey($t->getKey())->first()?->forceFill(['accepts_donations' => (bool) ($data['accepts_donations'] ?? false)])->save();
 
                 Notification::make()->title('Payout details saved.')->success()->send();
             });

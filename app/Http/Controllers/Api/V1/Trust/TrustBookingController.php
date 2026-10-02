@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Api\V1\Trust;
 use App\Enums\BookingStatus;
 use App\Http\Controllers\Api\V1\Trust\Concerns\ScopesToTrustTemples;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\V1\EventRegistrationResource;
 use App\Http\Resources\V1\PublicPassportResource;
 use App\Http\Resources\V1\PujaBookingResource;
 use App\Models\Devotee;
+use App\Models\EventRegistration;
 use App\Models\PujaBooking;
 use App\Support\BookingQr;
 use App\Support\Bookings\PujaBookings;
+use App\Support\Events\EventRegistrations;
 use App\Support\Finance\Settlements;
 use App\Support\PassportQr;
 use App\Support\StaffCheckIn;
@@ -66,7 +69,16 @@ class TrustBookingController extends Controller
         $booking = $this->find($request, $validated['code']);
 
         if ($booking === null) {
-            return response()->json(['message' => 'No booking at your temples matches this code. It may be for another temple, or it was cancelled.'], 404);
+            // An event ticket carries the same kind of code.
+            $ticket = $this->findTicket($request, $validated['code']);
+            if ($ticket !== null) {
+                return response()->json(['data' => [
+                    'booking' => (new EventRegistrationResource($ticket))->resolve($request),
+                    'outcome' => $ticket->isVerified() ? EventRegistrations::ALREADY_VERIFIED : null,
+                ]]);
+            }
+
+            return response()->json(['message' => 'No booking or ticket at your temples matches this code. It may be for another temple, or it was cancelled.'], 404);
         }
 
         return response()->json(['data' => [
@@ -75,11 +87,24 @@ class TrustBookingController extends Controller
         ]]);
     }
 
-    public function verify(Request $request, PujaBookings $bookings): JsonResponse
+    public function verify(Request $request, PujaBookings $bookings, EventRegistrations $tickets): JsonResponse
     {
         $validated = $request->validate(['code' => ['required', 'string', 'max:500']]);
 
         $booking = $this->find($request, $validated['code']);
+
+        if ($booking === null && ($ticket = $this->findTicket($request, $validated['code'])) !== null) {
+            try {
+                $result = $tickets->verify($ticket, $this->trustUser($request));
+            } catch (AuthorizationException $e) {
+                abort(403, $e->getMessage());
+            }
+
+            return response()->json(['data' => [
+                'booking' => (new EventRegistrationResource($result['registration']->load(['event', 'temple', 'payment'])))->resolve($request),
+                'outcome' => $result['outcome'],
+            ]]);
+        }
 
         abort_if($booking === null, 404, 'Scan the code again.');
 
@@ -145,6 +170,20 @@ class TrustBookingController extends Controller
             },
             'temple' => ['id' => $temple->getKey(), 'name' => $temple->name],
         ]]);
+    }
+
+    protected function findTicket(Request $request, string $code): ?EventRegistration
+    {
+        $ids = $this->bookableTempleIds($request);
+        $query = EventRegistration::query()
+            ->with(['event', 'temple', 'payment'])
+            ->when($ids !== null, fn ($q) => $q->whereIn('temple_id', $ids));
+
+        $token = BookingQr::parse($code);
+
+        return $token === null
+            ? $query->where('reference', strtoupper(trim($code)))->first()
+            : $query->where('code', $token)->first();
     }
 
     protected function find(Request $request, string $code): ?PujaBooking
