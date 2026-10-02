@@ -20,7 +20,9 @@ class EventResource extends JsonResource
             'image_url' => $this->imageUrl(),
 
             'starts_on' => $this->starts_on?->toDateString(),
-            'ends_on' => $this->lastDay()->toDateString(),
+            // A weekly gathering's last week, or null while it goes on; an
+            // editor that sends this back must not end the series.
+            'ends_on' => $this->isWeekly() ? $this->ends_on?->toDateString() : $this->lastDay()->toDateString(),
             'date_label' => $this->dateLabel(),
             'is_all_day' => $this->is_all_day,
             'starts_at' => $this->starts_at ? substr((string) $this->starts_at, 0, 5) : null,

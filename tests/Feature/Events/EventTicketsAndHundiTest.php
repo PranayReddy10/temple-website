@@ -80,6 +80,7 @@ class EventTicketsAndHundiTest extends TestCase
         $this->getJson('/api/v1/events?type=bhajan')
             ->assertOk()
             ->assertJsonPath('data.0.recurrence', 'weekly')
+            ->assertJsonPath('data.0.ends_on', null)
             ->assertJsonPath('data.0.next_on', $today->toDateString())
             ->assertJsonPath('data.0.next_dates.1', $today->copy()->addWeek()->toDateString())
             ->assertJsonPath('data.0.group_name', 'Sri Rama Bhajan Mandali')
