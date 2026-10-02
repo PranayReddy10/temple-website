@@ -92,7 +92,7 @@ class TempleDetailResource extends JsonResource
             'is_featured' => (bool) $this->is_featured,
             // Online hundi: the app shows "Give to the hundi" when on.
             'donations' => [
-                'enabled' => (bool) $this->accepts_donations,
+                'enabled' => (bool) $this->accepts_donations && $this->resource->canCollectPayments(),
                 'purposes' => collect(TempleDonation::PURPOSES)->map(fn ($label, $value) => ['value' => $value, 'label' => $label])->values(),
                 'min_amount' => TempleDonation::MIN_PAISE / 100,
                 'max_amount' => TempleDonation::MAX_PAISE / 100,

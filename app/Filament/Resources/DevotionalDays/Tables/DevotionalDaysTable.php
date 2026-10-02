@@ -5,6 +5,7 @@ namespace App\Filament\Resources\DevotionalDays\Tables;
 use App\Enums\TempleStatus;
 use App\Models\DevotionalDay;
 use App\Models\Temple;
+use App\Support\DevotionalClock;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -27,8 +28,8 @@ class DevotionalDaysTable
                     ->label('Day')
                     ->formatStateUsing(fn (int $state): string => DevotionalDay::weekdayNames()[$state] ?? '—')
                     ->badge()
-                    ->color(fn (DevotionalDay $record): string => $record->weekday === \App\Support\DevotionalClock::now()->dayOfWeek ? 'success' : 'gray')
-                    ->description(fn (DevotionalDay $record): ?string => $record->weekday === \App\Support\DevotionalClock::now()->dayOfWeek ? 'Today' : null)
+                    ->color(fn (DevotionalDay $record): string => $record->weekday === DevotionalClock::now()->dayOfWeek ? 'success' : 'gray')
+                    ->description(fn (DevotionalDay $record): ?string => $record->weekday === DevotionalClock::now()->dayOfWeek ? 'Today' : null)
                     ->sortable(),
 
                 TextColumn::make('deity.name')->label('Deity')->weight('medium')->sortable(),

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\TemplePujas\Pages;
 
 use App\Filament\Resources\TemplePujas\TemplePujaResource;
+use App\Filament\Resources\Temples\TempleResource;
 use App\Models\TemplePuja;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -28,7 +29,7 @@ class EditTemplePuja extends EditRecord
                 ->color('gray')
                 ->url(fn (TemplePuja $record): ?string => $record->temple === null
                     ? null
-                    : \App\Filament\Resources\Temples\TempleResource::getUrl('edit', ['record' => $record->temple]))
+                    : TempleResource::getUrl('edit', ['record' => $record->temple]))
                 ->visible(fn (TemplePuja $record): bool => $record->temple !== null),
 
             DeleteAction::make(),

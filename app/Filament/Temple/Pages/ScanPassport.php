@@ -2,6 +2,7 @@
 
 namespace App\Filament\Temple\Pages;
 
+use App\Enums\TempleStatus;
 use App\Filament\Concerns\ScansDevoteePassports;
 use App\Models\Temple;
 use App\Support\DevotionalClock;
@@ -82,7 +83,7 @@ class ScanPassport extends Page
                 'id' => $t->id,
                 'name' => $t->name,
                 'city' => $t->city,
-                'published' => $t->status === \App\Enums\TempleStatus::Published,
+                'published' => $t->status === TempleStatus::Published,
                 'today' => $devotee === null ? null : $devotee->visits()
                     ->where('temple_id', $t->id)
                     ->whereDate('visited_on', $today)

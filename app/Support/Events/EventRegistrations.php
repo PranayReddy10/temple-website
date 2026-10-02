@@ -63,6 +63,11 @@ final class EventRegistrations
 
         $amount = $event->amountPaiseFor($people);
 
+        // Money only reaches a temple whose owner and bank are approved.
+        if ($amount > 0 && ! $event->temple->canCollectPayments()) {
+            throw ValidationException::withMessages(['event' => 'This temple does not sell tickets in the app yet. Buy them at the temple for now.']);
+        }
+
         if ($amount > 0) {
             $gateway ??= AppConfig::payments('android')['default_gateway'] ?? null;
             if ($gateway === null || ! in_array($gateway, AppConfig::enabledGateways(), true)) {

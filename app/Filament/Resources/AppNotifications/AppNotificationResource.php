@@ -107,7 +107,9 @@ class AppNotificationResource extends Resource
             ->columns([
                 TextColumn::make('title')->searchable()->weight('medium')->description(fn (AppNotification $r) => str($r->body)->limit(80))->wrap(),
                 TextColumn::make('audience')->formatStateUsing(fn (string $state) => AppNotification::AUDIENCES[$state] ?? $state)->badge()->color('gray'),
-                TextColumn::make('status')->badge()->color(fn (string $state) => match ($state) { 'sent' => 'success', 'scheduled' => 'info', 'failed' => 'danger', default => 'gray' }),
+                TextColumn::make('status')->badge()->color(fn (string $state) => match ($state) {
+                    'sent' => 'success', 'scheduled' => 'info', 'failed' => 'danger', default => 'gray'
+                }),
                 TextColumn::make('when')->label('When')->state(fn (AppNotification $r) => $r->sent_at ?? $r->scheduled_at)->dateTime('d M Y, H:i')->placeholder('—'),
                 TextColumn::make('reads_count')->counts('reads')->label('Read')->alignEnd(),
                 TextColumn::make('last_error')->label('Push error')->color('danger')->limit(40)->placeholder('—')->toggleable(),

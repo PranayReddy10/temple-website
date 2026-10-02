@@ -179,8 +179,11 @@ class TrustAdminFinanceController extends Controller
         $account = $record->payoutAccount;
 
         abort_if($account === null || ! $account->isComplete(), 422, 'This temple has not added its payout details yet.');
+        abort_unless($account->hasKyc(), 422, 'The owner has not sent the verification documents (Aadhaar, temple proof, photo) yet.');
 
-        $account->forceFill(['verified_at' => now(), 'verified_by' => $this->trustUser($request)->getKey()])->saveQuietly();
+        // The documents are private and are looked at on the web, beside
+        // the details, before money can flow; the app only shows the state.
+        abort(422, 'Look at the Aadhaar, temple proof and photo and approve in the admin panel: Finance → Temple balances → Review & approve payments.');
 
         return response()->json(['data' => $account->refresh()->toPublicArray()]);
     }

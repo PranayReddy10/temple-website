@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Temples\Tables;
 
 use App\Enums\TempleStatus;
 use App\Enums\VerificationStatus;
+use App\Filament\Support\MediaColumn;
 use App\Models\Temple;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -28,7 +29,7 @@ class TemplesTable
             ->columns([
                 // What devotees see first, at a glance, before opening the
                 // temple: its thumbnail, or "No cover" (Filter: Without a cover).
-                \App\Filament\Support\MediaColumn::make(
+                MediaColumn::make(
                     'cover',
                     fn (Temple $record): ?string => $record->primaryPhoto?->thumbnail_path ?? $record->primaryPhoto?->path,
                     fn (Temple $record): string => $record->primaryPhoto?->disk ?? config('filesystems.media'),

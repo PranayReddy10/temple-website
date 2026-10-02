@@ -27,7 +27,8 @@ final class Donations
      */
     public function give(Devotee $devotee, Temple $temple, array $data, ?string $gateway = null): TempleDonation
     {
-        if ($temple->status !== TempleStatus::Published || ! $temple->accepts_donations) {
+        // Money only reaches a temple whose owner and bank are approved.
+        if ($temple->status !== TempleStatus::Published || ! $temple->accepts_donations || ! $temple->canCollectPayments()) {
             throw ValidationException::withMessages(['temple' => 'This temple does not take online hundi donations yet.']);
         }
 

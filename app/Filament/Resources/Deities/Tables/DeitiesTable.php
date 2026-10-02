@@ -9,6 +9,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 
 class DeitiesTable
@@ -86,12 +87,12 @@ class DeitiesTable
                     ->sortable(),
             ])
             ->filters([
-                \Filament\Tables\Filters\Filter::make('needs_image')
+                Filter::make('needs_image')
                     ->label('Missing an image')
                     ->query(fn ($query) => $query->whereNull('image_path'))
                     ->toggle(),
 
-                \Filament\Tables\Filters\Filter::make('needs_mantra')
+                Filter::make('needs_mantra')
                     ->label('Missing a mantra')
                     ->query(fn ($query) => $query->whereNull('mantra'))
                     ->toggle(),

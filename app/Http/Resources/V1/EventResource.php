@@ -40,7 +40,7 @@ class EventResource extends JsonResource
 
             // "I'll join" for a free gathering, tickets for a paid one.
             'registration' => [
-                'enabled' => (bool) $this->registration_enabled,
+                'enabled' => (bool) $this->registration_enabled && (! $this->isTicketed() || (bool) $this->temple?->canCollectPayments()),
                 'is_paid' => $this->isTicketed(),
                 'price_paise' => (int) $this->ticket_price_paise,
                 'price' => $this->priceLabel(),

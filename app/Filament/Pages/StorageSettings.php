@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Support\MediaStorage;
+use App\Support\SpacesCors;
 use App\Support\StorageHealth;
 use App\Support\UploadRules;
 use BackedEnum;
@@ -244,9 +245,9 @@ class StorageSettings extends Page
                 ->color('gray')
                 ->visible(fn (): bool => MediaStorage::spacesIsFilledIn())
                 ->requiresConfirmation()
-                ->modalDescription(fn (): string => 'Sets a CORS rule on the Space so '.implode(' and ', \App\Support\SpacesCors::origins()).' may load its photos (GET and HEAD only). Replaces any CORS rule the Space already has.')
+                ->modalDescription(fn (): string => 'Sets a CORS rule on the Space so '.implode(' and ', SpacesCors::origins()).' may load its photos (GET and HEAD only). Replaces any CORS rule the Space already has.')
                 ->action(function (): void {
-                    $result = \App\Support\SpacesCors::apply();
+                    $result = SpacesCors::apply();
 
                     Notification::make()
                         ->title($result['ok'] ? 'Photos allowed' : 'Could not change the Space')

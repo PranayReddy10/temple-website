@@ -4,15 +4,17 @@ namespace App\Filament\Widgets;
 
 use App\Enums\EventStatus;
 use App\Enums\TempleStatus;
+use App\Enums\TicketPriority;
+use App\Filament\Resources\SupportTickets\SupportTicketResource;
 use App\Filament\Resources\TempleAccess\TempleAccessResource;
 use App\Filament\Resources\TempleEvents\TempleEventResource;
-use App\Filament\Resources\SupportTickets\SupportTicketResource;
 use App\Filament\Resources\Temples\TempleResource;
+use App\Models\SupportTicket;
 use App\Models\Temple;
 use App\Models\TempleEvent;
-use App\Models\SupportTicket;
 use App\Models\TempleUser;
 use App\Support\AdminLinks;
+use Filament\Resources\Resource;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
@@ -91,7 +93,7 @@ class TempleWorkQueueWidget extends StatsOverviewWidget
                 ->description($this->oldestTicketPhrase($openTickets))
                 ->descriptionIcon('heroicon-m-lifebuoy')
                 ->color(match (true) {
-                    SupportTicket::query()->open()->where('priority', \App\Enums\TicketPriority::Urgent)->exists() => 'danger',
+                    SupportTicket::query()->open()->where('priority', TicketPriority::Urgent)->exists() => 'danger',
                     $openTickets > 0 => 'warning',
                     default => 'success',
                 })

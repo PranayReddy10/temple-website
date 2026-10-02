@@ -4,6 +4,7 @@ namespace App\Filament\Resources\SevaDrives\RelationManagers;
 
 use App\Filament\Support\MediaColumn;
 use App\Models\SevaDriveMedia;
+use App\Support\UploadRules;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -13,7 +14,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
-use App\Support\UploadRules;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;

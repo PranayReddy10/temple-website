@@ -3,10 +3,10 @@
 namespace App\Models;
 
 use App\Enums\TempleStatus;
+use App\Enums\VerificationStatus;
 use App\Models\Concerns\HasMantra;
 use App\Models\Concerns\HasTranslations;
 use Carbon\CarbonInterface;
-use App\Enums\VerificationStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 
 class Temple extends Model
 {
@@ -186,6 +187,16 @@ class Temple extends Model
     public function payoutAccount(): HasOne
     {
         return $this->hasOne(TemplePayoutAccount::class);
+    }
+
+    /**
+     * Devotees may pay this temple in the app: its bank details and the
+     * owner's documents are approved by staff. Free sevas and free events
+     * never need this.
+     */
+    public function canCollectPayments(): bool
+    {
+        return $this->payoutAccount?->canReceiveMoney() ?? false;
     }
 
     public function settlements(): HasMany
@@ -400,7 +411,7 @@ class Temple extends Model
     /**
      * What to play here: this temple's media first, then its deity's.
      *
-     * @return \Illuminate\Support\Collection<int, DevotionalMedia>
+     * @return Collection<int, DevotionalMedia>
      */
     public function allMedia(bool $publishedOnly = true)
     {

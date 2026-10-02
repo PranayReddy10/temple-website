@@ -2,6 +2,7 @@
 
 namespace App\Filament\Schemas;
 
+use App\Filament\Support\PaymentsApproval;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -51,6 +52,8 @@ class EventGatheringFields
                     ->placeholder('0 for free')
                     ->formatStateUsing(fn ($state): ?string => $state ? (string) ($state / 100) : null)
                     ->dehydrateStateUsing(fn ($state): int => (int) round(((float) $state) * 100))
+                    // Paid tickets take money: only for an approved temple.
+                    ->rule(PaymentsApproval::rule(fn (Get $get, mixed $value): bool => (bool) $get('registration_enabled') && (float) $value > 0))
                     ->visible(fn (Get $get): bool => (bool) $get('registration_enabled')),
                 TextInput::make('capacity')
                     ->label('People per date')

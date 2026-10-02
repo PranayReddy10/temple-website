@@ -18,7 +18,7 @@ class CreateSevaDrive extends CreateRecord
     {
         $photos = array_values(array_filter((array) ($data['before_photos'] ?? [])));
 
-        $drive = SevaDriveForm::fill(new SevaDrive(), $data);
+        $drive = SevaDriveForm::fill(new SevaDrive, $data);
         $drive->created_by = Auth::id();
         $drive->moderated_by = Auth::id();
         $drive->moderated_at = now();

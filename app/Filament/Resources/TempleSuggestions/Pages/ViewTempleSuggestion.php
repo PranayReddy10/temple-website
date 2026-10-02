@@ -4,8 +4,8 @@ namespace App\Filament\Resources\TempleSuggestions\Pages;
 
 use App\Enums\TempleSuggestionStatus;
 use App\Filament\Resources\Devotees\DevoteeResource;
-use App\Filament\Resources\TempleSuggestions\TempleSuggestionResource;
 use App\Filament\Resources\Temples\TempleResource;
+use App\Filament\Resources\TempleSuggestions\TempleSuggestionResource;
 use App\Models\Temple;
 use App\Models\TempleSuggestion;
 use Filament\Actions\Action;

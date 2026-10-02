@@ -4,6 +4,7 @@ namespace App\Filament\Resources\TemplePhotos;
 
 use App\Enums\PhotoCategory;
 use App\Filament\Resources\TemplePhotos\Pages\ListTemplePhotos;
+use App\Filament\Resources\Temples\TempleResource;
 use App\Filament\Support\MediaColumn;
 use App\Models\TemplePhoto;
 use BackedEnum;
@@ -112,7 +113,7 @@ class TemplePhotoResource extends Resource
                     ->color('gray')
                     ->url(fn (TemplePhoto $record): ?string => $record->temple === null
                         ? null
-                        : \App\Filament\Resources\Temples\TempleResource::getUrl('edit', ['record' => $record->temple]))
+                        : TempleResource::getUrl('edit', ['record' => $record->temple]))
                     ->visible(fn (TemplePhoto $record): bool => $record->temple !== null),
 
                 Action::make('make_cover')

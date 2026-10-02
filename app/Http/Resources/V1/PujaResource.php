@@ -2,10 +2,11 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Models\TemplePuja;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\TemplePuja */
+/** @mixin TemplePuja */
 class PujaResource extends JsonResource
 {
     public function toArray(Request $request): array
@@ -47,7 +48,7 @@ class PujaResource extends JsonResource
              * client shows it exactly as before; nothing here is compulsory.
              */
             'app_booking' => [
-                'enabled' => $this->isBookableInApp(),
+                'enabled' => $this->isBookableInApp() && ($this->is_free || (bool) $this->temple?->canCollectPayments()),
                 'requires_payment' => $this->requiresPayment(),
                 'fee_per_person' => (bool) $this->fee_per_person,
                 'amount_paise' => $this->amountPaiseFor(1),
