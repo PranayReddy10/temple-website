@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Devotees\Pages;
 
+use App\Filament\Resources\Devotees\DevoteeAdminActions;
 use App\Filament\Resources\Devotees\DevoteeResource;
 use App\Models\Devotee;
 use App\Support\DevoteeAccount;
@@ -48,6 +49,10 @@ class ViewDevotee extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            DevoteeAdminActions::edit(),
+            DevoteeAdminActions::verifyEmail(),
+            DevoteeAdminActions::verifyPhone(),
+            DevoteeAdminActions::unverify(),
             // A deletion request from the website form (a support ticket),
             // once support has confirmed it is the owner asking.
             Action::make('delete_account')
@@ -166,7 +171,11 @@ class ViewDevotee extends ViewRecord
                         ->boolean()
                         ->tooltip('Email or phone has been confirmed'),
 
-                    TextEntry::make('home_state.name')->label('Home state')->placeholder('Not given'),
+                    TextEntry::make('email_verified_at')->label('Email verified')->since()->placeholder('No'),
+                    TextEntry::make('phone_verified_at')->label('Phone verified')->since()->placeholder('No'),
+                    TextEntry::make('date_of_birth')->label('Date of birth')->date('d M Y')->placeholder('Not given'),
+
+                    TextEntry::make('homeState.name')->label('Home state')->placeholder('Not given'),
                     TextEntry::make('gender')->label('Gender')->placeholder('Not given'),
                 ]),
 
