@@ -2,11 +2,13 @@
 
 namespace App\Filament\Resources\Devotees\Tables;
 
+use App\Filament\Resources\Devotees\DevoteeAdminActions;
 use App\Filament\Support\MediaColumn;
 use App\Models\Devotee;
 use App\Support\InitialsAvatarProvider;
 use App\Support\Locales;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -143,6 +145,12 @@ class DevoteesTable
             ])
             ->recordActions([
                 ViewAction::make(),
+                ActionGroup::make([
+                    DevoteeAdminActions::edit(),
+                    DevoteeAdminActions::verifyEmail(),
+                    DevoteeAdminActions::verifyPhone(),
+                    DevoteeAdminActions::unverify(),
+                ])->visible(fn (): bool => DevoteeAdminActions::allowed()),
 
                 /*
                  * Suspension, not deletion.
