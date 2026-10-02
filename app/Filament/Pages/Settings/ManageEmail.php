@@ -29,7 +29,7 @@ class ManageEmail extends SettingsPage
 {
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-envelope';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'App';
+    protected static string|\UnitEnum|null $navigationGroup = 'Administration';
 
     protected static ?int $navigationSort = 5;
 

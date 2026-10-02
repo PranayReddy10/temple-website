@@ -39,7 +39,7 @@ class StorageSettings extends Page
 
     protected static string|\UnitEnum|null $navigationGroup = 'Administration';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $title = 'Storage & Uploads';
 

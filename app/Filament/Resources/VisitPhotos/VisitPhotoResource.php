@@ -28,7 +28,7 @@ class VisitPhotoResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Devotees';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $navigationLabel = 'Photo Stamps';
 

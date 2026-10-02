@@ -21,7 +21,9 @@ class ScanDevoteePassport extends Page
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-identification';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Devotees';
+    protected static string|\UnitEnum|null $navigationGroup = 'Bookings & Counter';
+
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $title = 'Scan a devotee passport';
 

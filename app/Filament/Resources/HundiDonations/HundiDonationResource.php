@@ -28,7 +28,7 @@ class HundiDonationResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Finance';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 3;
 
     protected static ?string $navigationLabel = 'Hundi donations';
 

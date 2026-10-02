@@ -38,7 +38,7 @@ class DevoteeResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Devotees';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $navigationLabel = 'Devotee Accounts';
 
