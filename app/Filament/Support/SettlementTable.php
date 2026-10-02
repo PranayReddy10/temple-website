@@ -37,7 +37,7 @@ class SettlementTable
                 TextColumn::make('reference')->label('Reference')->fontFamily('mono')->copyable()->searchable(),
                 TextColumn::make('temple.name')->label('Temple')->weight('medium')->description(fn (TempleSettlement $s): ?string => $s->temple?->city)->searchable(),
                 TextColumn::make('period_to')->label('Seva days')->state(fn (TempleSettlement $s): string => $s->periodLabel())->sortable(),
-                TextColumn::make('bookings_count')->label('Bookings')->numeric()->alignCenter(),
+                TextColumn::make('bookings_count')->label('Covers')->state(fn (TempleSettlement $s): string => $s->itemsLabel())->wrap(),
                 TextColumn::make('gross_paise')->label('Paid by devotees')->state(fn (TempleSettlement $s): string => TempleSettlement::rupees($s->gross_paise))->alignEnd(),
                 TextColumn::make('fee_paise')->label('Platform fee')->state(fn (TempleSettlement $s): string => TempleSettlement::rupees($s->fee_paise))
                     ->description(fn (TempleSettlement $s): string => rtrim(rtrim(number_format((float) $s->fee_percent, 2), '0'), '.').'%')->alignEnd(),
@@ -84,7 +84,12 @@ class SettlementTable
             ->modalHeading(fn (TempleSettlement $s): string => 'Settlement '.$s->reference)
             ->modalDescription(fn (TempleSettlement $s): string => ($s->temple?->name ?? '').' · '.$s->periodLabel())
             ->modalContent(fn (TempleSettlement $s): View => view('filament.finance.settlement', [
-                'settlement' => $s->load(['temple', 'creator', 'payer', 'bookings' => fn ($q) => $q->with('puja:id,name')->orderBy('booked_for')]),
+                'settlement' => $s->load([
+                    'temple', 'creator', 'payer',
+                    'bookings' => fn ($q) => $q->with('puja:id,name')->orderBy('booked_for'),
+                    'tickets' => fn ($q) => $q->with('event:id,title')->orderBy('occurs_on'),
+                    'donations' => fn ($q) => $q->with('devotee:id,name')->orderBy('paid_on'),
+                ]),
                 'payout' => $staff ? Settlements::payoutDetails($s) : null,
                 'staff' => $staff,
             ]))

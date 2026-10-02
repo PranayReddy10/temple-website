@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\EventRegistration;
 use App\Models\PujaBooking;
 use chillerlan\QRCode\Common\EccLevel;
 use chillerlan\QRCode\Output\QROutputInterface;
@@ -21,7 +22,7 @@ final class BookingQr
 {
     private const TOKEN = '/^[A-Za-z0-9]{20,40}$/';
 
-    public static function url(PujaBooking $booking): string
+    public static function url(PujaBooking|EventRegistration $booking): string
     {
         return rtrim((string) config('brand.url'), '/').'/bookings/'.$booking->code;
     }

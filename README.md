@@ -131,6 +131,32 @@ also settle from the Trust app. API: `GET /api/v1/trust/temples/{id}/finance`,
 `finance`, `settlements`, `temples/{id}/settlements`,
 `settlements/{id}/paid|cancel`, `temples/{id}/payout-account/verify`.
 
+## Bhajan gatherings, event tickets and online hundi
+
+- **Events** take a new type, *Bhajan gathering*, and weekly repetition
+  (every week on the first date's weekday, "To" = last week, blank = ongoing).
+  An event can name who leads it, say whether it is open to all, list its
+  songs, and switch on **"Devotees can join in the app"**: free → *I'll join*;
+  priced → paid tickets per person, with a limit per date. Tickets work like
+  seva bookings: a QR code, received once at the gate (trust app **Scan at
+  counter**), expiring after their day. An event that sold tickets cannot be
+  deleted, and its price cannot change once sold.
+- **Online hundi**: a temple's owner switches it on in the trust app (or
+  staff under Temple balances → Payout details). Devotees give ₹10 to
+  ₹5,00,000 with a purpose (general, annadanam, maintenance, gau seva,
+  festival), optionally anonymously: the temple then sees "A devotee".
+- **Money**: tickets and gifts are paid through the same gateways and
+  settled in the same settlements as seva bookings. Settings → Payment
+  gateways has the fee on sevas and tickets and a separate fee on hundi gifts
+  (usually 0). Admin → Finance lists **Event tickets** and **Hundi donations**
+  with *Mark refunded*. Paid seva bookings that expired unused are now
+  settled too (the money is the temple's unless refunded).
+- API: `GET events?type=bhajan&lat=&lng=`, `GET events/{id}`,
+  `POST events/{id}/join`, `me/event-tickets[/{ref}[/pay|/cancel]]`,
+  `POST temples/{slug}/donations`, `me/donations[/{ref}]`; trust:
+  `temples/{id}/events/{e}/registrations`, `temples/{id}/donations`,
+  `PUT temples/{id}/donation-settings`; `bookings/scan|verify` accept tickets.
+
 ## Telangana temples
 
 `TelanganaTempleSeeder` covers 45 temples across every region of Telangana —

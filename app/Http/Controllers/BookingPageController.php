@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\EventRegistration;
 use App\Models\PujaBooking;
 use Illuminate\View\View;
 
@@ -14,8 +15,12 @@ class BookingPageController extends Controller
 {
     public function __invoke(string $code): View
     {
+        $booking = PujaBooking::findByCode($code)?->load(['puja', 'temple', 'verifier']);
+
         return view('booking', [
-            'booking' => PujaBooking::findByCode($code)?->load(['puja', 'temple', 'verifier']),
+            'booking' => $booking,
+            // Event tickets carry the same kind of code.
+            'ticket' => $booking === null ? EventRegistration::findByCode($code)?->load(['event', 'temple', 'verifier']) : null,
         ]);
     }
 }

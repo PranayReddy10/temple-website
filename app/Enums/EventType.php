@@ -12,6 +12,7 @@ enum EventType: string implements HasColor, HasIcon, HasLabel
     case Program = 'program';
     case Puja = 'puja';
     case Announcement = 'announcement';
+    case Bhajan = 'bhajan';
 
     public function getLabel(): string
     {
@@ -20,6 +21,7 @@ enum EventType: string implements HasColor, HasIcon, HasLabel
             self::Program => 'Program',
             self::Puja => 'Special puja',
             self::Announcement => 'Announcement',
+            self::Bhajan => 'Bhajan gathering',
         };
     }
 
@@ -30,6 +32,7 @@ enum EventType: string implements HasColor, HasIcon, HasLabel
             self::Program => 'info',
             self::Puja => 'primary',
             self::Announcement => 'gray',
+            self::Bhajan => 'success',
         };
     }
 
@@ -40,6 +43,7 @@ enum EventType: string implements HasColor, HasIcon, HasLabel
             self::Program => 'heroicon-m-calendar-days',
             self::Puja => 'heroicon-m-fire',
             self::Announcement => 'heroicon-m-megaphone',
+            self::Bhajan => 'heroicon-m-musical-note',
         };
     }
 }

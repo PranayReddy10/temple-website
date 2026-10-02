@@ -139,7 +139,9 @@ class PujaBooking extends Model
      */
     public function scopeSettleable(Builder $query): Builder
     {
-        return $query->live()
+        // Expired counts: a paid seva the devotee did not come for is still
+        // the temple's money; only a refund takes it back.
+        return $query->whereIn('status', [\App\Enums\BookingStatus::Confirmed->value, \App\Enums\BookingStatus::Verified->value, \App\Enums\BookingStatus::Expired->value])
             ->where('amount_paise', '>', 0)
             ->whereNull('settlement_id')
             ->whereHas('payment', fn (Builder $q) => $q->where('status', Payment::PAID));

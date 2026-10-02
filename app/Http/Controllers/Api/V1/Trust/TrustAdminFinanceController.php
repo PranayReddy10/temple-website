@@ -33,14 +33,24 @@ class TrustAdminFinanceController extends Controller
             return ['bookings' => (int) $row->n, 'amount_paise' => (int) $row->amount, 'amount' => TempleSettlement::rupees((int) $row->amount)];
         })($query->selectRaw('count(*) as n, coalesce(sum(amount_paise), 0) as amount')->first());
 
-        // Everything paid and unsettled, advance bookings included; "ahead"
-        // is the part for seva days still to come.
-        $owed = PujaBooking::query()
-            ->settleable()
-            ->selectRaw('temple_id, count(*) as n, coalesce(sum(amount_paise), 0) as gross, coalesce(sum(case when booked_for > ? then amount_paise else 0 end), 0) as ahead', [$cutoff])
-            ->groupBy('temple_id')
-            ->get()
-            ->keyBy('temple_id');
+        // Everything paid and unsettled across sevas, tickets and hundi gifts,
+        // advance ones included; "ahead" is the part dated after yesterday.
+        $owed = [];
+        foreach (Settlements::SOURCES as $key => [$model, $column]) {
+            $rows = $model::query()->settleable()
+                ->selectRaw("temple_id, count(*) as n, coalesce(sum(amount_paise), 0) as gross, coalesce(sum(case when {$column} > ? then amount_paise else 0 end), 0) as ahead", [$cutoff])
+                ->groupBy('temple_id')
+                ->get();
+            foreach ($rows as $r) {
+                $o = $owed[$r->temple_id] ?? ['n' => 0, 'gross' => 0, 'ahead' => 0, 'services' => 0, 'donations' => 0];
+                $o['n'] += (int) $r->n;
+                $o['gross'] += (int) $r->gross;
+                $o['ahead'] += (int) $r->ahead;
+                $o[$key === 'donations' ? 'donations' : 'services'] += (int) $r->gross;
+                $owed[$r->temple_id] = $o;
+            }
+        }
+        $owed = collect($owed);
 
         $pending = TempleSettlement::query()->pending()
             ->selectRaw('temple_id, count(*) as n, coalesce(sum(net_paise), 0) as net')
@@ -52,17 +62,19 @@ class TrustAdminFinanceController extends Controller
 
         $temples = Temple::query()->whereKey($ids)->with('payoutAccount')->orderBy('name')->get(['id', 'name', 'city'])
             ->map(function (Temple $t) use ($owed, $pending, $settlements): array {
-                $gross = (int) ($owed[$t->id]->gross ?? 0);
+                $o = $owed[$t->id] ?? ['n' => 0, 'gross' => 0, 'ahead' => 0, 'services' => 0, 'donations' => 0];
+                $gross = $o['gross'];
                 $percent = $settlements->feePercentFor($t);
-                $fee = Settlements::feeOf($gross, $percent);
+                $fee = $settlements->feeFor($t, $o['services'], $o['donations']);
 
                 return [
                     'id' => $t->id,
                     'name' => $t->name,
                     'city' => $t->city,
-                    'ready_bookings' => (int) ($owed[$t->id]->n ?? 0),
+                    'ready_bookings' => $o['n'],
+                    'ready_donations_paise' => $o['donations'],
                     'ready_gross_paise' => $gross,
-                    'ahead_gross_paise' => (int) ($owed[$t->id]->ahead ?? 0),
+                    'ahead_gross_paise' => $o['ahead'],
                     'fee_percent' => $percent,
                     'ready_net_paise' => $gross - $fee,
                     'ready_net' => TempleSettlement::rupees($gross - $fee),
@@ -79,7 +91,7 @@ class TrustAdminFinanceController extends Controller
             'cutoff' => $cutoff,
             'today' => $sum(PujaBooking::query()->paidFor()->whereDate('booked_for', $now->toDateString())),
             'collected_today' => (function () use ($now): array {
-                $amount = (int) Payment::query()->paid()->where('purpose', Payment::PUJA_BOOKING)
+                $amount = (int) Payment::query()->paid()->whereIn('purpose', [Payment::PUJA_BOOKING, Payment::EVENT_TICKET, Payment::DONATION])
                     ->where('paid_at', '>=', $now->copy()->startOfDay()->utc())->sum('amount_paise');
 
                 return ['amount_paise' => $amount, 'amount' => TempleSettlement::rupees($amount)];

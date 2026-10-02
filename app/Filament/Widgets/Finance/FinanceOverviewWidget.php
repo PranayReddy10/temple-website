@@ -6,6 +6,7 @@ use App\Filament\Resources\TempleBalances\TempleBalanceResource;
 use App\Filament\Resources\TempleSettlements\TempleSettlementResource;
 use App\Models\Payment;
 use App\Models\PujaBooking;
+use App\Models\TempleDonation;
 use App\Models\TempleSettlement;
 use App\Support\DevotionalClock;
 use App\Support\Finance\Settlements;
@@ -35,14 +36,19 @@ class FinanceOverviewWidget extends StatsOverviewWidget
         $todayRow = PujaBooking::query()->paidFor()->whereDate('booked_for', $today)
             ->selectRaw('count(*) as n, coalesce(sum(people), 0) as people, coalesce(sum(amount_paise), 0) as amount')->first();
 
-        $collectedToday = (int) Payment::query()->paid()->where('purpose', Payment::PUJA_BOOKING)
+        $collectedToday = (int) Payment::query()->paid()->whereIn('purpose', [Payment::PUJA_BOOKING, Payment::EVENT_TICKET, Payment::DONATION])
             ->where('paid_at', '>=', $now->copy()->startOfDay()->utc())->sum('amount_paise');
 
         $month = (int) PujaBooking::query()->paidFor()
             ->whereDate('booked_for', '>=', $monthFrom)->whereDate('booked_for', '<=', $monthTo)->sum('amount_paise');
 
-        $owedGross = (int) PujaBooking::query()->settleable()->whereDate('booked_for', '<=', $cutoff)->sum('amount_paise');
-        $heldAhead = (int) PujaBooking::query()->settleable()->whereDate('booked_for', '>', $cutoff)->sum('amount_paise');
+        $owedGross = 0;
+        $heldAhead = 0;
+        foreach (Settlements::SOURCES as [$model, $column]) {
+            $owedGross += (int) $model::query()->settleable()->whereDate($column, '<=', $cutoff)->sum('amount_paise');
+            $heldAhead += (int) $model::query()->settleable()->whereDate($column, '>', $cutoff)->sum('amount_paise');
+        }
+        $hundiMonth = (int) TempleDonation::query()->paid()->whereDate('paid_on', '>=', $monthFrom)->sum('amount_paise');
 
         $pending = TempleSettlement::query()->pending()->selectRaw('count(*) as n, coalesce(sum(net_paise), 0) as net')->first();
         $paidMonth = TempleSettlement::query()->paid()->where('paid_at', '>=', $now->copy()->startOfMonth()->utc())
@@ -57,12 +63,12 @@ class FinanceOverviewWidget extends StatsOverviewWidget
                 ->color('primary'),
 
             Stat::make('Collected today', $rupees($collectedToday))
-                ->description('Seva payments received through the gateway')
+                ->description('Sevas, event tickets and hundi, through the gateway')
                 ->descriptionIcon('heroicon-m-credit-card')
                 ->color('success'),
 
             Stat::make('Sevas this month', $rupees($month))
-                ->description($now->format('F Y').', by seva day')
+                ->description($now->format('F Y').', by seva day · hundi '.$rupees($hundiMonth))
                 ->descriptionIcon('heroicon-m-calendar-days')
                 ->color('gray'),
 

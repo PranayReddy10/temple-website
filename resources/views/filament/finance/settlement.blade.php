@@ -16,9 +16,12 @@
 
     <dl style="display:grid;grid-template-columns:auto 1fr;gap:.35rem .9rem;font-size:.9rem;margin:0">
         <dt style="opacity:.65">Seva days</dt><dd style="margin:0">{{ $settlement->periodLabel() }}</dd>
-        <dt style="opacity:.65">Bookings</dt><dd style="margin:0">{{ $settlement->bookings_count }}</dd>
+        <dt style="opacity:.65">Covers</dt><dd style="margin:0">{{ $settlement->itemsLabel() }}</dd>
+        @if ($settlement->bookings_paise || $settlement->tickets_paise || $settlement->donations_paise)
+            <dt style="opacity:.65">Of which</dt><dd style="margin:0">Sevas {{ $rs($settlement->bookings_paise) }} · Tickets {{ $rs($settlement->tickets_paise) }} · Hundi {{ $rs($settlement->donations_paise) }}</dd>
+        @endif
         <dt style="opacity:.65">Paid by devotees</dt><dd style="margin:0">{{ $rs($settlement->gross_paise) }}</dd>
-        <dt style="opacity:.65">Platform fee</dt><dd style="margin:0">{{ $rs($settlement->fee_paise) }} <span style="opacity:.65">({{ rtrim(rtrim(number_format((float) $settlement->fee_percent, 2), '0'), '.') }}%)</span></dd>
+        <dt style="opacity:.65">Platform fee</dt><dd style="margin:0">{{ $rs($settlement->fee_paise) }} <span style="opacity:.65">({{ rtrim(rtrim(number_format((float) $settlement->fee_percent, 2), '0'), '.') }}%@if ($settlement->donations_paise), {{ rtrim(rtrim(number_format((float) $settlement->donation_fee_percent, 2), '0'), '.') }}% on hundi @endif)</span></dd>
         <dt style="opacity:.65">To the temple</dt><dd style="margin:0;font-weight:700;font-size:1.05rem">{{ $rs($settlement->net_paise) }}</dd>
         @if ($staff)
             <dt style="opacity:.65">Pay to</dt>
@@ -51,6 +54,24 @@
                 </tr>
             </thead>
             <tbody>
+                @foreach ($settlement->tickets as $t)
+                    <tr style="border-top:1px solid rgba(127,127,127,.2)">
+                        <td style="padding:.35rem .5rem;white-space:nowrap">{{ $t->occurs_on?->format('d M Y') }}</td>
+                        <td style="padding:.35rem .5rem">Ticket · {{ $t->event?->title }}</td>
+                        <td style="padding:.35rem .5rem">{{ $t->devotee_name }} <span style="opacity:.65">· {{ $t->people }}</span></td>
+                        <td style="padding:.35rem .5rem;font-family:monospace">{{ $t->reference }}</td>
+                        <td style="padding:.35rem .5rem;text-align:right">{{ $t->amountLabel() }}</td>
+                    </tr>
+                @endforeach
+                @foreach ($settlement->donations as $d)
+                    <tr style="border-top:1px solid rgba(127,127,127,.2)">
+                        <td style="padding:.35rem .5rem;white-space:nowrap">{{ $d->paid_on?->format('d M Y') }}</td>
+                        <td style="padding:.35rem .5rem">Hundi · {{ $d->purposeLabel() }}</td>
+                        <td style="padding:.35rem .5rem">{{ $staff ? ($d->donor_name ?? $d->devotee?->name) : $d->displayName() }}</td>
+                        <td style="padding:.35rem .5rem;font-family:monospace">{{ $d->reference }}</td>
+                        <td style="padding:.35rem .5rem;text-align:right">{{ $d->amountLabel() }}</td>
+                    </tr>
+                @endforeach
                 @forelse ($settlement->bookings as $b)
                     <tr style="border-top:1px solid rgba(127,127,127,.2)">
                         <td style="padding:.35rem .5rem;white-space:nowrap">{{ $b->booked_for?->format('d M Y') }}</td>
@@ -60,7 +81,9 @@
                         <td style="padding:.35rem .5rem;text-align:right">{{ $b->amountLabel() }}</td>
                     </tr>
                 @empty
+                    @if ($settlement->tickets->isEmpty() && $settlement->donations->isEmpty())
                     <tr><td colspan="5" style="padding:.5rem;opacity:.65">{{ $settlement->status === 'cancelled' ? 'Cancelled: its bookings went back into the balance.' : 'No bookings.' }}</td></tr>
+                    @endif
                 @endforelse
             </tbody>
         </table>

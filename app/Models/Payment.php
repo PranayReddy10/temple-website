@@ -31,6 +31,10 @@ class Payment extends Model
 
     public const PUJA_BOOKING = 'puja_booking';
 
+    public const EVENT_TICKET = 'event_ticket';
+
+    public const DONATION = 'donation';
+
     public const GATEWAYS = [
         'razorpay' => 'Razorpay',
         'phonepe' => 'PhonePe',
@@ -91,6 +95,18 @@ class Payment extends Model
         return $this->hasOne(PujaBooking::class);
     }
 
+    /** The event place this payment buys, when that is what it is for. */
+    public function registration(): HasOne
+    {
+        return $this->hasOne(EventRegistration::class);
+    }
+
+    /** The hundi gift this payment carries. */
+    public function donation(): HasOne
+    {
+        return $this->hasOne(TempleDonation::class);
+    }
+
     public function isForBooking(): bool
     {
         return $this->purpose === self::PUJA_BOOKING;
@@ -108,6 +124,16 @@ class Payment extends Model
             return $booking === null
                 ? 'Seva booking'
                 : trim(($booking->puja?->name ?? 'Seva').' · '.($booking->temple?->name ?? ''), ' ·');
+        }
+
+        if ($this->purpose === self::EVENT_TICKET) {
+            $r = $this->registration;
+
+            return $r === null ? 'Event ticket' : trim(($r->event?->title ?? 'Event').' · '.($r->temple?->name ?? ''), ' ·');
+        }
+
+        if ($this->purpose === self::DONATION) {
+            return 'Hundi · '.($this->donation?->temple?->name ?? 'temple');
         }
 
         return $this->plan?->name ?? config('brand.name');

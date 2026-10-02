@@ -18,6 +18,8 @@ use App\Http\Controllers\Api\V1\PassportController;
 use App\Http\Controllers\Api\V1\PassportShareController;
 use App\Http\Controllers\Api\V1\PincodeController;
 use App\Http\Controllers\Api\V1\PujaBookingController;
+use App\Http\Controllers\Api\V1\EventRegistrationController;
+use App\Http\Controllers\Api\V1\DonationController;
 use App\Http\Controllers\Api\V1\ReviewController;
 use App\Http\Controllers\Api\V1\SevaDriveController;
 use App\Http\Controllers\Api\V1\StateController;
@@ -108,6 +110,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         ->name('passports.show');
 
     Route::get('events', [EventController::class, 'index'])->name('events.index');
+    Route::get('events/{event}', [EventController::class, 'show'])->whereNumber('event')->name('events.show');
 
     // What devotees said about visiting: published accounts, with the
     // per-dimension summary. There is no overall score, on purpose.
@@ -319,6 +322,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 Route::post('events', [TrustEventController::class, 'store'])->middleware('throttle:30,1')->name('events.store');
                 Route::post('events/{event}', [TrustEventController::class, 'update'])->whereNumber('event')->name('events.update');
                 Route::delete('events/{event}', [TrustEventController::class, 'destroy'])->whereNumber('event')->name('events.destroy');
+                Route::get('events/{event}/registrations', [TrustEventController::class, 'registrations'])->whereNumber('event')->name('events.registrations');
 
                 Route::get('sevas', [TrustPujaController::class, 'index'])->name('sevas.index');
                 Route::post('sevas', [TrustPujaController::class, 'store'])->middleware('throttle:30,1')->name('sevas.store');
@@ -337,6 +341,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 Route::get('settlements', [TrustFinanceController::class, 'settlements'])->name('settlements.index');
                 Route::get('settlements/{settlement}', [TrustFinanceController::class, 'settlement'])->whereNumber('settlement')->name('settlements.show');
                 Route::put('payout-account', [TrustFinanceController::class, 'updatePayoutAccount'])->middleware('throttle:10,1')->name('payout-account.update');
+                Route::get('donations', [TrustFinanceController::class, 'donations'])->name('donations.index');
+                Route::put('donation-settings', [TrustFinanceController::class, 'donationSettings'])->middleware('throttle:10,1')->name('donation-settings.update');
 
                 Route::get('reviews', [TrustReviewController::class, 'index'])->name('reviews.index');
                 Route::post('reviews/{review}/reply', [TrustReviewController::class, 'reply'])->whereNumber('review')->name('reviews.reply');
@@ -424,6 +430,32 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->whereNumber('puja')
             ->middleware('throttle:10,1')
             ->name('me.bookings.store');
+
+        // Events: "I'll join" and tickets, shaped like seva bookings.
+        Route::get('me/event-tickets', [EventRegistrationController::class, 'index'])->name('me.event-tickets.index');
+        Route::get('me/event-tickets/{reference}', [EventRegistrationController::class, 'show'])
+            ->where('reference', '[A-Za-z0-9]{6,16}')
+            ->name('me.event-tickets.show');
+        Route::post('me/event-tickets/{reference}/pay', [EventRegistrationController::class, 'pay'])
+            ->where('reference', '[A-Za-z0-9]{6,16}')
+            ->middleware('throttle:20,1')
+            ->name('me.event-tickets.pay');
+        Route::post('me/event-tickets/{reference}/cancel', [EventRegistrationController::class, 'cancel'])
+            ->where('reference', '[A-Za-z0-9]{6,16}')
+            ->name('me.event-tickets.cancel');
+        Route::post('events/{event}/join', [EventRegistrationController::class, 'store'])
+            ->whereNumber('event')
+            ->middleware('throttle:10,1')
+            ->name('events.join');
+
+        // Online hundi.
+        Route::get('me/donations', [DonationController::class, 'index'])->name('me.donations.index');
+        Route::get('me/donations/{reference}', [DonationController::class, 'show'])
+            ->where('reference', '[A-Za-z0-9]{6,16}')
+            ->name('me.donations.show');
+        Route::post('temples/{temple:slug}/donations', [DonationController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('me.donations.store');
 
         Route::post('me/passport/qr/reset', [PassportShareController::class, 'reset'])
             ->middleware('throttle:6,1')

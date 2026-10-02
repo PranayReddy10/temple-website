@@ -36,7 +36,8 @@ class TempleSettlement extends Model
 
     protected $fillable = [
         'temple_id', 'period_from', 'period_to', 'bookings_count',
-        'gross_paise', 'fee_percent', 'fee_paise', 'net_paise', 'currency',
+        'bookings_paise', 'tickets_count', 'tickets_paise', 'donations_count', 'donations_paise',
+        'gross_paise', 'fee_percent', 'donation_fee_percent', 'fee_paise', 'net_paise', 'currency',
         'status', 'payout_to', 'method', 'transaction_ref', 'paid_at', 'note',
         'cancel_reason', 'created_by', 'paid_by',
     ];
@@ -52,6 +53,12 @@ class TempleSettlement extends Model
             'period_from' => 'date',
             'period_to' => 'date',
             'bookings_count' => 'integer',
+            'bookings_paise' => 'integer',
+            'tickets_count' => 'integer',
+            'tickets_paise' => 'integer',
+            'donations_count' => 'integer',
+            'donations_paise' => 'integer',
+            'donation_fee_percent' => 'decimal:2',
             'gross_paise' => 'integer',
             'fee_percent' => 'decimal:2',
             'fee_paise' => 'integer',
@@ -90,6 +97,26 @@ class TempleSettlement extends Model
     public function bookings(): HasMany
     {
         return $this->hasMany(PujaBooking::class, 'settlement_id');
+    }
+
+    public function tickets(): HasMany
+    {
+        return $this->hasMany(EventRegistration::class, 'settlement_id');
+    }
+
+    public function donations(): HasMany
+    {
+        return $this->hasMany(TempleDonation::class, 'settlement_id');
+    }
+
+    /** "12 bookings · 3 tickets · 5 hundi gifts", leaving out what is not there. */
+    public function itemsLabel(): string
+    {
+        return collect([
+            $this->bookings_count > 0 ? $this->bookings_count.' '.($this->bookings_count === 1 ? 'seva booking' : 'seva bookings') : null,
+            $this->tickets_count > 0 ? $this->tickets_count.' '.($this->tickets_count === 1 ? 'event ticket' : 'event tickets') : null,
+            $this->donations_count > 0 ? $this->donations_count.' '.($this->donations_count === 1 ? 'hundi gift' : 'hundi gifts') : null,
+        ])->filter()->implode(' · ') ?: 'Nothing';
     }
 
     public function creator(): BelongsTo
@@ -152,6 +179,13 @@ class TempleSettlement extends Model
             'period_to' => $this->period_to?->toDateString(),
             'period' => $this->periodLabel(),
             'bookings_count' => $this->bookings_count,
+            'items' => $this->itemsLabel(),
+            'breakdown' => [
+                'bookings' => ['count' => $this->bookings_count, 'amount_paise' => $this->bookings_paise, 'amount' => self::rupees($this->bookings_paise)],
+                'tickets' => ['count' => $this->tickets_count, 'amount_paise' => $this->tickets_paise, 'amount' => self::rupees($this->tickets_paise)],
+                'donations' => ['count' => $this->donations_count, 'amount_paise' => $this->donations_paise, 'amount' => self::rupees($this->donations_paise)],
+            ],
+            'donation_fee_percent' => (float) $this->donation_fee_percent,
             'gross_paise' => $this->gross_paise,
             'gross' => self::rupees($this->gross_paise),
             'fee_percent' => (float) $this->fee_percent,
@@ -180,6 +214,20 @@ class TempleSettlement extends Model
                     'amount' => $b->amountLabel(),
                     'status' => ['value' => $b->status->value, 'label' => $b->status->getLabel()],
                 ])->values()->all()
+                : null,
+            'tickets' => $withBookings
+                ? $this->tickets->map(fn (EventRegistration $r): array => [
+                    'reference' => $r->reference,
+                    'occurs_on' => $r->occurs_on?->toDateString(),
+                    'event' => $r->event?->title,
+                    'devotee_name' => $r->devotee_name,
+                    'people' => $r->people,
+                    'amount_paise' => $r->amount_paise,
+                    'amount' => $r->amountLabel(),
+                ])->values()->all()
+                : null,
+            'donations' => $withBookings
+                ? $this->donations->map(fn (TempleDonation $d): array => $d->toTempleArray())->values()->all()
                 : null,
         ];
     }

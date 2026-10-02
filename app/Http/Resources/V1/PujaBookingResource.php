@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Models\PujaBooking;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -9,7 +10,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * A seva booking as the devotee who made it sees it: what, where, when, for
  * whom, what it cost, and the code the counter scans.
  *
- * @mixin \App\Models\PujaBooking
+ * @mixin PujaBooking
  */
 class PujaBookingResource extends JsonResource
 {
@@ -19,6 +20,7 @@ class PujaBookingResource extends JsonResource
         $temple = $this->whenLoaded('temple', fn () => $this->temple);
 
         return [
+            'kind' => 'seva',
             // The reference is the public id; the row id never leaves.
             'reference' => $this->reference,
             // The counter code only once the booking holds: a booking still

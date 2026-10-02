@@ -53,6 +53,8 @@ class Temple extends Model
         'official_website', 'contact_phone', 'contact_email',
         'dress_code', 'photography_policy', 'mobile_policy', 'footwear_policy',
         'entry_rules', 'queue_information',
+        // The online hundi: the trust app lets only the owner change it.
+        'accepts_donations',
     ];
 
     protected $fillable = [
@@ -65,7 +67,7 @@ class Temple extends Model
         'entry_rules', 'queue_information',
         'official_website', 'contact_phone', 'contact_email',
         'verification_status', 'source_name', 'source_url', 'last_verified_at',
-        'status', 'is_featured', 'published_at', 'created_by', 'updated_by',
+        'status', 'is_featured', 'accepts_donations', 'published_at', 'created_by', 'updated_by',
     ];
 
     protected function casts(): array
@@ -73,6 +75,7 @@ class Temple extends Model
         return [
             'status' => TempleStatus::class,
             'is_featured' => 'boolean',
+            'accepts_donations' => 'boolean',
             'verification_status' => VerificationStatus::class,
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
@@ -188,6 +191,18 @@ class Temple extends Model
     public function settlements(): HasMany
     {
         return $this->hasMany(TempleSettlement::class);
+    }
+
+    /** Places at its events: "I'll join" and tickets. */
+    public function eventRegistrations(): HasMany
+    {
+        return $this->hasMany(EventRegistration::class);
+    }
+
+    /** Online hundi: money devotees gave through the app. */
+    public function donations(): HasMany
+    {
+        return $this->hasMany(TempleDonation::class);
     }
 
     // --- What devotees add ---

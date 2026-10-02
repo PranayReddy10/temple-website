@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Trust;
 use App\Http\Controllers\Api\V1\Trust\Concerns\ScopesToTrustTemples;
 use App\Http\Controllers\Controller;
 use App\Models\Temple;
+use App\Models\TempleDonation;
 use App\Models\TemplePayoutAccount;
 use App\Models\TempleSettlement;
 use App\Models\TempleUser;
@@ -41,6 +42,7 @@ class TrustFinanceController extends Controller
             'balance' => $settlements->balance($record),
             'payout_account' => $record->payoutAccount?->toPublicArray(),
             'can_edit_payout_account' => $this->canEditPayout($request, $record),
+            'accepts_donations' => (bool) $record->accepts_donations,
             'recent_settlements' => $record->settlements()->latest('id')->limit(5)->get()
                 ->map(fn (TempleSettlement $s): array => $s->toPublicArray())->values(),
         ]]);
@@ -60,7 +62,11 @@ class TrustFinanceController extends Controller
         $record = $this->managedTemple($request, $temple);
 
         /** @var TempleSettlement $row */
-        $row = $record->settlements()->with(['bookings' => fn ($q) => $q->with('puja:id,name')->orderBy('booked_for')])->findOrFail($settlement);
+        $row = $record->settlements()->with([
+            'bookings' => fn ($q) => $q->with('puja:id,name')->orderBy('booked_for'),
+            'tickets' => fn ($q) => $q->with('event:id,title')->orderBy('occurs_on'),
+            'donations' => fn ($q) => $q->with('devotee:id,name')->orderBy('paid_on'),
+        ])->findOrFail($settlement);
 
         return response()->json(['data' => $row->toPublicArray(withBookings: true)]);
     }
@@ -111,6 +117,48 @@ class TrustFinanceController extends Controller
         $account->save();
 
         return response()->json(['data' => $account->refresh()->toPublicArray()]);
+    }
+
+    /** Online hundi: every gift, newest first, with today's and the month's totals. */
+    public function donations(Request $request, int $temple): JsonResponse
+    {
+        $record = $this->managedTemple($request, $temple);
+        $now = DevotionalClock::now();
+
+        $validated = $request->validate(['date' => ['nullable', 'date_format:Y-m-d']]);
+
+        $rows = $record->donations()
+            ->whereIn('status', [TempleDonation::PAID, TempleDonation::REFUNDED])
+            ->with('devotee:id,name')
+            ->when($validated['date'] ?? null, fn ($q, $d) => $q->whereDate('paid_on', $d))
+            ->latest('paid_at')
+            ->limit(200)
+            ->get();
+
+        $sum = fn ($q) => ['count' => (int) (clone $q)->count(), 'amount_paise' => (int) (clone $q)->sum('amount_paise')];
+        $paid = fn () => $record->donations()->paid();
+
+        return response()->json(['data' => [
+            'accepts_donations' => (bool) $record->accepts_donations,
+            'can_change' => $this->canEditPayout($request, $record),
+            'today' => $sum($paid()->whereDate('paid_on', $now->toDateString())),
+            'month' => $sum($paid()->whereDate('paid_on', '>=', $now->copy()->startOfMonth()->toDateString())),
+            'total' => $sum($paid()),
+            'items' => $rows->map(fn (TempleDonation $d): array => $d->toTempleArray())->values(),
+        ]]);
+    }
+
+    /** The owner switches the online hundi on or off. */
+    public function donationSettings(Request $request, int $temple): JsonResponse
+    {
+        $record = $this->managedTemple($request, $temple);
+
+        abort_unless($this->canEditPayout($request, $record), 403, 'Only the temple\'s owner can switch the online hundi on or off.');
+
+        $validated = $request->validate(['accepts_donations' => ['required', 'boolean']]);
+        $record->forceFill(['accepts_donations' => $validated['accepts_donations']])->save();
+
+        return response()->json(['data' => ['accepts_donations' => (bool) $record->accepts_donations]]);
     }
 
     protected function canEditPayout(Request $request, Temple $temple): bool

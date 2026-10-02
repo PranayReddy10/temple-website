@@ -2,10 +2,13 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Http\Controllers\Api\V1\EngagementController;
+use App\Models\Temple;
+use App\Models\TempleDonation;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Temple */
+/** @mixin Temple */
 class TempleDetailResource extends JsonResource
 {
     public function toArray(Request $request): array
@@ -87,6 +90,14 @@ class TempleDetailResource extends JsonResource
             // An editorial "famous temple" mark. Not a trust claim: read
             // `trust` for how far the record can be relied on.
             'is_featured' => (bool) $this->is_featured,
+            // Online hundi: the app shows "Give to the hundi" when on.
+            'donations' => [
+                'enabled' => (bool) $this->accepts_donations,
+                'purposes' => collect(TempleDonation::PURPOSES)->map(fn ($label, $value) => ['value' => $value, 'label' => $label])->values(),
+                'min_amount' => TempleDonation::MIN_PAISE / 100,
+                'max_amount' => TempleDonation::MAX_PAISE / 100,
+                'suggested_amounts' => [101, 251, 501, 1001, 2101, 5001],
+            ],
 
             'trust' => [
                 'level' => $this->verification_status?->value,
@@ -130,7 +141,7 @@ class TempleDetailResource extends JsonResource
              * because a place of worship is not ranked. `viewer` is where
              * the signed-in caller stands, null for a guest.
              */
-            'engagement' => \App\Http\Controllers\Api\V1\EngagementController::state($request, $this->resource),
+            'engagement' => EngagementController::state($request, $this->resource),
 
             'published_at' => $this->published_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
