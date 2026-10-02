@@ -7,6 +7,7 @@ use App\Models\TempleUser;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\Textarea;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -57,6 +58,35 @@ class TempleAccessTable
                     default => 'warning',
                 }),
 
+            // What they wrote when asking: who they are and how to verify it.
+            TextColumn::make('claim_note')
+                ->label('Their note')
+                ->placeholder('—')
+                ->wrap()
+                ->limit(120)
+                ->tooltip(fn (TempleUser $record): ?string => $record->claim_note),
+
+            TextColumn::make('claim_location')
+                ->label('Asked from')
+                ->state(fn (TempleUser $record): string => $record->claimLocationSummary())
+                ->icon(fn (TempleUser $record): ?string => $record->hasClaimLocation() ? 'heroicon-o-map-pin' : null)
+                ->color(fn (TempleUser $record): string => match (true) {
+                    ! $record->hasClaimLocation() || $record->claim_distance_m === null => 'gray',
+                    $record->claim_distance_m <= TempleUser::CLAIM_RADIUS_M => 'success',
+                    default => 'danger',
+                })
+                ->url(fn (TempleUser $record): ?string => $record->claimMapUrl(), shouldOpenInNewTab: true)
+                ->wrap(),
+
+            TextColumn::make('requested_at')->label('Asked')->since()->placeholder('—')->sortable()->toggleable(),
+
+            TextColumn::make('rejection_reason')
+                ->label('Reason refused')
+                ->placeholder('—')
+                ->wrap()
+                ->limit(80)
+                ->toggleable(isToggledHiddenByDefault: true),
+
             TextColumn::make('approver.name')
                 ->label('Approved by')
                 ->placeholder('—')
@@ -75,6 +105,11 @@ class TempleAccessTable
                 ->query(fn (Builder $query): Builder => $query->pending())
                 ->toggle(),
 
+            Filter::make('rejected')
+                ->label('Rejected')
+                ->query(fn (Builder $query): Builder => $query->rejected())
+                ->toggle(),
+
             Filter::make('approved')
                 ->label('Active access only')
                 ->query(fn (Builder $query): Builder => $query->approved())
@@ -88,6 +123,27 @@ class TempleAccessTable
     public static function recordActions(): array
     {
         return [
+            Action::make('details')
+                ->label('Details')
+                ->icon('heroicon-o-eye')
+                ->color('gray')
+                ->modalHeading(fn (TempleUser $record): string => 'Request to manage '.($record->temple?->name ?? 'temple'))
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel('Close')
+                ->schema(fn (TempleUser $record): array => [
+                    TextEntry::make('who')->label('Account')
+                        ->state(trim(($record->user?->name ?? '—').' · '.($record->user?->email ?? '').' · '.($record->user?->phone ?? ''), ' ·')),
+                    TextEntry::make('level')->label('Level')->state(ucfirst((string) $record->role)),
+                    TextEntry::make('note')->label('Their note')->state($record->claim_note ?? '—'),
+                    TextEntry::make('where')->label('Asked from')
+                        ->state($record->claimLocationSummary())
+                        ->url($record->claimMapUrl(), shouldOpenInNewTab: true)
+                        ->helperText($record->hasClaimLocation() ? $record->claim_latitude.', '.$record->claim_longitude.' — open on the map' : null),
+                    TextEntry::make('asked')->label('Asked on')->state($record->requested_at?->format('d M Y, H:i') ?? '—'),
+                    TextEntry::make('status')->label('Status')->state(ucfirst($record->status())),
+                    TextEntry::make('reason')->label('Reason refused')->state($record->rejection_reason)->visible($record->isRejected()),
+                ]),
+
             Action::make('approve')
                 ->label('Approve')
                 ->icon('heroicon-o-check')
@@ -99,6 +155,25 @@ class TempleAccessTable
                     'approved_at' => now(),
                     'approved_by' => Auth::id(),
                     'rejection_reason' => null,
+                ])),
+
+            Action::make('reject')
+                ->label('Reject')
+                ->icon('heroicon-o-no-symbol')
+                ->color('danger')
+                ->visible(fn (TempleUser $record): bool => $record->status() === 'pending')
+                ->modalDescription('The request is refused and the person sees your reason in the Temple Trust app. They can ask again.')
+                ->form([
+                    Textarea::make('rejection_reason')
+                        ->label('Reason')
+                        ->required()
+                        ->rows(2)
+                        ->placeholder('e.g. Could not confirm with the temple office.'),
+                ])
+                ->action(fn (TempleUser $record, array $data) => $record->update([
+                    'approved_at' => null,
+                    'approved_by' => null,
+                    'rejection_reason' => $data['rejection_reason'],
                 ])),
 
             Action::make('revoke')
