@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\ActAsTempleTeam;
 use App\Http\Middleware\EnsureSuperAdmin;
+use App\Http\Middleware\NoStoreApiResponses;
 use App\Http\Middleware\SetApiLocale;
 use App\Http\Middleware\ThrottlePerRoute;
 use App\Support\TrustedProxies;
@@ -34,7 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Every API response is in some language, so the decision belongs to
         // the whole group rather than to the endpoints that remembered.
-        $middleware->api(append: [SetApiLocale::class]);
+        $middleware->api(append: [SetApiLocale::class, NoStoreApiResponses::class]);
 
         // Gateways POST the devotee back to these pages from their own
         // domain (PayU always, Razorpay's handler form too), which a CSRF

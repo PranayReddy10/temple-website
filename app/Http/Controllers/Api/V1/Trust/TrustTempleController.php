@@ -8,11 +8,13 @@ use App\Enums\TempleStatus;
 use App\Http\Controllers\Api\V1\Trust\Concerns\ScopesToTrustTemples;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\Trust\TrustTempleResource;
+use App\Models\District;
 use App\Models\Temple;
 use App\Support\DevotionalClock;
 use App\Support\TempleQr;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
@@ -56,7 +58,7 @@ class TrustTempleController extends Controller
 
     public function show(Request $request, int $temple): JsonResponse
     {
-        $record = $this->managedTemple($request, $temple)->load(['deity:id,name', 'state:id,name', 'primaryPhoto']);
+        $record = $this->managedTemple($request, $temple)->load(['deity:id,name', 'state:id,name', 'district:id,name', 'primaryPhoto']);
 
         return response()->json(['data' => (new TrustTempleResource($record))->withStats($this->stats($record))->resolve($request)]);
     }
@@ -69,6 +71,8 @@ class TrustTempleController extends Controller
             'short_description' => ['nullable', 'string', 'max:500'],
             'address' => ['nullable', 'string', 'max:1000'],
             'city' => ['nullable', 'string', 'max:255'],
+            'state_id' => ['nullable', 'integer', Rule::exists('states', 'id')],
+            'district' => ['nullable', 'string', 'min:2', 'max:100'],
             'pincode' => ['nullable', 'string', 'regex:/^[1-9][0-9]{5}$/'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
@@ -86,7 +90,22 @@ class TrustTempleController extends Controller
             'queue_information' => ['nullable', 'string', 'max:5000'],
         ]);
 
-        $record->fill(collect($validated)->except('location_accuracy')->all())->save();
+        $fill = collect($validated)->except(['location_accuracy', 'district'])->all();
+
+        // The district is typed; it is matched to the state's list by name,
+        // and added to it the first time a temple there names it.
+        if ($request->has('district') || $request->has('state_id')) {
+            $stateId = array_key_exists('state_id', $validated) ? $validated['state_id'] : $record->state_id;
+            $name = trim((string) ($validated['district'] ?? ''));
+            $fill['district_id'] = ($stateId && $name !== '')
+                ? District::query()->firstOrCreate(
+                    ['state_id' => $stateId, 'slug' => Str::slug($name)],
+                    ['name' => Str::title($name)],
+                )->getKey()
+                : null;
+        }
+
+        $record->fill($fill)->save();
 
         return $this->show($request, $temple);
     }

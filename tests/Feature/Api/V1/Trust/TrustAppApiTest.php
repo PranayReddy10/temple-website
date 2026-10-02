@@ -8,7 +8,9 @@ use App\Enums\TempleStatus;
 use App\Enums\TempleSuggestionStatus;
 use App\Enums\UserRole;
 use App\Models\Devotee;
+use App\Models\District;
 use App\Models\PujaBooking;
+use App\Models\State;
 use App\Models\Temple;
 use App\Models\TempleEvent;
 use App\Models\TemplePuja;
@@ -232,6 +234,31 @@ class TrustAppApiTest extends TestCase
         $this->as($token)->getJson('/api/v1/trust/me')
             ->assertJsonPath('data.claims.0.status', 'pending')
             ->assertJsonPath('data.registrations.0.temple_id', $temple->id);
+    }
+
+    public function test_the_address_carries_state_and_district_and_reloads_fresh(): void
+    {
+        [$token] = $this->manager();
+        $state = State::create(['name' => 'Telangana', 'slug' => 'telangana', 'code' => 'TG', 'type' => 'state']);
+
+        $this->as($token)->patchJson('/api/v1/trust/temples/'.$this->temple->id, [
+            'address' => 'Temple Street', 'state_id' => $state->id, 'district' => 'bhadradri kothagudem',
+        ])->assertOk()
+            ->assertJsonPath('data.profile.state', 'Telangana')
+            ->assertJsonPath('data.profile.district', 'Bhadradri Kothagudem');
+
+        // Same district again is matched, not duplicated.
+        $this->as($token)->patchJson('/api/v1/trust/temples/'.$this->temple->id, ['state_id' => $state->id, 'district' => 'Bhadradri Kothagudem'])->assertOk();
+        $this->assertSame(1, District::query()->count());
+
+        $res = $this->as($token)->getJson('/api/v1/trust/temples/'.$this->temple->id)
+            ->assertOk()
+            ->assertJsonPath('data.profile.address', 'Temple Street')
+            ->assertJsonPath('data.profile.district', 'Bhadradri Kothagudem');
+
+        // No proxy or CDN may keep an API answer.
+        $this->assertStringContainsString('no-store', $res->headers->get('Cache-Control'));
+        $this->assertSame('no-store', $res->headers->get('CDN-Cache-Control'));
     }
 
     public function test_the_team_edits_its_own_listing_but_not_its_identity_or_another_temple(): void
