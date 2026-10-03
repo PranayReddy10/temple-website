@@ -134,4 +134,33 @@ class AdminPersonSearchTest extends TestCase
         Livewire::test($list)->searchTable($booking->reference)->assertCanSeeTableRecords([$p2])->assertCanNotSeeTableRecords([$p1]);
         Livewire::test($list)->searchTable('pay_LAKSHMI')->assertCanSeeTableRecords([$p1])->assertCanNotSeeTableRecords([$p2]);
     }
+
+    public function test_tickets_and_bookings_are_found_by_temple_name_or_town(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => UserRole::SuperAdmin, 'is_active' => true]));
+        $today = DevotionalClock::now()->toDateString();
+        $rama = Temple::create(['name' => 'Sri Rama Temple', 'slug' => 'sri-rama', 'city' => 'Bhadrachalam', 'status' => TempleStatus::Published, 'published_at' => now()]);
+        $shiva = Temple::create(['name' => 'Someshwara Temple', 'slug' => 'someshwara', 'city' => 'Kolanupaka', 'status' => TempleStatus::Published, 'published_at' => now()]);
+        $devotee = Devotee::factory()->create();
+
+        $ticket = function (Temple $t) use ($today, $devotee): EventRegistration {
+            $e = TempleEvent::create(['temple_id' => $t->id, 'type' => 'bhajan', 'title' => 'Saturday bhajan', 'starts_on' => $today, 'is_all_day' => true, 'status' => EventStatus::Published, 'registration_enabled' => true]);
+
+            return EventRegistration::create(['temple_event_id' => $e->id, 'temple_id' => $t->id, 'devotee_id' => $devotee->id, 'occurs_on' => $today, 'people' => 1, 'devotee_name' => 'Anu', 'amount_paise' => 0, 'status' => BookingStatus::Confirmed]);
+        };
+        $t1 = $ticket($rama);
+        $t2 = $ticket($shiva);
+        Livewire::test(ListEventTickets::class)->searchTable('Someshwara')->assertCanSeeTableRecords([$t2])->assertCanNotSeeTableRecords([$t1]);
+        Livewire::test(ListEventTickets::class)->searchTable('bhadrachalam')->assertCanSeeTableRecords([$t1])->assertCanNotSeeTableRecords([$t2]);
+
+        $booking = function (Temple $t) use ($today, $devotee): PujaBooking {
+            $p = TemplePuja::create(['temple_id' => $t->id, 'name' => 'Archana', 'is_free' => true, 'app_booking_enabled' => true, 'is_published' => true]);
+
+            return PujaBooking::create(['temple_id' => $t->id, 'temple_puja_id' => $p->id, 'devotee_id' => $devotee->id, 'booked_for' => $today, 'people' => 1, 'devotee_name' => 'Anu', 'amount_paise' => 0, 'status' => BookingStatus::Confirmed, 'confirmed_at' => now()]);
+        };
+        $b1 = $booking($rama);
+        $b2 = $booking($shiva);
+        Livewire::test(ListPujaBookings::class)->searchTable('Sri Rama')->assertCanSeeTableRecords([$b1])->assertCanNotSeeTableRecords([$b2]);
+        Livewire::test(ListPujaBookings::class)->searchTable('kolanupaka')->assertCanSeeTableRecords([$b2])->assertCanNotSeeTableRecords([$b1]);
+    }
 }
