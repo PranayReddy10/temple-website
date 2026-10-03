@@ -65,7 +65,7 @@ class EventRegistrationController extends Controller
         $gateway = $validated['gateway'] ?? null;
         if ($record->amountPaiseFor((int) ($validated['people'] ?? 1)) > 0) {
             $config = AppConfig::payments($validated['platform'] ?? 'android');
-            abort_unless($config['enabled'], 403, 'Payments are not open on this device yet. Buy tickets at the temple for now.');
+            abort_unless($config['temple_payments'], 403, 'Payments are not open on this device yet. Buy tickets at the temple for now.');
             $gateway ??= $config['default_gateway'];
         }
 
@@ -104,7 +104,7 @@ class EventRegistrationController extends Controller
         ]);
 
         $config = AppConfig::payments($validated['platform'] ?? 'android');
-        abort_unless($config['enabled'], 403, 'Payments are not open on this device yet.');
+        abort_unless($config['temple_payments'], 403, 'Payments are not open on this device yet.');
 
         $registration = $this->registrations->retryPayment($this->mine($request, $reference), $validated['gateway'] ?? null);
 

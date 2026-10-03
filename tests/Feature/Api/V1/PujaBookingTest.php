@@ -173,6 +173,24 @@ class PujaBookingTest extends TestCase
         $this->getJson('/api/v1/me/bookings')->assertOk()->assertJsonCount(1, 'data');
     }
 
+    /** The plans switch is about subscriptions; a temple's seva is paid on the web whatever it says. */
+    public function test_a_priced_seva_is_booked_on_the_web_while_the_subscriptions_switch_is_off(): void
+    {
+        Setting::set('payments_enabled', '0', 'boolean');
+        $this->devotee();
+        $puja = $this->puja(['fee_amount' => 100]);
+        Http::fake(['api.razorpay.com/v1/orders' => Http::response(['id' => 'order_WEB1'])]);
+
+        $this->postJson("/api/v1/temples/booking-temple/pujas/{$puja->id}/bookings", ['booked_for' => $this->today(), 'platform' => 'web'])
+            ->assertCreated()
+            ->assertJsonPath('data.status.value', 'pending_payment');
+
+        // The admin's own switch for temple payments still pauses them.
+        Setting::set('temple_payments_enabled', '0', 'boolean');
+        $this->postJson("/api/v1/temples/booking-temple/pujas/{$puja->id}/bookings", ['booked_for' => $this->today(), 'platform' => 'web'])
+            ->assertForbidden();
+    }
+
     public function test_an_unpaid_booking_shows_no_code_and_can_be_paid_again(): void
     {
         $this->devotee();
