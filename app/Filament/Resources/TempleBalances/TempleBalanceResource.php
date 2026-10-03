@@ -3,9 +3,9 @@
 namespace App\Filament\Resources\TempleBalances;
 
 use App\Enums\BookingStatus;
+use App\Filament\Resources\PaymentVerifications\PaymentVerificationResource;
 use App\Filament\Resources\TempleBalances\Pages\ListTempleBalances;
 use App\Filament\Resources\TempleSettlements\TempleSettlementResource;
-use App\Http\Controllers\KycDocumentController;
 use App\Models\Temple;
 use App\Models\TemplePayoutAccount;
 use App\Models\TempleSettlement;
@@ -18,7 +18,6 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
@@ -203,7 +202,6 @@ class TempleBalanceResource extends Resource
                 ActionGroup::make([
                     self::payoutAccountAction(),
                     self::reviewPaymentsAction(),
-                    self::rejectPaymentsAction(),
                     Action::make('history')
                         ->label('Settlements')
                         ->icon('heroicon-o-queue-list')
@@ -346,79 +344,15 @@ class TempleBalanceResource extends Resource
             });
     }
 
-    /**
-     * Who will collect the money, and where it goes: the bank details and the
-     * owner's documents side by side, then Approve. Until then no devotee can
-     * pay this temple in the app.
-     */
+    /** The documents and the decision live on their own page. */
     public static function reviewPaymentsAction(): Action
     {
         return Action::make('reviewPayments')
-            ->label('Review & approve payments')
-            ->icon('heroicon-o-shield-check')
+            ->label(fn (Temple $t): string => $t->payoutAccount?->canReceiveMoney() ? 'Payment verification' : 'Check documents & approve')
+            ->icon('heroicon-o-identification')
             ->color('success')
-            ->visible(fn (Temple $t): bool => $t->payoutAccount !== null && ! $t->payoutAccount->canReceiveMoney())
-            ->modalHeading(fn (Temple $t): string => 'Payments for '.$t->name)
-            ->modalDescription('Check the person against the Aadhaar and the photo, and that the proof names this temple. Call the temple if anything is unclear.')
-            ->modalSubmitActionLabel('Approve payments')
-            ->schema(fn (Temple $t): array => self::reviewEntries($t->payoutAccount))
-            ->action(function (Temple $t): void {
-                $account = $t->payoutAccount;
-
-                if (! $account->isComplete() || ! $account->hasKyc()) {
-                    Notification::make()->title('Not everything is in yet')->body('The bank details and all four documents are needed before approval.')->danger()->send();
-
-                    return;
-                }
-
-                $account->forceFill(['verified_at' => now(), 'verified_by' => Auth::id(), 'rejection_reason' => null])->saveQuietly();
-                Notification::make()->title('Approved. The temple can take money in the app.')->success()->send();
-            });
-    }
-
-    public static function rejectPaymentsAction(): Action
-    {
-        return Action::make('rejectPayments')
-            ->label('Reject verification')
-            ->icon('heroicon-o-no-symbol')
-            ->color('danger')
-            ->visible(fn (Temple $t): bool => $t->payoutAccount?->kyc_submitted_at !== null)
-            ->modalDescription('Payments stay off (or are switched off). The owner sees your reason in the Trust app and can send the documents again.')
-            ->schema([
-                Textarea::make('reason')->label('Reason')->required()->rows(3)->placeholder('e.g. The Aadhaar photo is not readable; the proof does not name this temple.'),
-            ])
-            ->action(function (Temple $t, array $data): void {
-                $t->payoutAccount->forceFill(['verified_at' => null, 'verified_by' => null, 'rejection_reason' => $data['reason']])->saveQuietly();
-                Notification::make()->title('Verification rejected.')->success()->send();
-            });
-    }
-
-    /** @return array<int, TextEntry> */
-    protected static function reviewEntries(?TemplePayoutAccount $a): array
-    {
-        if ($a === null) {
-            return [];
-        }
-
-        $doc = fn (string $key, string $label): TextEntry => TextEntry::make('doc_'.$key)
-            ->label($label)
-            ->state(filled($a->{TemplePayoutAccount::DOCUMENTS[$key][0]}) ? 'Open' : 'Not sent')
-            ->color(filled($a->{TemplePayoutAccount::DOCUMENTS[$key][0]}) ? 'primary' : 'danger')
-            ->url(filled($a->{TemplePayoutAccount::DOCUMENTS[$key][0]}) ? KycDocumentController::url($a, $key) : null, shouldOpenInNewTab: true);
-
-        return [
-            TextEntry::make('status')->label('Status')->state($a->kycStatusLabel()),
-            TextEntry::make('bank')->label('Bank / UPI')->state($a->isComplete() ? $a->summary() : 'Not complete'),
-            TextEntry::make('person')->label('Name on Aadhaar')->state($a->kyc_name ?? 'Not sent'),
-            TextEntry::make('aadhaar')->label('Aadhaar number')->state(filled($a->aadhaar_number) ? trim(chunk_split((string) $a->aadhaar_number, 4, ' ')) : 'Not sent'),
-            TextEntry::make('proof')->label('Temple proof')->state(TemplePayoutAccount::PROOF_KINDS[$a->temple_proof_kind] ?? '—'),
-            $doc('aadhaar_front', 'Aadhaar (front)'),
-            $doc('aadhaar_back', 'Aadhaar (back)'),
-            $doc('temple_proof', 'Temple proof document'),
-            $doc('person_photo', 'Photo of the person'),
-            TextEntry::make('sent')->label('Sent')->state($a->kyc_submitted_at?->format('d M Y, H:i') ?? '—'),
-            TextEntry::make('rejected')->label('Last rejection')->state($a->rejection_reason)->visible(filled($a->rejection_reason)),
-        ];
+            ->visible(fn (Temple $t): bool => $t->payoutAccount !== null)
+            ->url(fn (Temple $t): string => PaymentVerificationResource::getUrl('view', ['record' => $t->payoutAccount]));
     }
 
     public static function getPages(): array
