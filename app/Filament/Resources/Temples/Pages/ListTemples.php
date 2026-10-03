@@ -5,14 +5,22 @@ namespace App\Filament\Resources\Temples\Pages;
 use App\Enums\TempleStatus;
 use App\Filament\Resources\Temples\TempleResource;
 use App\Models\Temple;
+use App\Support\TempleImport\TempleLinkImport;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
+use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 
 class ListTemples extends ListRecords
 {
     protected static string $resource = TempleResource::class;
+
+    /** Each line is read while you wait; more go through temples:import-links. */
+    public const LINKS_PER_RUN = 15;
 
     public function getSubheading(): ?string
     {
@@ -31,6 +39,36 @@ class ListTemples extends ListRecords
     {
         return [
             CreateAction::make()->label('Add a temple'),
+            Action::make('importLinks')
+                ->label('Add from Google Maps links')
+                ->icon('heroicon-o-map-pin')
+                ->color('gray')
+                ->modalHeading('Add temples from Google Maps links')
+                ->modalDescription('One temple per line: its Google Maps link, then its website if it has one. Each becomes a draft with its pin, address, district and state, and its website and nearby free photos are read for you to review. A temple already listed at that spot is skipped.')
+                ->schema([
+                    Textarea::make('links')->hiddenLabel()->rows(10)->required()
+                        ->placeholder("https://maps.app.goo.gl/AbCdEf https://www.example-temple.org\nhttps://maps.app.goo.gl/GhIjKl\nSri Rama Temple https://www.google.com/maps/place/…")
+                        ->helperText('Up to '.self::LINKS_PER_RUN.' lines at a time. Words on a line before the links are used as the name.'),
+                ])
+                ->modalSubmitActionLabel('Add temples')
+                ->action(function (array $data): void {
+                    $lines = array_slice(array_values(array_filter(array_map('trim', preg_split('/\R/', (string) $data['links'])))), 0, self::LINKS_PER_RUN);
+                    $results = collect($lines)->map(function (string $line): array {
+                        $l = TempleLinkImport::parseLine($line);
+
+                        return TempleLinkImport::create($l['maps'], $l['website'], $l['name']);
+                    });
+                    $count = fn (string $status) => $results->where('status', $status)->count();
+                    Notification::make()
+                        ->title($count('created').' added, '.$count('duplicate').' already listed, '.$count('error').' not read')
+                        ->body(new HtmlString(nl2br(e($results->pluck('message')->implode("\n")))))
+                        ->status($count('error') > 0 ? 'warning' : 'success')
+                        ->persistent()
+                        ->send();
+                    if ($count('created') > 0) {
+                        $this->redirect(TempleResource::getUrl('index', ['filters' => ['official_to_review' => ['isActive' => true]]]));
+                    }
+                }),
         ];
     }
 

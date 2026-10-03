@@ -13,11 +13,13 @@ class ReadOfficialSitesCommand extends Command
         {--days=30 : Skip temples read within this many days}
         {--limit=200 : Temples per run}';
 
-    protected $description = "Read temples' own websites for timings, sevas and contact details, for staff to review in the admin panel";
+    protected $description = "Read temples' Google Maps links and own websites for details and photos, for staff to review in the admin panel";
 
     public function handle(): int
     {
-        $query = Temple::query()->whereNotNull('official_website')->where('official_website', '!=', '');
+        $query = Temple::query()->where(fn ($q) => $q
+            ->where(fn ($w) => $w->whereNotNull('official_website')->where('official_website', '!=', ''))
+            ->orWhere(fn ($w) => $w->whereNotNull('google_maps_url')->where('google_maps_url', '!=', '')));
 
         if ($one = $this->option('temple')) {
             $query->where(fn ($q) => $q->where('id', $one)->orWhere('slug', $one));
@@ -33,7 +35,7 @@ class ReadOfficialSitesCommand extends Command
             usleep(500_000); // Gentle on small temple sites.
         }
 
-        $this->info("Read {$read} temple websites. Review them in the admin panel: Temples → filter \"Official details to review\".");
+        $this->info("Read {$read} temple websites. Review them in the admin panel: Temples → filter \"Imported details to review\".");
 
         return self::SUCCESS;
     }
