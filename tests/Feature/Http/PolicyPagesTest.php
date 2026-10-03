@@ -13,6 +13,7 @@ use App\Models\Page;
 use App\Models\Setting;
 use App\Models\SupportTicket;
 use App\Models\User;
+use App\Support\BrandName;
 use App\Support\DefaultPages;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -48,6 +49,25 @@ class PolicyPagesTest extends TestCase
         $this->get('https://darshansaathi.com/terms-and-conditions')->assertOk()
             ->assertSee('Saathi Technologies LLP')
             ->assertSee('the courts at Hyderabad, India');
+    }
+
+    /** The app's name comes from Settings, not an old .env value, on every page and in the editor. */
+    public function test_pages_use_the_brand_name_from_settings(): void
+    {
+        config(['brand.name' => 'Temple Passport']);
+        Setting::set('brand_name', 'Darshan Saathi');
+        BrandName::apply();
+
+        $this->get('https://darshansaathi.com/about-us')->assertOk()
+            ->assertSee('Darshan Saathi is a companion for visiting Hindu temples across India.')
+            ->assertSee('<meta name="description" content="What Darshan Saathi is: a companion for temple visits across India.">', false)
+            ->assertDontSee('Temple Passport')
+            ->assertDontSee('{app}');
+
+        $this->actingAs(User::factory()->create(['role' => UserRole::SuperAdmin, 'is_active' => true]));
+        Livewire::test(EditPage::class, ['record' => Page::query()->where('slug', 'about-us')->firstOrFail()->getRouteKey()])
+            ->assertSee('{app} → Darshan Saathi')
+            ->assertSee('Shown as: “What Darshan Saathi is: a companion for temple visits across India.”', false);
     }
 
     public function test_the_footer_links_the_pages_and_the_sitemap_lists_them(): void

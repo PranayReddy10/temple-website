@@ -79,10 +79,11 @@ class Page extends Model
         $city = trim((string) setting('legal_jurisdiction_city'));
 
         return [
-            '{app}' => (string) config('brand.name'),
+            // The Brand name from Administration → Settings, else .env.
+            '{app}' => (string) setting('brand_name', 'brand.name'),
             '{website}' => preg_replace('#^https?://#', '', Seo::website()),
             '{email}' => (string) setting('support_email', 'brand.support_email'),
-            '{business}' => (string) (setting('legal_business_name') ?: config('brand.name')),
+            '{business}' => (string) (setting('legal_business_name') ?: setting('brand_name', 'brand.name')),
             '{address}' => (string) (setting('legal_address') ?: 'India'),
             '{grievance_officer}' => filled(setting('legal_grievance_officer')) ? (string) setting('legal_grievance_officer') : 'our Grievance Officer',
             '{courts}' => $city !== '' ? 'the exclusive jurisdiction of the courts at '.$city.', India' : 'the jurisdiction of the competent courts in India',
