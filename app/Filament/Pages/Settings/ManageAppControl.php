@@ -2,8 +2,11 @@
 
 namespace App\Filament\Pages\Settings;
 
+use App\Support\AppLinks;
+use App\Support\Seo;
 use BackedEnum;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -42,6 +45,10 @@ class ManageAppControl extends SettingsPage
             'app_ios_store_url' => ['string', null],
             'app_update_title' => ['string', null],
             'app_update_message' => ['string', null],
+
+            'app_android_package' => ['string', null],
+            'app_android_sha256' => ['string', null],
+            'app_ios_app_id' => ['string', null],
         ];
     }
 
@@ -75,6 +82,21 @@ class ManageAppControl extends SettingsPage
                         ->placeholder('https://apps.apple.com/app/id…'),
                     TextInput::make('app_update_title')->label('Popup title')->placeholder('A new version is ready')->maxLength(120)->columnSpanFull(),
                     Textarea::make('app_update_message')->label('What is new')->rows(3)->maxLength(1000)->columnSpanFull(),
+                ]),
+
+            Section::make('Open temple links in the app')
+                ->description('A shared temple link (darshansaathi.com/temples/…) opens that temple straight in the installed app instead of the browser. Without these, links still open the temple\'s web page, which has an "Open in the app" button.')
+                ->icon('heroicon-o-link')
+                ->columns(2)
+                ->schema([
+                    TextInput::make('app_android_package')->label('Android package name')->placeholder(AppLinks::DEFAULT_ANDROID_PACKAGE)->maxLength(150),
+                    Textarea::make('app_android_sha256')->label('Android signing certificate SHA-256')->rows(2)->columnSpanFull()
+                        ->placeholder('AB:CD:12:…')
+                        ->helperText('Play Console → your app → Test and release → App integrity → App signing key certificate → SHA-256. Add the upload key\'s too, one per line, to test builds you install yourself.'),
+                    TextInput::make('app_ios_app_id')->label('iOS app ID')->placeholder('TEAMID.com.darshansaathi.templevisit')->maxLength(200)
+                        ->helperText('Your Apple Team ID, a dot, and the bundle ID.'),
+                    Placeholder::make('app_links_check')->label('Check')
+                        ->content(fn (): string => Seo::url('.well-known/assetlinks.json').' and '.Seo::url('.well-known/apple-app-site-association')),
                 ]),
         ]);
     }

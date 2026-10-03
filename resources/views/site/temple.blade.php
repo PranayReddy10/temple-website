@@ -41,8 +41,34 @@
     ];
 @endphp
 
+@php
+    $faqSchema = $faq === [] ? null : [
+        '@context' => 'https://schema.org',
+        '@type' => 'FAQPage',
+        'mainEntity' => collect($faq)->map(fn ($f) => ['@type' => 'Question', 'name' => $f['q'], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f['a']]])->all(),
+    ];
+    $eventSchemas = $temple->events->map(fn ($e) => array_filter([
+        '@context' => 'https://schema.org',
+        '@type' => 'Event',
+        'name' => $e->title,
+        'description' => $e->description ? \Illuminate\Support\Str::limit(strip_tags($e->description), 300) : null,
+        'startDate' => optional($e->nextDate() ?? $e->starts_on)->toDateString(),
+        'endDate' => optional($e->ends_on)->toDateString(),
+        'eventAttendanceMode' => 'https://schema.org/OfflineEventAttendanceMode',
+        'eventStatus' => 'https://schema.org/EventScheduled',
+        'image' => $e->imageUrl() ? Seo::absolute($e->imageUrl()) : $image,
+        'location' => ['@type' => 'Place', 'name' => $temple->name, 'address' => collect([$temple->address, $place])->filter()->implode(', ') ?: $temple->name],
+        'organizer' => ['@type' => 'Organization', 'name' => $temple->name, 'url' => $canonical],
+    ]))->values();
+    if ($aliases->isNotEmpty()) {
+        $schema['alternateName'] = $aliases->all();
+    }
+@endphp
+
 @push('head')
     <script type="application/ld+json">{!! json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) !!}</script>
+    @if ($faqSchema)<script type="application/ld+json">{!! json_encode($faqSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) !!}</script>@endif
+    @foreach ($eventSchemas as $ev)<script type="application/ld+json">{!! json_encode($ev, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) !!}</script>@endforeach
     <script type="application/ld+json">{!! json_encode($crumbs, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) !!}</script>
     <style>
         .hero { border-radius: 18px; overflow: hidden; aspect-ratio: 21/9; background: #efe3cf; margin: 12px 0; }
@@ -63,6 +89,17 @@
         .more .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .more b { display: block; font-size: .92rem; line-height: 1.25; }
         .more span { color: var(--muted); font-size: .8rem; }
+        .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 6px; }
+        .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 999px; font-weight: 600; font-size: .95rem; text-decoration: none; border: 1.5px solid var(--line); color: var(--deep); background: #fffdf9; cursor: pointer; font-family: inherit; }
+        .btn.primary { background: var(--kumkum, #9B1B30); border-color: var(--kumkum, #9B1B30); color: #fff; }
+        .today { display: flex; flex-wrap: wrap; gap: 6px 18px; background: #fff7e8; border: 1px solid #f0dcb4; border-radius: 14px; padding: 12px 14px; margin: 10px 0; font-size: .93rem; }
+        .today b { color: var(--deep); }
+        .event { padding: 10px 0; border-top: 1px solid #efe6d8; }
+        .event b { display: block; }
+        details.q { border-top: 1px solid #efe6d8; padding: 10px 0; }
+        details.q summary { font-weight: 600; cursor: pointer; }
+        details.q p { margin: 6px 0 0; }
+        .aka { font-size: .9rem; }
     </style>
 @endpush
 
@@ -77,6 +114,28 @@
         @if ($temple->deity?->slug && $sameDeity->isNotEmpty())<a href="{{ Seo::url('deities/'.$temple->deity->slug) }}">{{ $temple->deity->name }}</a>@else{{ $temple->deity?->name }}@endif
         @if ($temple->deity && $place !== '') · @endif{{ $place }}
     </p>
+
+    @if ($aliases->isNotEmpty())<p class="muted aka">Also known as {{ $aliases->implode(', ') }}</p>@endif
+
+    {{-- Every button opens this same temple: in the app, on the map, or to share. --}}
+    <div class="actions">
+        @if ($bookable)<a class="btn primary" href="{{ $bookLink }}">Book a seva</a>@endif
+        <a class="btn {{ $bookable ? '' : 'primary' }}" href="{{ $appLink }}">Open in {{ config('brand.name') }}</a>
+        @if ($temple->hasCoordinates())
+            <a class="btn" href="https://www.google.com/maps/dir/?api=1&destination={{ $temple->latitude }},{{ $temple->longitude }}" rel="nofollow noopener" target="_blank">Directions</a>
+        @endif
+        <button type="button" class="btn" id="share" data-url="{{ $canonical }}" data-title="{{ $temple->name }}">Share</button>
+    </div>
+
+    @if ($todays->isNotEmpty())
+        <div class="today">
+            <b>Today ({{ \App\Support\DevotionalClock::now()->format('l') }})</b>
+            @foreach ($todays as $t)<span>{{ $t->label ?: $t->kind?->getLabel() }}: {{ $t->window() }}</span>@endforeach
+        </div>
+    @endif
+    @foreach ($temple->closures as $c)
+        <div class="today" style="background:#fdeceb;border-color:#f3c3be"><b>Closure</b><span>{{ $c->reason ?? 'Closed' }} · {{ $c->starts_on?->format('d M Y') }}@if ($c->ends_on && ! $c->ends_on->equalTo($c->starts_on)) – {{ $c->ends_on->format('d M Y') }}@endif</span></div>
+    @endforeach
 
     @if ($image)
         <div class="hero"><img src="{{ $image }}" alt="{{ $temple->name }}"></div>
@@ -109,6 +168,17 @@
             @if ($significance)<h2>Significance</h2><p>{{ $significance }}</p>@endif
             @if ($history)<h2>History</h2><p>{{ $history }}</p>@endif
 
+            @if ($temple->events->isNotEmpty())
+                <h2>Festivals and events</h2>
+                @foreach ($temple->events as $e)
+                    <div class="event">
+                        <b>{{ $e->title }}</b>
+                        <span class="muted">{{ optional($e->nextDate() ?? $e->starts_on)->format('l, d M Y') }}@if ($e->group_name) · {{ $e->group_name }}@endif</span>
+                        @if ($e->description)<div>{{ \Illuminate\Support\Str::limit(strip_tags($e->description), 220) }}</div>@endif
+                    </div>
+                @endforeach
+            @endif
+
             @if ($temple->photos->count() > 1)
                 <h2>Photos</h2>
                 <div class="gallery">
@@ -134,9 +204,21 @@
                     @if ($temple->official_website)<dt>Official website</dt><dd><a href="{{ $temple->official_website }}" rel="nofollow noopener" target="_blank">{{ parse_url($temple->official_website, PHP_URL_HOST) ?: $temple->official_website }}</a></dd>@endif
                 </dl>
             </div>
-            <p style="margin-top:16px"><a class="cta" style="display:inline-block;text-decoration:none" href="{{ Seo::url('/') }}">Book pujas and plan your visit in {{ config('brand.name') }}</a></p>
+            <div class="card" style="margin-top:16px">
+                <b>{{ $bookable ? 'Book a seva at '.$temple->name : 'Plan your visit to '.$temple->name }}</b>
+                <p class="muted" style="margin:6px 0 10px">Timings, sevas, festivals and directions in the {{ config('brand.name') }} app{{ $bookable ? ', with booking and payment' : '' }}.</p>
+                <a class="btn primary" href="{{ $bookable ? $bookLink : $appLink }}">{{ $bookable ? 'Book a seva' : 'Open in the app' }}</a>
+                @if ($storeUrl)<a class="btn" href="{{ $storeUrl }}" rel="noopener" style="margin-top:8px">Get the Android app</a>@endif
+            </div>
         </aside>
     </div>
+
+    @if ($faq !== [])
+        <h2>Questions devotees ask about {{ $temple->name }}</h2>
+        @foreach ($faq as $f)
+            <details class="q" @if ($loop->first) open @endif><summary>{{ $f['q'] }}</summary><p>{{ $f['a'] }}</p></details>
+        @endforeach
+    @endif
 
     @foreach ([
         ['list' => $sameDeity, 'heading' => 'More '.\App\Http\Controllers\PublicTempleController::deityPhrase((string) $temple->deity?->name).' temples', 'all' => $temple->deity?->slug ? Seo::url('deities/'.$temple->deity->slug) : null],
@@ -155,4 +237,13 @@
             @if ($group['all'])<p><a href="{{ $group['all'] }}">See all →</a></p>@endif
         @endif
     @endforeach
+
+    <script>
+        // Share this temple's page: the phone's share sheet, else WhatsApp.
+        document.getElementById('share')?.addEventListener('click', function () {
+            var url = this.dataset.url, title = this.dataset.title;
+            if (navigator.share) { navigator.share({ title: title, text: title, url: url }).catch(function () {}); return; }
+            window.open('https://wa.me/?text=' + encodeURIComponent(title + ' ' + url), '_blank', 'noopener');
+        });
+    </script>
 @endsection

@@ -38,6 +38,26 @@ final class Seo
         return str_starts_with($url, '/') && ! str_starts_with($url, '//') ? self::url($url) : $url;
     }
 
+    /**
+     * The devotee app opened on a temple, from a website page.
+     *
+     * On the web the app reads ?temple= when it starts and goes straight to
+     * that temple (and to its sevas with action=book), so "Book" or "Open in
+     * the app" never drops a devotee on the home screen to search again.
+     */
+    public static function appLink(string $slug, ?string $action = null): string
+    {
+        return self::url('/').'?'.http_build_query(array_filter(['temple' => $slug, 'action' => $action]));
+    }
+
+    /** The app's store page, from Administration → App control, if set. */
+    public static function storeUrl(): ?string
+    {
+        $url = setting('app_android_store_url');
+
+        return filled($url) ? (string) $url : null;
+    }
+
     /** Whether this request came in on the website rather than the admin host. */
     public static function onWebsite(Request $request): bool
     {

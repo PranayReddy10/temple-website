@@ -1,6 +1,23 @@
 @extends('site.layout')
 
+@php
+    // The list itself, for search engines: which temples this page is about.
+    $itemList = [
+        '@context' => 'https://schema.org',
+        '@type' => 'ItemList',
+        'name' => $heading,
+        'numberOfItems' => $temples->total(),
+        'itemListElement' => $temples->values()->map(fn ($t, $i) => [
+            '@type' => 'ListItem',
+            'position' => ($temples->firstItem() ?? 1) + $i,
+            'url' => \App\Support\Seo::url('temples/'.$t->slug),
+            'name' => $t->name,
+        ])->all(),
+    ];
+@endphp
+
 @push('head')
+    @if (empty($noindex) && $temples->isNotEmpty())<script type="application/ld+json">{!! json_encode($itemList, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) !!}</script>@endif
     @if ($temples->previousPageUrl())<link rel="prev" href="{{ $temples->previousPageUrl() }}">@endif
     @if ($temples->nextPageUrl())<link rel="next" href="{{ $temples->nextPageUrl() }}">@endif
     <style>
@@ -15,6 +32,10 @@
         .tile b { display: block; font-size: 1rem; line-height: 1.3; }
         .tile span { color: var(--muted); font-size: .85rem; }
         nav.pages { display: flex; justify-content: space-between; margin-top: 24px; }
+        .tile p { margin: 6px 0 0; font-size: .85rem; color: var(--deep); opacity: .85; }
+        .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .badge { font-size: .72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #f5ead6; color: var(--deep); }
+        .badge.book { background: var(--kumkum); color: #fff; }
     </style>
 @endpush
 
@@ -58,6 +79,12 @@
                 <div class="tx">
                     <b>{{ $t->name }}</b>
                     <span>{{ collect([$t->deity?->name, $t->city, $t->state?->name])->filter()->implode(' · ') }}</span>
+                    @if ($t->short_description)<p>{{ \Illuminate\Support\Str::limit(strip_tags($t->short_description), 110) }}</p>@endif
+                    <div class="badges">
+                        @if ($t->books_in_app)<span class="badge book">Book sevas online</span>@endif
+                        @if ($t->pujas_count)<span class="badge">{{ $t->pujas_count }} {{ \Illuminate\Support\Str::plural('seva', $t->pujas_count) }}</span>@endif
+                        @if ($t->is_featured)<span class="badge">Popular</span>@endif
+                    </div>
                 </div>
             </a>
         @endforeach

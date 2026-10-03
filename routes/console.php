@@ -31,3 +31,7 @@ Schedule::call(fn () => app(PujaBookings::class)->expireOverdue())
 // The same for event tickets and "I'll join" places.
 Schedule::call(fn () => app(EventRegistrations::class)->expireOverdue())
     ->name('event-tickets:expire-overdue')->hourly()->withoutOverlapping();
+
+// New and changed temple pages to Bing and the other IndexNow engines.
+// Google reads the sitemap instead (submitted once in Search Console).
+Schedule::command('seo:indexnow')->dailyAt('03:15')->withoutOverlapping();
