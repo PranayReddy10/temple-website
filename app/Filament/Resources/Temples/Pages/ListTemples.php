@@ -44,7 +44,7 @@ class ListTemples extends ListRecords
                 ->icon('heroicon-o-map-pin')
                 ->color('gray')
                 ->modalHeading('Add temples from Google Maps links')
-                ->modalDescription('One temple per line: its Google Maps link, then its website if it has one. Each becomes a draft with its pin, address, district and state, and its website and nearby free photos are read for you to review. A temple already listed at that spot is skipped.')
+                ->modalDescription('One temple per line: its Google Maps link, then its website if it has one. Each becomes a draft with its pin, address, district and state, and its website is read for you to review. A temple already listed at that spot is skipped.')
                 ->schema([
                     Textarea::make('links')->hiddenLabel()->rows(10)->required()
                         ->placeholder("https://maps.app.goo.gl/AbCdEf https://www.example-temple.org\nhttps://maps.app.goo.gl/GhIjKl\nSri Rama Temple https://www.google.com/maps/place/…")

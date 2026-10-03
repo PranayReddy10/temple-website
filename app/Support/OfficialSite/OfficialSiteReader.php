@@ -145,7 +145,7 @@ final class OfficialSiteReader
      */
     public static function extract(array $pages): array
     {
-        $found = ['phones' => [], 'emails' => [], 'timings' => [], 'sevas' => [], 'images' => []];
+        $found = ['phones' => [], 'emails' => [], 'timings' => [], 'sevas' => []];
 
         foreach ($pages as $pageUrl => $html) {
             [$xpath, $records] = self::parse($html);
@@ -193,8 +193,6 @@ final class OfficialSiteReader
                     $found['longitude'] = (float) $m[2];
                 }
             }
-            array_push($found['images'], ...self::imagesIn($xpath, $pageUrl));
-
             foreach ($xpath->query('//iframe[@src]') as $f) {
                 if (! isset($found['latitude']) && preg_match('#maps.*?[@=!](-?\d{1,2}\.\d{3,})[,!].*?(-?\d{2,3}\.\d{3,})#', rawurldecode($f->getAttribute('src')), $m)) {
                     // Embedded Google Maps: !3d<lat>!2d<lng> or q=lat,lng.
@@ -232,10 +230,6 @@ final class OfficialSiteReader
         $found['emails'] = array_values(array_filter($found['emails'], fn ($e) => filter_var($e, FILTER_VALIDATE_EMAIL) && ! preg_match('/\.(png|jpe?g|gif|webp)$/', $e)));
         $found['timings'] = array_slice(self::unique($found['timings'], fn ($t) => mb_strtolower($t['label'].'|'.($t['notes'] ?? '').'|'.implode(',', $t['days'] ?? [])).$t['opens_at'].$t['closes_at']), 0, 30);
         $found['sevas'] = array_slice(self::mergeSevas($found['sevas']), 0, 60);
-        if (isset($found['image'])) {
-            array_unshift($found['images'], ['url' => $found['image'], 'alt' => 'Main image', 'page' => array_key_first($pages)]);
-        }
-        $found['images'] = array_slice(self::unique($found['images'], fn ($i) => preg_replace('/[?#].*$/', '', strtolower($i['url']))), 0, 24);
         $found['description'] = isset($found['description']) ? Str::limit(self::clean($found['description']), 500, '') : null;
         if (isset($found['address'])) {
             $found['address'] = trim(preg_replace('/^(temple\s+)?(address|location|reach us)\s*[:\-]\s*/i', '', $found['address']));
@@ -1105,44 +1099,6 @@ final class OfficialSiteReader
         [, $records] = self::parse($html);
 
         return implode(' ', array_column($records, 'text'));
-    }
-
-    /**
-     * The photos on a page worth offering: large images, not logos, icons,
-     * payment badges or QR codes. The biggest of a srcset is taken.
-     *
-     * @return array<int, array{url: string, alt: string, page: string}>
-     */
-    private static function imagesIn(DOMXPath $xpath, string $pageUrl): array
-    {
-        $out = [];
-        foreach ($xpath->query('//img') as $img) {
-            if (! $img instanceof DOMElement) {
-                continue;
-            }
-            $src = '';
-            $best = 0;
-            foreach (explode(',', (string) ($img->getAttribute('srcset') ?: $img->getAttribute('data-srcset'))) as $candidate) {
-                if (preg_match('/^\s*(\S+)\s+(\d+)w/', $candidate, $m) && (int) $m[2] > $best) {
-                    [$src, $best] = [$m[1], (int) $m[2]];
-                }
-            }
-            $src = $src ?: ($img->getAttribute('data-src') ?: $img->getAttribute('data-lazy-src') ?: $img->getAttribute('src'));
-            $alt = self::clean($img->getAttribute('alt'));
-            $hint = strtolower($src.' '.$alt.' '.$img->getAttribute('class').' '.$img->getAttribute('id'));
-            $width = (int) $img->getAttribute('width');
-            $height = (int) $img->getAttribute('height');
-            if ($src === '' || str_starts_with($src, 'data:') || preg_match('/\.(svg|gif|ico)(\?|$)/i', $src)
-                || preg_match('/logo|icon|favicon|avatar|loader|spinner|whatsapp|facebook|twitter|instagram|youtube|payment|upi|paytm|phonepe|gpay|qr|badge|flag|arrow|button|banner-ad|sprite|pixel/', $hint)
-                || ($width > 0 && $width < 300) || ($height > 0 && $height < 200)) {
-                continue;
-            }
-            if (($url = self::absolute($src, $pageUrl)) !== null) {
-                $out[] = ['url' => $url, 'alt' => Str::limit($alt, 100, ''), 'page' => $pageUrl];
-            }
-        }
-
-        return $out;
     }
 
     /** @return array<int, array<string, mixed>> */

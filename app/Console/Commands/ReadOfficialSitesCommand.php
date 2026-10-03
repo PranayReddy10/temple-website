@@ -13,7 +13,7 @@ class ReadOfficialSitesCommand extends Command
         {--days=30 : Skip temples read within this many days}
         {--limit=200 : Temples per run}';
 
-    protected $description = "Read temples' Google Maps links and own websites for details and photos, for staff to review in the admin panel";
+    protected $description = "Read temples' Google Maps links and own websites for details, for staff to review in the admin panel";
 
     public function handle(): int
     {

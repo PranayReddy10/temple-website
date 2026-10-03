@@ -9,7 +9,7 @@ class ImportTempleLinksCommand extends Command
 {
     protected $signature = 'temples:import-links {file : A text or CSV file, one temple per line: Google Maps link, then website if any}';
 
-    protected $description = 'Add temples as drafts from Google Maps links (and websites), read for details and photos to review';
+    protected $description = 'Add temples as drafts from Google Maps links (and websites), read for details to review';
 
     public function handle(): int
     {

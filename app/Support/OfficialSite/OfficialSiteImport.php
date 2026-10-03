@@ -7,9 +7,7 @@ use App\Models\Temple;
 use App\Models\TemplePuja;
 use App\Models\TempleTiming;
 use App\Support\Geocoder;
-use App\Support\TempleImport\CommonsPhotos;
 use App\Support\TempleImport\MapsLink;
-use App\Support\TempleImport\PhotoImporter;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -21,8 +19,8 @@ final class OfficialSiteImport
 {
     /**
      * Reads what the links say about a temple and keeps it for review:
-     * the Google Maps link's pin, the address the map has there, the
-     * temple's own website, and freely licensed photos taken at the place.
+     * the Google Maps link's pin, the address the map has there, and the
+     * temple's own website.
      * Returns the reading, or ['error' => …] when nothing could be read.
      *
      * @param  array<int, string>|null  $extraPages  more pages to read; saved on the temple for every re-read
@@ -61,7 +59,6 @@ final class OfficialSiteImport
             if ($place = self::placeAt($lat, $lng)) {
                 $found['place'] = $place;
             }
-            $found['commons_photos'] = CommonsPhotos::near($lat, $lng, $found['maps']['name'] ?? $temple->name);
         }
         if ($problems !== []) {
             $found['warning'] = trim(($found['warning'] ?? '').' '.implode(' ', $problems));
@@ -138,8 +135,6 @@ final class OfficialSiteImport
             isset($found['pincode']) ? 'PIN code' : null,
             isset($found['latitude']) ? 'map location' : null,
             isset($found['place']) ? 'address from the map' : null,
-            count($found['commons_photos'] ?? []) ? count($found['commons_photos']).' free photos' : null,
-            count($found['images'] ?? []) ? count($found['images']).' photos on the website' : null,
         ])->filter()->implode(', ');
 
         return ($what !== '' ? $what : 'No details found').($pages > 1 ? ' on '.$pages.' pages' : ' on the site');
@@ -238,40 +233,6 @@ final class OfficialSiteImport
                 $done[] = $sevas->count().' sevas';
             }
         });
-
-        // Photos last, outside the transaction: each is a download, and one
-        // that fails should not undo the details already taken.
-        $photos = [];
-        foreach ((array) ($data['commons_photos'] ?? []) as $i) {
-            if ($p = $found['commons_photos'][(int) $i] ?? null) {
-                $photos[] = array_merge($p, ['license' => $p['license'].' · Wikimedia Commons']);
-            }
-        }
-        if (! empty($data['website_permission'])) {
-            $host = preg_replace('/^www\./', '', (string) parse_url((string) ($found['source_url'] ?? ''), PHP_URL_HOST));
-            foreach ((array) ($data['website_photos'] ?? []) as $i) {
-                if ($p = $found['images'][(int) $i] ?? null) {
-                    $photos[] = ['url' => $p['url'], 'title' => $p['alt'] ?: null, 'credit' => 'Courtesy of '.($host ?: $temple->name),
-                        'license' => 'Used with the temple\'s permission', 'source_url' => $p['url']];
-                }
-            }
-        }
-        $copied = 0;
-        $failed = [];
-        foreach ($photos as $p) {
-            try {
-                PhotoImporter::import($temple, $p, ! array_key_exists('publish_photos', $data) || ! empty($data['publish_photos']));
-                $copied++;
-            } catch (\RuntimeException $e) {
-                $failed[] = $e->getMessage();
-            }
-        }
-        if ($copied) {
-            $done[] = $copied.' '.($copied === 1 ? 'photo' : 'photos');
-        }
-        if ($failed !== []) {
-            $done[] = count($failed).' '.(count($failed) === 1 ? 'photo' : 'photos').' could not be copied';
-        }
 
         return $done;
     }

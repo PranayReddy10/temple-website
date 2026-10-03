@@ -9,9 +9,9 @@ use App\Support\OfficialSite\OfficialSiteReader;
 
 /**
  * New temples from links: a Google Maps link, and the temple's website if
- * it has one. Each becomes a draft with its pin, read for details and
- * photos, waiting in "Imported details to review"; a temple already listed
- * at that spot is not added twice.
+ * it has one. Each becomes a draft with its pin, read for details,
+ * waiting in "Imported details to review"; a temple already listed at
+ * that spot is not added twice.
  */
 final class TempleLinkImport
 {

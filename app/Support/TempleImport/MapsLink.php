@@ -11,8 +11,8 @@ use Throwable;
  * Only the link is read. A short link (maps.app.goo.gl) is followed to the
  * full address it stands for, and the name and coordinates are taken out of
  * that address; Google's page is never fetched or scraped, which its terms
- * do not allow. Phone, hours and photos come from the temple's own website
- * and from freely licensed sources instead.
+ * do not allow. Phone, timings and sevas come from the temple's own
+ * website instead.
  */
 final class MapsLink
 {

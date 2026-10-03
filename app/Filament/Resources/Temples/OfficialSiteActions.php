@@ -12,7 +12,6 @@ use App\Support\OfficialSite\OfficialSiteImport;
 use App\Support\OfficialSite\OfficialSiteReader;
 use App\Support\TempleImport\MapsLink;
 use Filament\Actions\Action;
-use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
@@ -40,8 +39,8 @@ final class OfficialSiteActions
             ->label('Import from Maps & website')
             ->icon('heroicon-o-globe-alt')
             ->color('gray')
-            ->modalHeading('Import details and photos')
-            ->modalDescription('From the Google Maps link: the exact pin, and the address, PIN code, district and state the map has there. From the website: phone, email, timings and sevas. Photos: free-licence photos taken at the temple, and the website\'s own (only with the temple\'s permission). Nothing on the listing changes until you review it.')
+            ->modalHeading('Import details')
+            ->modalDescription('From the Google Maps link: the exact pin, and the address, PIN code, district and state the map has there. From the website: phone, email, timings and sevas. Nothing on the listing changes until you review it.')
             ->fillForm(fn (Temple $record): array => [
                 'maps' => $record->google_maps_url,
                 'url' => $record->official_website,
@@ -118,11 +117,6 @@ final class OfficialSiteActions
             'city' => $f['place']['city'] ?? null, 'use_city' => isset($f['place']['city']) && $empty($t->city),
             'state_id' => $f['place']['state_id'] ?? null, 'district_id' => $f['place']['district_id'] ?? null,
             'use_region' => isset($f['place']['state_id']) && $empty($t->state_id),
-            // Photos: a few free ones ticked for a temple with none yet.
-            'commons_photos' => $t->photos()->exists() ? [] : array_slice(array_keys($f['commons_photos'] ?? []), 0, 3),
-            'website_photos' => [],
-            'website_permission' => false,
-            'publish_photos' => true,
             'latitude' => $f['latitude'] ?? null, 'longitude' => $f['longitude'] ?? null, 'use_location' => isset($f['latitude']) && ! $t->hasCoordinates(),
             'short_description' => $f['description'] ?? null, 'use_short_description' => false,
             // Timings and sevas: all ticked when the listing has none.
@@ -269,39 +263,13 @@ final class OfficialSiteActions
                 ->schema([$row('short_description', 'Short description', $t->short_description, true)]);
         }
 
-        $photo = fn (string $thumb, string $text): string => '<span style="display:inline-flex;flex-direction:column;gap:4px;max-width:220px">'
-            .'<img src="'.e($thumb).'" alt="" loading="lazy" style="width:220px;height:150px;object-fit:cover;border-radius:10px">'
-            .'<span style="font-size:12px;line-height:1.3">'.$text.'</span></span>';
-        $photoSections = [];
-        if (! empty($f['commons_photos'])) {
-            $photoSections[] = CheckboxList::make('commons_photos')->label('Free-licence photos taken here (Wikimedia Commons)')
-                ->helperText('Free to use with the credit, which is saved with the photo and shown with it.')
-                ->allowHtml()->columns(['default' => 1, 'md' => 3])->bulkToggleable()
-                ->options(collect($f['commons_photos'])->mapWithKeys(fn ($p, $i) => [$i => $photo($p['thumb'], e($p['title']).'<br><em>'.e($p['credit']).' · '.e($p['license']).'</em>'.(isset($p['distance']) ? ' · '.e($p['distance']).' m away' : ''))])->all());
-        }
-        if (! empty($f['images'])) {
-            $photoSections[] = CheckboxList::make('website_photos')->label('Photos on the temple\'s website')
-                ->helperText('These belong to the temple. Copy them only with their permission.')
-                ->allowHtml()->columns(['default' => 1, 'md' => 3])->bulkToggleable()
-                ->options(collect($f['images'])->mapWithKeys(fn ($p, $i) => [$i => $photo($p['url'], e($p['alt'] ?: basename(parse_url($p['url'], PHP_URL_PATH) ?: '')))])->all());
-            $photoSections[] = Toggle::make('website_permission')->label('The temple has given permission to use these photos')
-                ->accepted(fn (Get $get): bool => ! empty($get('website_photos')))
-                ->validationMessages(['accepted' => 'Tick this only when the temple has said yes, or untick their photos.']);
-        }
-        if ($photoSections !== []) {
-            $photoSections[] = Toggle::make('publish_photos')->label('Show the copied photos to devotees now');
-            $sections[] = Section::make('Photos')
-                ->description(($t->photos()->count() ? 'The temple has '.$t->photos()->count().' photos already. ' : 'The temple has no photos yet; the first one copied becomes the cover. ').'Photos from Google Maps cannot be copied: they belong to the people who took them.')
-                ->schema($photoSections);
-        }
-
         $sections[] = Section::make('Pages read')
             ->visible(! empty($f['pages']))
             ->description('Something missing? Use "Read official website" again and paste the page that has it under "Also read these pages".')
             ->collapsed(empty($f['failed_pages']) && empty($f['documents']))
             ->schema([Placeholder::make('pages')->hiddenLabel()->content(new HtmlString(self::pagesHtml($f)))]);
 
-        if (empty($f['timings']) && empty($f['sevas']) && $contact === [] && $photoSections === []) {
+        if (empty($f['timings']) && empty($f['sevas']) && $contact === []) {
             array_unshift($sections, Placeholder::make('none')->hiddenLabel()->content('Nothing useful was found on these pages. Many temple sites put timings and seva lists in images or PDFs, which cannot be read; enter them by hand, or add the right page links and read again.'));
         }
 
