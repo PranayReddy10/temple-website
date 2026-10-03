@@ -5,14 +5,17 @@ namespace Tests\Feature\Filament;
 use App\Enums\BookingStatus;
 use App\Enums\EventStatus;
 use App\Enums\TempleStatus;
+use App\Enums\TicketCategory;
 use App\Enums\UserRole;
 use App\Filament\Resources\Devotees\Pages\ListDevotees;
 use App\Filament\Resources\EventTickets\Pages\ListEventTickets;
 use App\Filament\Resources\HundiDonations\Pages\ListHundiDonations;
 use App\Filament\Resources\PujaBookings\Pages\ListPujaBookings;
+use App\Filament\Resources\SupportTickets\Pages\ListSupportTickets;
 use App\Models\Devotee;
 use App\Models\EventRegistration;
 use App\Models\PujaBooking;
+use App\Models\SupportTicket;
 use App\Models\Temple;
 use App\Models\TempleDonation;
 use App\Models\TempleEvent;
@@ -82,5 +85,21 @@ class AdminPersonSearchTest extends TestCase
         Livewire::test($list)->searchTable('9848022338')->assertCanSeeTableRecords([$lakshmi])->assertCanNotSeeTableRecords([$ravi]);
         Livewire::test($list)->searchTable('ravi@')->assertCanSeeTableRecords([$ravi])->assertCanNotSeeTableRecords([$lakshmi]);
         Livewire::test($list)->searchTable('Lakshmi')->assertCanSeeTableRecords([$lakshmi])->assertCanNotSeeTableRecords([$ravi]);
+    }
+
+    public function test_support_tickets_are_found_by_the_writers_phone(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => UserRole::SuperAdmin, 'is_active' => true]));
+        $lakshmi = Devotee::factory()->create(['name' => 'Lakshmi Devi', 'phone' => '+91 98480 22338']);
+        $trustee = User::factory()->create(['role' => UserRole::TempleAdmin, 'name' => 'Temple Secretary', 'phone' => '90000 11111']);
+
+        $fromDevotee = SupportTicket::create(['devotee_id' => $lakshmi->id, 'subject' => 'Payment not received', 'body' => 'Paid for a seva, no booking.', 'category' => TicketCategory::cases()[0]]);
+        $fromTemple = SupportTicket::create(['user_id' => $trustee->id, 'subject' => 'Payout question', 'body' => 'When is the payout?', 'category' => TicketCategory::cases()[0]]);
+
+        $list = ListSupportTickets::class;
+        Livewire::test($list)->searchTable('98480 22338')->assertCanSeeTableRecords([$fromDevotee])->assertCanNotSeeTableRecords([$fromTemple]);
+        Livewire::test($list)->searchTable('11111')->assertCanSeeTableRecords([$fromTemple])->assertCanNotSeeTableRecords([$fromDevotee]);
+        Livewire::test($list)->searchTable('Secretary')->assertCanSeeTableRecords([$fromTemple])->assertCanNotSeeTableRecords([$fromDevotee]);
+        Livewire::test($list)->searchTable($fromDevotee->reference)->assertCanSeeTableRecords([$fromDevotee])->assertCanNotSeeTableRecords([$fromTemple]);
     }
 }
