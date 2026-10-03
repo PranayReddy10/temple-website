@@ -49,7 +49,7 @@ class DonationController extends Controller
         ]);
 
         $config = AppConfig::payments($validated['platform'] ?? 'android');
-        abort_unless($config['enabled'], 403, 'Online payments are not open on this device yet. Please give at the temple for now.');
+        abort_unless($config['temple_payments'], 403, 'Online payments are not open on this device yet. Please give at the temple for now.');
 
         $donation = $this->donations->give($request->user(), $temple, [
             'amount_paise' => (int) round(((float) $validated['amount']) * 100),
