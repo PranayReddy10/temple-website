@@ -128,7 +128,9 @@ class PujaBookingTest extends TestCase
 
         $this->assertMatchesRegularExpression('/^SV[2-9A-HJ-NP-Z]{8}$/', $response->json('data.reference'));
         $this->assertStringContainsString('/bookings/'.$response->json('data.code'), $response->json('data.qr_url'));
-        $this->assertStringNotContainsString('/bookings/1', $response->json('data.qr_url'));
+        // The link carries the random code, never the row id. (A code may
+        // itself start with "1", so the id is matched as the whole segment.)
+        $this->assertDoesNotMatchRegularExpression('#/bookings/1(?:$|[/?])#', $response->json('data.qr_url'));
     }
 
     public function test_a_priced_seva_waits_for_its_payment_and_is_confirmed_by_the_gateway(): void
