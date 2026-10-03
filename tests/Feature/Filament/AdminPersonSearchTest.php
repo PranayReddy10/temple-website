@@ -10,10 +10,12 @@ use App\Enums\UserRole;
 use App\Filament\Resources\Devotees\Pages\ListDevotees;
 use App\Filament\Resources\EventTickets\Pages\ListEventTickets;
 use App\Filament\Resources\HundiDonations\Pages\ListHundiDonations;
+use App\Filament\Resources\Payments\Pages\ListPayments;
 use App\Filament\Resources\PujaBookings\Pages\ListPujaBookings;
 use App\Filament\Resources\SupportTickets\Pages\ListSupportTickets;
 use App\Models\Devotee;
 use App\Models\EventRegistration;
+use App\Models\Payment;
 use App\Models\PujaBooking;
 use App\Models\SupportTicket;
 use App\Models\Temple;
@@ -101,5 +103,35 @@ class AdminPersonSearchTest extends TestCase
         Livewire::test($list)->searchTable('11111')->assertCanSeeTableRecords([$fromTemple])->assertCanNotSeeTableRecords([$fromDevotee]);
         Livewire::test($list)->searchTable('Secretary')->assertCanSeeTableRecords([$fromTemple])->assertCanNotSeeTableRecords([$fromDevotee]);
         Livewire::test($list)->searchTable($fromDevotee->reference)->assertCanSeeTableRecords([$fromDevotee])->assertCanNotSeeTableRecords([$fromTemple]);
+    }
+
+    public function test_payments_are_found_by_name_phone_reference_or_gateway_id(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => UserRole::SuperAdmin, 'is_active' => true]));
+        $temple = Temple::create(['name' => 'Sri Rama Temple', 'slug' => 'sri-rama', 'status' => TempleStatus::Published, 'published_at' => now()]);
+        $lakshmi = Devotee::factory()->create(['name' => 'Lakshmi Devi', 'phone' => '+91 98480 22338']);
+        $ravi = Devotee::factory()->create(['name' => 'Ravi Kumar', 'phone' => '90000 11111']);
+        $pay = fn (Devotee $d, string $purpose, string $gatewayId) => Payment::create([
+            'devotee_id' => $d->id, 'purpose' => $purpose, 'gateway' => 'razorpay', 'amount_paise' => 50000,
+            'status' => Payment::PAID, 'gateway_payment_id' => $gatewayId, 'paid_at' => now(),
+        ]);
+        $p1 = $pay($lakshmi, Payment::PUJA_BOOKING, 'pay_LAKSHMI001');
+        $p2 = $pay($ravi, Payment::PUJA_BOOKING, 'pay_RAVI002');
+
+        // Booked for someone else, with that person's number on the booking.
+        $puja = TemplePuja::create(['temple_id' => $temple->id, 'name' => 'Archana', 'fee_amount' => 500, 'app_booking_enabled' => true, 'is_published' => true]);
+        $booking = PujaBooking::create([
+            'temple_id' => $temple->id, 'temple_puja_id' => $puja->id, 'devotee_id' => $ravi->id, 'payment_id' => $p2->id,
+            'booked_for' => DevotionalClock::now()->toDateString(), 'people' => 1, 'devotee_name' => 'Sita Mahalakshmi',
+            'devotee_phone' => '77777-55555', 'amount_paise' => 50000, 'status' => BookingStatus::Confirmed, 'confirmed_at' => now(),
+        ]);
+
+        $list = ListPayments::class;
+        Livewire::test($list)->searchTable('98480 22338')->assertCanSeeTableRecords([$p1])->assertCanNotSeeTableRecords([$p2]);
+        Livewire::test($list)->searchTable('ravi')->assertCanSeeTableRecords([$p2])->assertCanNotSeeTableRecords([$p1]);
+        Livewire::test($list)->searchTable('7777755555')->assertCanSeeTableRecords([$p2])->assertCanNotSeeTableRecords([$p1]);
+        Livewire::test($list)->searchTable('Sita')->assertCanSeeTableRecords([$p2])->assertCanNotSeeTableRecords([$p1]);
+        Livewire::test($list)->searchTable($booking->reference)->assertCanSeeTableRecords([$p2])->assertCanNotSeeTableRecords([$p1]);
+        Livewire::test($list)->searchTable('pay_LAKSHMI')->assertCanSeeTableRecords([$p1])->assertCanNotSeeTableRecords([$p2]);
     }
 }
