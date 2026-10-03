@@ -65,10 +65,13 @@ class PageResource extends Resource
                         ? 'Fixed: the app, the payment gateways and the stores link to this address.'
                         : 'Lower-case letters, numbers and dashes.'),
                 Textarea::make('summary')->label('Search description')->rows(2)->maxLength(300)->columnSpanFull()
-                    ->helperText('What Google shows under the title. About 150 characters.'),
+                    ->helperText(fn (?Page $record): string => 'What Google shows under the title. About 150 characters.'
+                        .($record !== null && str_contains((string) $record->summary, '{') ? ' Shown as: “'.$record->renderedSummary().'”' : '')),
                 RichEditor::make('body')->label('Text')->columnSpanFull()
                     ->toolbarButtons([['bold', 'italic', 'link'], ['h2', 'h3'], ['bulletList', 'orderedList', 'blockquote'], ['undo', 'redo']])
-                    ->helperText('These words are filled in when the page is shown: {app}, {website}, {email}, {business}, {address}, {grievance_officer}, {courts}. Set them under Website → Business details and Administration → Settings.'),
+                    ->helperText(fn (): string => 'Words in braces are filled in when the page is shown: '
+                        .collect(Page::tokens())->except('{address}')->map(fn (string $v, string $k): string => $k.' → '.$v)->implode(' · ')
+                        .'. The app name is the Brand name under Administration → Settings; the rest are under Website → Business details.'),
                 Toggle::make('is_published')->label('Published')->default(true),
                 Toggle::make('show_in_footer')->label('Link in the website footer')->default(true),
                 TextInput::make('sort_order')->label('Order in the footer')->numeric()->default(50),

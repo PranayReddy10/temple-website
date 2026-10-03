@@ -43,7 +43,7 @@
             @endif
             <div>
                 <h1>{{ $passport['name'] }}</h1>
-                <p class="muted">Temple Passport{{ $passport['home_state'] ? ' · '.$passport['home_state'] : '' }}</p>
+                <p class="muted">{{ config('brand.name') }} passport{{ $passport['home_state'] ? ' · '.$passport['home_state'] : '' }}</p>
             </div>
         </div>
         <div class="stats">

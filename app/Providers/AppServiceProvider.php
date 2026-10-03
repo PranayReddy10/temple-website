@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\Controllers\MediaPreviewController;
 use App\Models\DevotionalMedia;
 use App\Models\Temple;
 use App\Models\TempleEvent;
@@ -13,12 +14,14 @@ use App\Observers\TempleEventObserver;
 use App\Observers\TempleObserver;
 use App\Observers\TemplePhotoObserver;
 use App\Observers\TemplePujaObserver;
+use App\Support\BrandName;
 use App\Support\LoginRecorder;
 use App\Support\MailSettings;
 use App\Support\MediaStorage;
 use App\Support\Pwa;
 use App\Support\TempleTheme;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\FileUpload;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Auth\Events\Failed;
@@ -28,6 +31,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -46,7 +50,7 @@ class AppServiceProvider extends ServiceProvider
         // forwards requests over http would otherwise blank every photo in
         // the app while the admin panel (relative URLs) looks fine.
         if (str_starts_with((string) config('app.url'), 'https://')) {
-            \Illuminate\Support\Facades\URL::forceScheme('https');
+            URL::forceScheme('https');
         }
 
         /*
@@ -67,6 +71,9 @@ class AppServiceProvider extends ServiceProvider
         // panel; folded over config the same way, and as safe on a fresh
         // database.
         MailSettings::apply();
+
+        // One name everywhere: the Brand name from Settings over .env.
+        BrandName::apply();
 
         // The API-wide limit: 60 requests a minute per devotee, or per address
         // before sign-in.
@@ -156,14 +163,14 @@ class AppServiceProvider extends ServiceProvider
      */
     protected static function previewUploadsFromThisHost(): void
     {
-        \Filament\Forms\Components\FileUpload::configureUsing(function (\Filament\Forms\Components\FileUpload $upload): void {
+        FileUpload::configureUsing(function (FileUpload $upload): void {
             // Opening a form asked the Space whether each saved file exists,
             // and its size and type, before the page could render: a round
             // trip per file, and a hang when the Space is slow to answer or
             // the key is refused. The preview shows the file either way.
-            $upload->fetchFileInformation(fn (\Filament\Forms\Components\FileUpload $component): bool => $component->getDiskName() !== \App\Support\MediaStorage::SPACES_DISK);
+            $upload->fetchFileInformation(fn (FileUpload $component): bool => $component->getDiskName() !== MediaStorage::SPACES_DISK);
 
-            $upload->getUploadedFileUsing(function (\Filament\Forms\Components\FileUpload $component, string $file, string|array|null $storedFileNames): ?array {
+            $upload->getUploadedFileUsing(function (FileUpload $component, string $file, string|array|null $storedFileNames): ?array {
                 $disk = $component->getDiskName();
                 $storage = $component->getDisk();
                 $size = 0;
@@ -182,8 +189,8 @@ class AppServiceProvider extends ServiceProvider
                     'name' => ($component->isMultiple() ? ($storedFileNames[$file] ?? null) : $storedFileNames) ?? basename($file),
                     'size' => $size,
                     'type' => $type,
-                    'url' => in_array($disk, \App\Http\Controllers\MediaPreviewController::DISKS, true)
-                        ? \Illuminate\Support\Facades\URL::temporarySignedRoute('media.preview', now()->addHours(2), ['disk' => $disk, 'path' => $file], absolute: false)
+                    'url' => in_array($disk, MediaPreviewController::DISKS, true)
+                        ? URL::temporarySignedRoute('media.preview', now()->addHours(2), ['disk' => $disk, 'path' => $file], absolute: false)
                         : $storage->url($file),
                 ];
             });
