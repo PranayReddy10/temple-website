@@ -78,6 +78,12 @@ class TemplePayoutAccount extends Model
         return $this->belongsTo(Temple::class);
     }
 
+    /** Who last changed the details or sent the documents. */
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
     public function verifier(): BelongsTo
     {
         return $this->belongsTo(User::class, 'verified_by');

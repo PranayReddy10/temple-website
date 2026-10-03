@@ -4,7 +4,8 @@ namespace Tests\Feature\Finance;
 
 use App\Enums\TempleStatus;
 use App\Enums\UserRole;
-use App\Filament\Resources\TempleBalances\Pages\ListTempleBalances;
+use App\Filament\Resources\PaymentVerifications\Pages\ListPaymentVerifications;
+use App\Filament\Resources\PaymentVerifications\Pages\ViewPaymentVerification;
 use App\Http\Controllers\KycDocumentController;
 use App\Models\Devotee;
 use App\Models\Setting;
@@ -151,16 +152,22 @@ class PaymentsVerificationTest extends TestCase
         $this->actingAs($owner)->get($link)->assertForbidden();
         $this->actingAs($admin)->get($link)->assertOk();
 
-        Livewire::test(ListTempleBalances::class)
-            ->set('tableFilters.owed.isActive', false)
-            ->callTableAction('rejectPayments', $this->temple, data: ['reason' => 'The Aadhaar photo is not readable.']);
+        // The queue shows who is waiting, and the page shows the documents themselves.
+        Livewire::test(ListPaymentVerifications::class)
+            ->assertCanSeeTableRecords([$account])
+            ->assertSee('Rama Rao');
+        Livewire::test(ViewPaymentVerification::class, ['record' => $account->getRouteKey()])
+            ->assertSee('/admin-kyc/'.$account->id.'/person_photo', false)
+            ->assertSee('/admin-kyc/'.$account->id.'/aadhaar_front', false)
+            ->assertSee('/admin-kyc/'.$account->id.'/temple_proof', false)
+            ->assertSee('2345 6789 0123')
+            ->callAction('reject', data: ['reason' => 'The Aadhaar photo is not readable.']);
         $this->assertSame('rejected', $account->fresh()->kycStatus());
         $this->trust($owner)->getJson($base.'/finance')->assertJsonPath('data.payout_account.kyc.rejection_reason', 'The Aadhaar photo is not readable.');
 
         $this->actingAs($admin);
-        Livewire::test(ListTempleBalances::class)
-            ->set('tableFilters.owed.isActive', false)
-            ->callTableAction('reviewPayments', $this->temple);
+        Livewire::test(ViewPaymentVerification::class, ['record' => $account->getRouteKey()])
+            ->callAction('approve');
         $this->assertTrue($this->temple->fresh()->canCollectPayments());
     }
 }
