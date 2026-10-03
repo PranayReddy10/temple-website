@@ -8,7 +8,7 @@
     <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
         <x-filament::badge :color="match ($settlement->status) { 'paid' => 'success', 'pending' => 'warning', default => 'gray' }">{{ $settlement->statusLabel() }}</x-filament::badge>
         @if ($settlement->isPaid())
-            <span style="font-size:.85rem;opacity:.8">{{ $settlement->paid_at?->timezone($tz)->format('d M Y, H:i') }} · {{ \App\Models\TempleSettlement::METHODS[$settlement->method] ?? $settlement->method }} @if ($settlement->transaction_ref) · <span style="font-family:monospace">{{ $settlement->transaction_ref }}</span>@endif @if ($staff && $settlement->payer) · by {{ $settlement->payer->name }}@endif</span>
+            <span style="font-size:.85rem;opacity:.8">{{ $settlement->paid_at?->timezone($tz)->format('d M Y, g:i A') }} · {{ \App\Models\TempleSettlement::METHODS[$settlement->method] ?? $settlement->method }} @if ($settlement->transaction_ref) · <span style="font-family:monospace">{{ $settlement->transaction_ref }}</span>@endif @if ($staff && $settlement->payer) · by {{ $settlement->payer->name }}@endif</span>
         @elseif ($settlement->cancel_reason)
             <span style="font-size:.85rem;opacity:.8">{{ $settlement->cancel_reason }}</span>
         @endif
@@ -35,7 +35,7 @@
                     <span style="color:#b45309">No payout details when prepared. See the temple's current details under Temple balances.</span>
                 @endif
             </dd>
-            <dt style="opacity:.65">Prepared</dt><dd style="margin:0">{{ $settlement->created_at?->timezone($tz)->format('d M Y, H:i') }}@if ($settlement->creator) by {{ $settlement->creator->name }}@endif</dd>
+            <dt style="opacity:.65">Prepared</dt><dd style="margin:0">{{ $settlement->created_at?->timezone($tz)->format('d M Y, g:i A') }}@if ($settlement->creator) by {{ $settlement->creator->name }}@endif</dd>
         @endif
         @if ($settlement->note)
             <dt style="opacity:.65">Note</dt><dd style="margin:0">{{ $settlement->note }}</dd>

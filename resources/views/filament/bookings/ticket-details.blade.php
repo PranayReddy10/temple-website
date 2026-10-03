@@ -8,7 +8,7 @@
         <x-filament::badge :color="$ticket->status->getColor()" :icon="$ticket->status->getIcon()">{{ $ticket->status->getLabel() }}</x-filament::badge>
         <x-filament::badge color="gray" icon="heroicon-o-musical-note">{{ $ticket->isFree() ? 'Event registration' : 'Event ticket' }}</x-filament::badge>
         @if ($ticket->isVerified())
-            <span style="font-size:.85rem;opacity:.8">by {{ $ticket->verifier?->name ?? 'the temple' }} · {{ $ticket->verified_at?->timezone($tz)->format('d M Y, H:i') }}</span>
+            <span style="font-size:.85rem;opacity:.8">by {{ $ticket->verifier?->name ?? 'the temple' }} · {{ $ticket->verified_at?->timezone($tz)->format('d M Y, g:i A') }}</span>
         @elseif ($ticket->cancel_reason)
             <span style="font-size:.85rem;opacity:.8">{{ $ticket->cancel_reason }}</span>
         @endif
@@ -20,7 +20,7 @@
             <dt style="opacity:.65">Led by</dt><dd style="margin:0">{{ $ticket->event->group_name }}</dd>
         @endif
         <dt style="opacity:.65">Temple</dt><dd style="margin:0">{{ $ticket->temple?->name }}{{ $ticket->temple?->city ? ', '.$ticket->temple->city : '' }}</dd>
-        <dt style="opacity:.65">Day</dt><dd style="margin:0;font-weight:600">{{ $ticket->occurs_on?->format('l, d M Y') }}@if ($ticket->event?->starts_at) · {{ \App\Support\OfficialSite\OfficialSiteReader::twelveHour((string) $ticket->event->starts_at) }}@endif</dd>
+        <dt style="opacity:.65">Day</dt><dd style="margin:0;font-weight:600">{{ $ticket->occurs_on?->format('l, d M Y') }}@if ($ticket->event?->starts_at) · {{ \App\Support\Clock::twelve((string) $ticket->event->starts_at) }}@endif</dd>
         <dt style="opacity:.65">People</dt><dd style="margin:0">{{ $ticket->people }}</dd>
         <dt style="opacity:.65">In the name of</dt><dd style="margin:0">{{ $ticket->devotee_name }}@if ($ticket->devotee_phone) · {{ $ticket->devotee_phone }}@endif</dd>
         <dt style="opacity:.65">Amount</dt>
@@ -30,6 +30,6 @@
                 · {{ ucfirst($ticket->payment->status) }} via {{ \App\Models\Payment::GATEWAYS[$ticket->payment->gateway] ?? $ticket->payment->gateway }}
             @endif
         </dd>
-        <dt style="opacity:.65">Booked</dt><dd style="margin:0">{{ $ticket->created_at?->timezone($tz)->format('d M Y, H:i') }}</dd>
+        <dt style="opacity:.65">Booked</dt><dd style="margin:0">{{ $ticket->created_at?->timezone($tz)->format('d M Y, g:i A') }}</dd>
     </dl>
 </div>

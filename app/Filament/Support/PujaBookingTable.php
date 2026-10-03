@@ -5,6 +5,7 @@ namespace App\Filament\Support;
 use App\Enums\BookingStatus;
 use App\Models\PujaBooking;
 use App\Support\Bookings\PujaBookings;
+use App\Support\Clock;
 use App\Support\DevotionalClock;
 use App\Support\Payments\Payments;
 use Filament\Actions\Action;
@@ -47,7 +48,7 @@ class PujaBookingTable
                     ->label('Day')
                     ->date('D, d M Y')
                     // The booked slot, like a show time; else the seva's own start.
-                    ->description(fn (PujaBooking $record): ?string => $record->slotLabel() ?? ($record->puja?->starts_at ? substr((string) $record->puja->starts_at, 0, 5) : null))
+                    ->description(fn (PujaBooking $record): ?string => $record->slotLabel() ?? ($record->puja?->starts_at ? Clock::twelve((string) $record->puja->starts_at) : null))
                     ->sortable(),
 
                 TextColumn::make('puja.name')
@@ -90,7 +91,7 @@ class PujaBookingTable
                     ->badge()
                     ->sortable()
                     ->description(fn (PujaBooking $record): ?string => $record->isVerified()
-                        ? 'by '.($record->verifier?->name ?? 'the temple').' · '.$record->verified_at?->timezone(DevotionalClock::timezone())->format('d M, H:i')
+                        ? 'by '.($record->verifier?->name ?? 'the temple').' · '.$record->verified_at?->timezone(DevotionalClock::timezone())->format('d M, g:i A')
                         : $record->cancel_reason),
 
                 TextColumn::make('created_at')->label('Booked')->since()->sortable()->toggleable(isToggledHiddenByDefault: true),

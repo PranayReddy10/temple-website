@@ -261,7 +261,7 @@ class ViewDevotee extends ViewRecord
         }
 
         $rows = $events->map(function ($event): string {
-            $when = $event->occurred_at?->format('d M Y, H:i') ?? '—';
+            $when = $event->occurred_at?->format('d M Y, g:i A') ?? '—';
             $outcome = $event->succeeded
                 ? 'Signed in'
                 : 'Failed ('.str($event->failure_reason ?? 'unknown')->replace('_', ' ').')';

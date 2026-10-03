@@ -60,7 +60,7 @@
             <dt>In the name of</dt><dd>{{ $booking->devotee_name }}</dd>
             <dt>Amount</dt><dd>{{ $booking->amountLabel() }}</dd>
             @if ($booking->isVerified())
-                <dt>Received</dt><dd>{{ $booking->verified_at?->timezone(\App\Support\DevotionalClock::timezone())->format('d M Y, H:i') }}</dd>
+                <dt>Received</dt><dd>{{ $booking->verified_at?->timezone(\App\Support\DevotionalClock::timezone())->format('d M Y, g:i A') }}</dd>
             @endif
         </dl>
         <p class="note">The temple's counter verifies this code with its own scanner in the temple portal. A verified code is not accepted a second time.</p>

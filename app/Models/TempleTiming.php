@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TimingKind;
+use App\Support\Clock;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -66,11 +67,6 @@ class TempleTiming extends Model
     /** "05:30:00" → "5:30 AM": devotees read the 12-hour clock. */
     protected function formatTime(?string $time): ?string
     {
-        if (blank($time) || ! preg_match('/^(\d{1,2}):(\d{2})/', $time, $m)) {
-            return null;
-        }
-        $h = (int) $m[1];
-
-        return sprintf('%d:%s %s', $h % 12 === 0 ? 12 : $h % 12, $m[2], $h < 12 ? 'AM' : 'PM');
+        return Clock::twelve($time);
     }
 }

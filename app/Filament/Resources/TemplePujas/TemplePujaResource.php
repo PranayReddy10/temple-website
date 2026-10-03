@@ -97,7 +97,7 @@ class TemplePujaResource extends Resource
 
                 TextColumn::make('starts_at')
                     ->label('Time')
-                    ->time('H:i')
+                    ->time('g:i A')
                     ->placeholder('—')
                     ->toggleable(),
 

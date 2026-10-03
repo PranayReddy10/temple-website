@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Temples\RelationManagers;
 use App\Filament\Schemas\TemplePujaForm;
 use App\Filament\Support\MediaColumn;
 use App\Models\TemplePuja;
+use App\Support\Clock;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -46,7 +47,7 @@ class PujasRelationManager extends RelationManager
                 TextColumn::make('when')
                     ->label('When')
                     ->state(function (TemplePuja $record): string {
-                        $time = $record->starts_at ? substr((string) $record->starts_at, 0, 5) : null;
+                        $time = $record->starts_at ? Clock::twelve((string) $record->starts_at) : null;
 
                         return collect([$time, $record->schedule_note])->filter()->join(' · ') ?: '—';
                     }),

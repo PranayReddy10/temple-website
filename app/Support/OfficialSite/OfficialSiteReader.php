@@ -2,6 +2,7 @@
 
 namespace App\Support\OfficialSite;
 
+use App\Support\Clock;
 use DOMDocument;
 use DOMElement;
 use DOMNode;
@@ -1167,12 +1168,7 @@ final class OfficialSiteReader
     /** "05:30" → "5:30 AM", for people reading it. */
     public static function twelveHour(?string $time): ?string
     {
-        if (blank($time) || ! preg_match('/^(\d{1,2}):(\d{2})/', (string) $time, $m)) {
-            return null;
-        }
-        $h = (int) $m[1];
-
-        return sprintf('%d:%s %s', $h % 12 === 0 ? 12 : $h % 12, $m[2], $h < 12 ? 'AM' : 'PM');
+        return Clock::twelve($time);
     }
 
     /** "5:30 pm", "5.30PM", "17:30" → "17:30"; null when it is not a time. */

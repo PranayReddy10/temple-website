@@ -67,7 +67,7 @@ class ViewSevaDrive extends ViewRecord
                 ->schema([
                     TextEntry::make('block_reason')->label('Reason (the organiser sees this)')->columnSpan(2),
                     TextEntry::make('blocker.name')->label('Blocked by')
-                        ->state(fn (SevaDrive $record): string => ($record->blocker?->name ?? 'Staff').' · '.$record->blocked_at?->format('d M Y, H:i')),
+                        ->state(fn (SevaDrive $record): string => ($record->blocker?->name ?? 'Staff').' · '.$record->blocked_at?->format('d M Y, g:i A')),
                 ]),
 
             Section::make('Marked misleading')
@@ -123,7 +123,7 @@ class ViewSevaDrive extends ViewRecord
                         ->label('Of those, blocked')
                         ->state(fn (SevaDrive $record): string => $record->devotee_id === null ? '—' : (string) SevaDrive::query()->where('devotee_id', $record->devotee_id)->where('status', SevaDriveStatus::Blocked)->count()),
                     TextEntry::make('creator.name')->label('Created in the admin by')->placeholder('Raised from the app'),
-                    TextEntry::make('created_at')->label('Raised')->dateTime('d M Y, H:i'),
+                    TextEntry::make('created_at')->label('Raised')->dateTime('d M Y, g:i A'),
                 ]),
 
             Section::make('What is wrong, and the plan')
@@ -156,8 +156,8 @@ class ViewSevaDrive extends ViewRecord
                         ->visible(fn (SevaDrive $record): bool => $record->verified_at !== null)
                         ->state(fn (SevaDrive $record): string => ($record->verifier?->name ?? 'Staff').' · '.$record->verified_at?->format('d M Y')),
                     TextEntry::make('date_label')->label('Dates')->state(fn (SevaDrive $record): string => $record->dateLabel())->columnSpan(2),
-                    TextEntry::make('starts_at')->label('Starts')->dateTime('d M Y, H:i'),
-                    TextEntry::make('ends_at')->label('Ends')->dateTime('d M Y, H:i')->placeholder('—'),
+                    TextEntry::make('starts_at')->label('Starts')->dateTime('d M Y, g:i A'),
+                    TextEntry::make('ends_at')->label('Ends')->dateTime('d M Y, g:i A')->placeholder('—'),
                     TextEntry::make('volunteers_needed')->label('Volunteers wanted')->placeholder('Any number'),
                     TextEntry::make('contact_phone')->label('Organiser phone')->copyable()->placeholder('—'),
                     TextEntry::make('cause')->badge()->color('gray'),
