@@ -38,6 +38,9 @@ class EventRegistrationResource extends JsonResource
                 'slug' => $this->temple->slug,
                 'name' => $this->temple->name,
                 'city' => $this->temple->city,
+                // For "Directions" on the ticket.
+                'latitude' => $this->temple->latitude !== null ? (float) $this->temple->latitude : null,
+                'longitude' => $this->temple->longitude !== null ? (float) $this->temple->longitude : null,
             ],
             'occurs_on' => $this->occurs_on?->toDateString(),
             // The same key as a seva booking, for screens that show both.

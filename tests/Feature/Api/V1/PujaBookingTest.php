@@ -113,6 +113,7 @@ class PujaBookingTest extends TestCase
     public function test_a_free_seva_is_confirmed_at_once_with_a_code_to_show(): void
     {
         $this->devotee();
+        $this->temple->updateQuietly(['latitude' => 17.6688, 'longitude' => 80.8936]);
         $puja = $this->puja(['is_free' => true, 'booking_instructions' => 'Report at the seva counter.']);
 
         $response = $this->postJson("/api/v1/temples/booking-temple/pujas/{$puja->id}/bookings", [
@@ -124,6 +125,9 @@ class PujaBookingTest extends TestCase
             ->assertJsonPath('data.gotram', 'Bharadwaja')
             ->assertJsonPath('data.devotee_name', 'Anu')
             ->assertJsonPath('data.puja.instructions', 'Report at the seva counter.')
+            // Where to go, for the Directions button.
+            ->assertJsonPath('data.temple.latitude', 17.6688)
+            ->assertJsonPath('data.temple.longitude', 80.8936)
             ->assertJsonPath('checkout', null);
 
         $this->assertMatchesRegularExpression('/^SV[2-9A-HJ-NP-Z]{8}$/', $response->json('data.reference'));

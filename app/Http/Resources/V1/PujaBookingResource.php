@@ -38,6 +38,9 @@ class PujaBookingResource extends JsonResource
                 'name' => $this->temple->name,
                 'city' => $this->temple->city,
                 'cover' => $this->temple->coverUrls(),
+                // For "Directions" on the booking.
+                'latitude' => $this->temple->latitude !== null ? (float) $this->temple->latitude : null,
+                'longitude' => $this->temple->longitude !== null ? (float) $this->temple->longitude : null,
             ],
             'puja' => $this->puja === null ? null : [
                 'id' => $this->puja->getKey(),
