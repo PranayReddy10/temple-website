@@ -44,6 +44,10 @@ class TrustFinanceController extends Controller
             'today' => $settlements->day($record, $now->toDateString()),
             'day' => $settlements->day($record, $day),
             'month' => $settlements->period($record, $now->copy()->startOfMonth(), $now->copy()->endOfMonth()),
+            // The report's longer views: the calendar year, and everything
+            // since the temple first took a booking in the app.
+            'year' => $settlements->period($record, $now->copy()->startOfYear(), $now->copy()->endOfYear()),
+            'all_time' => $settlements->period($record, $now->copy()->subYears(20)->startOfYear(), $now->copy()->addYears(5)->endOfYear()),
             'balance' => $settlements->balance($record),
             'payout_account' => $record->payoutAccount?->toPublicArray(),
             'can_edit_payout_account' => $this->canEditPayout($request, $record),

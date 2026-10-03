@@ -189,7 +189,12 @@ class TempleSettlementTest extends TestCase
             ->assertJsonPath('data.balance.upcoming.gross_paise', 50000)
             ->assertJsonPath('data.balance.paid.net_paise', 50000)
             ->assertJsonPath('data.recent_settlements.0.transaction_ref', 'UPI998877')
-            ->assertJsonPath('data.can_edit_payout_account', false);
+            ->assertJsonPath('data.can_edit_payout_account', false)
+            // The app's financial report: the year and all time hold every
+            // live booking, the one already settled included.
+            ->assertJsonPath('data.year.bookings', 3)
+            ->assertJsonPath('data.all_time.bookings', 3)
+            ->assertJsonPath('data.all_time.total_paise', 100000);
 
         $this->trust($user)->getJson('/api/v1/trust/temples/'.$this->temple->id.'/settlements/'.$settled->id)
             ->assertOk()
