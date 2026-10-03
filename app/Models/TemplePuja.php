@@ -2,17 +2,23 @@
 
 namespace App\Models;
 
+use App\Enums\BookingStatus;
 use App\Enums\PujaKind;
+use App\Models\Concerns\MarksTempleChanged;
+use App\Support\DevotionalClock;
 use App\Support\MediaUrl;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class TemplePuja extends Model
 {
-    use HasFactory;
+    use HasFactory, MarksTempleChanged;
 
     protected $fillable = [
         'temple_id', 'kind', 'name', 'description', 'image_disk', 'image_path',
@@ -79,8 +85,8 @@ class TemplePuja extends Model
         return $this->hasMany(TemplePujaSlot::class)->orderBy('starts_at')->orderBy('sort_order');
     }
 
-    /** @return \Illuminate\Support\Collection<int, TemplePujaSlot> The active slots that run on this day. */
-    public function slotsOn(\Carbon\CarbonInterface $date): \Illuminate\Support\Collection
+    /** @return Collection<int, TemplePujaSlot> The active slots that run on this day. */
+    public function slotsOn(CarbonInterface $date): Collection
     {
         return $this->activeSlots()->filter(fn (TemplePujaSlot $s) => $s->runsOn($date))->values();
     }
@@ -90,8 +96,8 @@ class TemplePuja extends Model
         return $this->activeSlots()->isNotEmpty();
     }
 
-    /** @return \Illuminate\Support\Collection<int, TemplePujaSlot> */
-    public function activeSlots(): \Illuminate\Support\Collection
+    /** @return Collection<int, TemplePujaSlot> */
+    public function activeSlots(): Collection
     {
         if (! $this->relationLoaded('slots')) {
             $this->load('slots');
@@ -106,7 +112,7 @@ class TemplePuja extends Model
      *
      * @return list<array{slot: TemplePujaSlot, capacity: ?int, taken: int, available: ?int, started: bool, bookable: bool}>
      */
-    public function slotAvailability(\Carbon\CarbonInterface $date): array
+    public function slotAvailability(CarbonInterface $date): array
     {
         $slots = $this->slotsOn($date);
         if ($slots->isEmpty()) {
@@ -121,7 +127,7 @@ class TemplePuja extends Model
             ->groupBy('temple_puja_slot_id')
             ->pluck('seats', 'temple_puja_slot_id');
 
-        $now = \App\Support\DevotionalClock::now();
+        $now = DevotionalClock::now();
         $isToday = $date->toDateString() === $now->toDateString();
 
         return $slots->map(function (TemplePujaSlot $slot) use ($taken, $isToday, $now): array {
@@ -255,13 +261,13 @@ class TemplePuja extends Model
     }
 
     /** The last day a booking may be made for. */
-    public function lastBookableDate(): \Carbon\CarbonImmutable
+    public function lastBookableDate(): CarbonImmutable
     {
-        return \App\Support\DevotionalClock::now()->addDays(max(0, (int) $this->booking_advance_days))->startOfDay();
+        return DevotionalClock::now()->addDays(max(0, (int) $this->booking_advance_days))->startOfDay();
     }
 
     /** How many more bookings a day can take, or null when the temple set no limit. */
-    public function remainingCapacityOn(\Carbon\CarbonInterface|string $date): ?int
+    public function remainingCapacityOn(CarbonInterface|string $date): ?int
     {
         if ($this->booking_capacity_per_day === null) {
             return null;
@@ -269,7 +275,7 @@ class TemplePuja extends Model
 
         $taken = $this->bookings()
             ->whereDate('booked_for', $date)
-            ->whereIn('status', [\App\Enums\BookingStatus::PendingPayment->value, \App\Enums\BookingStatus::Confirmed->value, \App\Enums\BookingStatus::Verified->value])
+            ->whereIn('status', [BookingStatus::PendingPayment->value, BookingStatus::Confirmed->value, BookingStatus::Verified->value])
             ->count();
 
         return max(0, $this->booking_capacity_per_day - $taken);

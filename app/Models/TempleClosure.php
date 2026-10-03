@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\MarksTempleChanged;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TempleClosure extends Model
 {
-    use HasFactory;
+    use HasFactory, MarksTempleChanged;
 
     protected $fillable = [
         'temple_id', 'starts_on', 'ends_on', 'reason',

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TimingKind;
+use App\Models\Concerns\MarksTempleChanged;
 use App\Support\Clock;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 
 class TempleTiming extends Model
 {
-    use HasFactory;
+    use HasFactory, MarksTempleChanged;
 
     protected $fillable = [
         'temple_id', 'kind', 'label', 'day_of_week', 'days',

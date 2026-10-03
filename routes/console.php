@@ -32,9 +32,10 @@ Schedule::call(fn () => app(PujaBookings::class)->expireOverdue())
 Schedule::call(fn () => app(EventRegistrations::class)->expireOverdue())
     ->name('event-tickets:expire-overdue')->hourly()->withoutOverlapping();
 
-// New and changed temple pages to Bing and the other IndexNow engines.
-// Google reads the sitemap instead (submitted once in Search Console).
-Schedule::command('seo:indexnow')->dailyAt('03:15')->withoutOverlapping();
+// New and changed pages to Bing and the other IndexNow engines, within
+// minutes of the change (only what changed is sent). Google reads the
+// sitemap instead, whose dates move with every change.
+Schedule::command('seo:indexnow')->everyTenMinutes()->withoutOverlapping();
 
 // Temples' own websites, re-read monthly for staff to review (nothing changes
 // on a listing until someone ticks it in the admin panel).

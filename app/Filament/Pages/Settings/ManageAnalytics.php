@@ -2,14 +2,20 @@
 
 namespace App\Filament\Pages\Settings;
 
+use App\Models\Setting;
 use App\Support\Seo;
 use BackedEnum;
+use Carbon\Carbon;
+use Filament\Actions\Action;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\HtmlString;
 
 /**
@@ -87,6 +93,34 @@ class ManageAnalytics extends SettingsPage
                         ->helperText('The whole tag or its content. Optional: Bing can also import the site straight from Search Console.'),
                     Placeholder::make('home_source')->label('Check')
                         ->content(fn () => new HtmlString('<a href="view-source:'.e(Seo::url('/')).'" target="_blank" rel="noopener">Open the home page source</a> (or open '.e(Seo::url('/')).' and press Ctrl+U) and look for the tag in &lt;head&gt;.')),
+                ]),
+
+            Section::make('Search engine updates')
+                ->description('Every 10 minutes, new and changed pages are sent to Bing and the other IndexNow search engines: a temple added or published, or its details, timings, sevas, photos or events changed, with the state and deity pages that list it. Google does not take these: it reads sitemap.xml, whose dates move with every change. For a page you need in Google quickly, paste its address into Search Console → URL inspection → Request indexing.')
+                ->icon('heroicon-o-arrow-path')
+                ->schema([
+                    Placeholder::make('indexnow_status')->label('Last sent')
+                        ->content(function (): HtmlString {
+                            $sent = Setting::get('indexnow_last_sent');
+                            $checked = Setting::get('indexnow_last_run');
+
+                            return new HtmlString(e($sent ? Carbon::parse((string) $sent)->diffForHumans().' — '.Setting::get('indexnow_last_count').' pages' : 'Nothing sent yet')
+                                .'<br><span style="opacity:.7">Last checked for changes: '.e($checked ? Carbon::parse((string) $checked)->diffForHumans() : 'never — is the scheduler (cron) running?').'</span>'
+                                .'<br><a href="'.e(Seo::url('sitemap.xml')).'" target="_blank" rel="noopener" class="underline">Open sitemap.xml</a>');
+                        }),
+                    Actions::make([
+                        Action::make('sendAllPages')
+                            ->label('Send all pages now')
+                            ->icon('heroicon-o-paper-airplane')
+                            ->requiresConfirmation()
+                            ->modalDescription('Sends every published temple, state, deity and information page to the IndexNow search engines. Use it once after a big import; changes go by themselves after that.')
+                            ->action(function (): void {
+                                $code = Artisan::call('seo:indexnow', ['--all' => true]);
+                                $code === 0
+                                    ? Notification::make()->title('Sent to the search engines')->body(trim(Artisan::output()))->success()->send()
+                                    : Notification::make()->title('The search engines could not be reached')->body('It is tried again within 10 minutes.')->warning()->send();
+                            }),
+                    ])->key('indexnow_actions'),
                 ]),
 
             Section::make('Code for every page')
