@@ -74,6 +74,9 @@ class Temple extends Model
     protected function casts(): array
     {
         return [
+            'official_import' => 'array',
+            'official_import_at' => 'datetime',
+            'official_import_reviewed_at' => 'datetime',
             'status' => TempleStatus::class,
             'is_featured' => 'boolean',
             'accepts_donations' => 'boolean',

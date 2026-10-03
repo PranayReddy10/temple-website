@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Temples\Pages;
 
 use App\Filament\Concerns\SyncsCoverPhoto;
+use App\Filament\Resources\Temples\OfficialSiteActions;
 use App\Filament\Resources\Temples\TempleResource;
 use App\Support\TempleQr;
 use Filament\Actions\Action;
@@ -22,6 +23,8 @@ class EditTemple extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            OfficialSiteActions::read(),
+            OfficialSiteActions::review(),
             Action::make('checkinQr')
                 ->label('Check-in QR code')
                 ->icon('heroicon-o-qr-code')
