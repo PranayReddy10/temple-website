@@ -20,7 +20,7 @@
             <dt style="opacity:.65">Led by</dt><dd style="margin:0">{{ $ticket->event->group_name }}</dd>
         @endif
         <dt style="opacity:.65">Temple</dt><dd style="margin:0">{{ $ticket->temple?->name }}{{ $ticket->temple?->city ? ', '.$ticket->temple->city : '' }}</dd>
-        <dt style="opacity:.65">Day</dt><dd style="margin:0;font-weight:600">{{ $ticket->occurs_on?->format('l, d M Y') }}@if ($ticket->event?->starts_at) · {{ substr((string) $ticket->event->starts_at, 0, 5) }}@endif</dd>
+        <dt style="opacity:.65">Day</dt><dd style="margin:0;font-weight:600">{{ $ticket->occurs_on?->format('l, d M Y') }}@if ($ticket->event?->starts_at) · {{ \App\Support\OfficialSite\OfficialSiteReader::twelveHour((string) $ticket->event->starts_at) }}@endif</dd>
         <dt style="opacity:.65">People</dt><dd style="margin:0">{{ $ticket->people }}</dd>
         <dt style="opacity:.65">In the name of</dt><dd style="margin:0">{{ $ticket->devotee_name }}@if ($ticket->devotee_phone) · {{ $ticket->devotee_phone }}@endif</dd>
         <dt style="opacity:.65">Amount</dt>
