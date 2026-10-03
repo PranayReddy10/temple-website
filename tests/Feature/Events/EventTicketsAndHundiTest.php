@@ -41,6 +41,7 @@ class EventTicketsAndHundiTest extends TestCase
         parent::setUp();
 
         $this->temple = Temple::create(['name' => 'Sri Rama Temple', 'slug' => 'sri-rama', 'city' => 'Bhadrachalam', 'status' => TempleStatus::Published, 'published_at' => now()]);
+        $this->approvePayments($this->temple);
 
         Setting::set('payments_enabled', '1', 'boolean');
         Setting::set('payments_razorpay_enabled', '1', 'boolean');

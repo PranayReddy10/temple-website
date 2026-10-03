@@ -9,9 +9,12 @@ use App\Models\Payment;
 use App\Models\PujaBooking;
 use App\Models\TemplePuja;
 use App\Models\User;
+use App\Support\AppConfig;
 use App\Support\DevotionalClock;
 use App\Support\Payments\Payments;
+use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -48,7 +51,7 @@ final class PujaBookings
         }
 
         $today = DevotionalClock::now()->startOfDay();
-        $for = \Carbon\CarbonImmutable::parse($data['booked_for'], DevotionalClock::timezone())->startOfDay();
+        $for = CarbonImmutable::parse($data['booked_for'], DevotionalClock::timezone())->startOfDay();
 
         if ($for->lt($today)) {
             throw ValidationException::withMessages(['booked_for' => 'That day has passed.']);
@@ -66,10 +69,15 @@ final class PujaBookings
 
         $amount = $puja->amountPaiseFor($people);
 
-        if ($amount > 0) {
-            $gateway ??= \App\Support\AppConfig::payments('android')['default_gateway'] ?? null;
+        // Money only reaches a temple whose owner and bank are approved.
+        if ($amount > 0 && ! $puja->temple->canCollectPayments()) {
+            throw ValidationException::withMessages(['puja' => 'This temple does not take payments in the app yet. Book at the temple counter for now.']);
+        }
 
-            if ($gateway === null || ! in_array($gateway, \App\Support\AppConfig::enabledGateways(), true)) {
+        if ($amount > 0) {
+            $gateway ??= AppConfig::payments('android')['default_gateway'] ?? null;
+
+            if ($gateway === null || ! in_array($gateway, AppConfig::enabledGateways(), true)) {
                 throw ValidationException::withMessages(['gateway' => 'Payments are not open yet. Book at the temple counter for now.']);
             }
         }
@@ -170,9 +178,9 @@ final class PujaBookings
                 : 'This booking can no longer be paid for. Book again.']);
         }
 
-        $gateway ??= $booking->payment?->gateway ?? \App\Support\AppConfig::payments('android')['default_gateway'] ?? null;
+        $gateway ??= $booking->payment?->gateway ?? AppConfig::payments('android')['default_gateway'] ?? null;
 
-        if ($gateway === null || ! in_array($gateway, \App\Support\AppConfig::enabledGateways(), true)) {
+        if ($gateway === null || ! in_array($gateway, AppConfig::enabledGateways(), true)) {
             throw ValidationException::withMessages(['gateway' => 'Payments are not open yet. Book at the temple counter for now.']);
         }
 
@@ -263,9 +271,9 @@ final class PujaBookings
      * paid for is cancelled. Run hourly by the scheduler, and for the
      * bookings being looked at, so it holds without the cron too.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder<PujaBooking>|null  $scope
+     * @param  Builder<PujaBooking>|null  $scope
      */
-    public function expireOverdue(?\Illuminate\Database\Eloquent\Builder $scope = null): int
+    public function expireOverdue(?Builder $scope = null): int
     {
         $today = DevotionalClock::now()->toDateString();
         $base = fn () => ($scope ? clone $scope : PujaBooking::query())->whereDate('booked_for', '<', $today);

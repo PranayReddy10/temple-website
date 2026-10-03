@@ -11,8 +11,12 @@ use App\Models\TempleSettlement;
 use App\Models\TempleUser;
 use App\Support\DevotionalClock;
 use App\Support\Finance\Settlements;
+use App\Support\UploadRules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * A temple's money, as its own team sees it: what devotees booked and paid
@@ -119,6 +123,81 @@ class TrustFinanceController extends Controller
         return response()->json(['data' => $account->refresh()->toPublicArray()]);
     }
 
+    /**
+     * The owner's proof, before the temple may take money in the app: the
+     * name and Aadhaar of the person, the Aadhaar card, a document showing
+     * the temple is theirs to represent, and a photo of them. Staff approve
+     * it with the bank details; any change sends it back for checking.
+     */
+    public function submitKyc(Request $request, int $temple): JsonResponse
+    {
+        $record = $this->managedTemple($request, $temple);
+
+        abort_unless($this->canEditPayout($request, $record), 403, 'Only the temple\'s owner can send the verification documents.');
+
+        /** @var TemplePayoutAccount $account */
+        $account = $record->payoutAccount()->firstOrNew();
+        $has = fn (string $column): bool => filled($account->{$column});
+        $doc = fn (string $column, bool $imageOnly = false): array => [
+            $has($column) ? 'nullable' : 'required',
+            'file',
+            'mimes:'.($imageOnly ? UploadRules::mimesRuleFor('temple_photo') : UploadRules::mimesRuleFor('kyc_document')),
+            'max:'.UploadRules::maxKbFor('kyc_document'),
+        ];
+
+        // "2345 6789 0123" as printed on the card.
+        if ($request->filled('aadhaar_number')) {
+            $request->merge(['aadhaar_number' => preg_replace('/\s+/', '', (string) $request->input('aadhaar_number'))]);
+        }
+
+        $validated = $request->validate([
+            'kyc_name' => [$has('kyc_name') ? 'nullable' : 'required', 'string', 'min:3', 'max:120'],
+            // Twelve digits, never starting with 0 or 1.
+            'aadhaar_number' => [$has('aadhaar_number') ? 'nullable' : 'required', 'regex:/^[2-9][0-9]{11}$/'],
+            'temple_proof_kind' => [$has('temple_proof_kind') ? 'nullable' : 'required', Rule::in(array_keys(TemplePayoutAccount::PROOF_KINDS))],
+            'aadhaar_front' => $doc('aadhaar_front_path'),
+            'aadhaar_back' => $doc('aadhaar_back_path'),
+            'temple_proof' => $doc('temple_proof_path'),
+            'person_photo' => $doc('person_photo_path', imageOnly: true),
+        ], [
+            'aadhaar_number.regex' => 'An Aadhaar number is 12 digits.',
+            'kyc_name.required' => 'Enter the name as it is on the Aadhaar card.',
+        ]);
+
+        $account->kyc_disk ??= 'local';
+        $disk = $account->kycDisk();
+        $old = [];
+
+        foreach (TemplePayoutAccount::DOCUMENTS as $field => [$column]) {
+            if ($request->hasFile($field)) {
+                if (filled($account->{$column})) {
+                    $old[] = $account->{$column};
+                }
+                $account->{$column} = $request->file($field)->store('kyc/'.$record->getKey(), ['disk' => $disk]);
+            }
+        }
+
+        foreach (['kyc_name', 'aadhaar_number', 'temple_proof_kind'] as $key) {
+            if (filled($validated[$key] ?? null)) {
+                $account->{$key} = $validated[$key];
+            }
+        }
+
+        $account->forceFill([
+            'temple_id' => $record->getKey(),
+            'kyc_submitted_at' => now(),
+            'rejection_reason' => null,
+            'updated_by' => $this->trustUser($request)->getKey(),
+            // New documents are always checked again.
+            'verified_at' => null,
+            'verified_by' => null,
+        ])->save();
+
+        Storage::disk($disk)->delete($old);
+
+        return response()->json(['data' => $account->refresh()->toPublicArray()]);
+    }
+
     /** Online hundi: every gift, newest first, with today's and the month's totals. */
     public function donations(Request $request, int $temple): JsonResponse
     {
@@ -156,6 +235,11 @@ class TrustFinanceController extends Controller
         abort_unless($this->canEditPayout($request, $record), 403, 'Only the temple\'s owner can switch the online hundi on or off.');
 
         $validated = $request->validate(['accepts_donations' => ['required', 'boolean']]);
+
+        if ($validated['accepts_donations'] && ! $record->canCollectPayments()) {
+            throw ValidationException::withMessages(['accepts_donations' => TemplePayoutAccount::NOT_APPROVED_MESSAGE]);
+        }
+
         $record->forceFill(['accepts_donations' => $validated['accepts_donations']])->save();
 
         return response()->json(['data' => ['accepts_donations' => (bool) $record->accepts_donations]]);

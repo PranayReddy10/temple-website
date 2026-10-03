@@ -6,12 +6,15 @@ use App\Enums\PujaKind;
 use App\Http\Controllers\Api\V1\Trust\Concerns\ScopesToTrustTemples;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\PujaResource;
+use App\Models\Temple;
+use App\Models\TemplePayoutAccount;
 use App\Models\TemplePuja;
 use App\Support\UploadRules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Pujas, sevas and prasadam: what the temple offers, what it costs, and
@@ -110,7 +113,14 @@ class TrustPujaController extends Controller
             ], true))
             ->all();
 
-        $oldImage = [$puja->image_disk, $puja->image_path];
+        // Paid booking in the app takes money: only once the owner and the
+        // bank details are approved.
+        $puja->fill($data);
+        if ($puja->app_booking_enabled && ! $puja->is_free && $puja->fee_amount !== null && ! (Temple::query()->find($templeId)?->canCollectPayments() ?? false)) {
+            throw ValidationException::withMessages(['app_booking_enabled' => TemplePayoutAccount::NOT_APPROVED_MESSAGE]);
+        }
+
+        $oldImage = [$puja->getOriginal('image_disk'), $puja->getOriginal('image_path')];
 
         if ($request->hasFile('image')) {
             $disk = config('filesystems.media');

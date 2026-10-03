@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\SevaDriveMedia;
+
 /**
  * What may be uploaded where, defined once.
  *
@@ -34,6 +36,13 @@ final class UploadRules
                 'types' => self::IMAGE_TYPES,
                 'max_kb' => 12288,
                 'note' => 'Resized on upload to a 1200px medium and a 400px thumbnail, so the original can be large.',
+            ],
+            'kyc_document' => [
+                'label' => 'Payment verification documents',
+                'where' => 'Temple Trust app → Finance → Verification (Aadhaar, temple proof, photo of the person)',
+                'types' => [...self::IMAGE_TYPES, 'application/pdf'],
+                'max_kb' => 8192,
+                'note' => 'Kept on the private disk; only staff can open them.',
             ],
             'deity_image' => [
                 'label' => 'Deity images',
@@ -89,7 +98,7 @@ final class UploadRules
                 'where' => 'Uploaded from the app, reviewed under Community → Seva Drives',
                 'types' => self::IMAGE_TYPES,
                 'max_kb' => 12288,
-                'note' => 'Before and after photographs of the place, up to '.\App\Models\SevaDriveMedia::MAX_PER_STAGE.' of each.',
+                'note' => 'Before and after photographs of the place, up to '.SevaDriveMedia::MAX_PER_STAGE.' of each.',
             ],
             'seva_video' => [
                 'label' => 'Seva drive videos',

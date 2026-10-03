@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\VisitPhotos;
 
-use App\Enums\PhotoModerationStatus;
 use App\Filament\Resources\VisitPhotos\Pages\ListVisitPhotos;
 use App\Filament\Support\PhotoModeration;
 use App\Models\VisitPhoto;

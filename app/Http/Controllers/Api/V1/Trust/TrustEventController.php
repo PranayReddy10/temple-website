@@ -8,7 +8,9 @@ use App\Enums\EventType;
 use App\Http\Controllers\Api\V1\Trust\Concerns\ScopesToTrustTemples;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\EventResource;
+use App\Models\Temple;
 use App\Models\TempleEvent;
+use App\Models\TemplePayoutAccount;
 use App\Support\UploadRules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -100,6 +102,13 @@ class TrustEventController extends Controller
         $validated['ticket_price_paise'] = (int) round(((float) ($validated['ticket_price'] ?? 0)) * 100);
         foreach (['open_to_all' => true, 'registration_enabled' => false, 'max_people_per_registration' => 10] as $key => $default) {
             $validated[$key] ??= $default;
+        }
+
+        // Paid tickets take money: only once the owner and the bank details
+        // are approved.
+        if ($validated['registration_enabled'] && $validated['ticket_price_paise'] > 0
+            && ! (Temple::query()->find($templeId)?->canCollectPayments() ?? false)) {
+            throw ValidationException::withMessages(['ticket_price' => TemplePayoutAccount::NOT_APPROVED_MESSAGE]);
         }
 
         // A price is set before tickets are sold, not changed under them.

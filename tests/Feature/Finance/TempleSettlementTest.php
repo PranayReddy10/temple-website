@@ -232,9 +232,10 @@ class TempleSettlementTest extends TestCase
         $this->assertNotSame('001234567890', \DB::table('temple_payout_accounts')->value('account_number'));
 
         $admin = $this->superAdmin();
+        // Approval needs the owner's documents, and is given on the web where they can be seen.
         $this->trust($admin)->postJson('/api/v1/trust/admin/temples/'.$this->temple->id.'/payout-account/verify')
-            ->assertOk()
-            ->assertJsonPath('data.is_verified', true);
+            ->assertUnprocessable();
+        $account->forceFill(['verified_at' => now()])->saveQuietly();
 
         // Resending without the number keeps it, and keeps it verified.
         $this->trust($owner)->putJson($url, ['account_name' => 'Sri Rama Trust', 'ifsc' => 'SBIN0001234', 'bank_name' => 'SBI Main Branch'])

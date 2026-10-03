@@ -6,6 +6,7 @@ use App\Filament\Support\ReviewModeration;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -39,7 +40,7 @@ class ReviewsRelationManager extends RelationManager
             ->emptyStateDescription($staff ? 'Accounts devotees write about visiting this temple appear here.' : 'Published accounts of visits appear here. You can reply to each one; the devotee sees your reply in the app.');
     }
 
-    public static function getBadge(\Illuminate\Database\Eloquent\Model $ownerRecord, string $pageClass): ?string
+    public static function getBadge(Model $ownerRecord, string $pageClass): ?string
     {
         $staff = Auth::user()?->role?->isStaff() ?? false;
         $count = $staff ? $ownerRecord->reviews()->awaitingModeration()->count() : $ownerRecord->reviews()->approved()->whereNull('temple_reply')->count();

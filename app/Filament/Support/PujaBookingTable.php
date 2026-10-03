@@ -6,6 +6,7 @@ use App\Enums\BookingStatus;
 use App\Models\PujaBooking;
 use App\Support\Bookings\PujaBookings;
 use App\Support\DevotionalClock;
+use App\Support\Payments\Payments;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Textarea;
@@ -204,7 +205,7 @@ class PujaBookingTable
             ->requiresConfirmation()
             ->modalDescription('Only after the refund has been made in the payment gateway. This records it: the payment reads refunded and the booking is void.')
             ->action(function (PujaBooking $record): void {
-                app(\App\Support\Payments\Payments::class)->refunded($record->payment);
+                app(Payments::class)->refunded($record->payment);
                 Notification::make()->title('Marked refunded.')->success()->send();
             });
     }

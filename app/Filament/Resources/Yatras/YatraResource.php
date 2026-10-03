@@ -7,11 +7,11 @@ use App\Filament\Resources\Yatras\Pages\ListYatras;
 use App\Models\Yatra;
 use BackedEnum;
 use Filament\Resources\Resource;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Filament\Tables\Columns\IconColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 

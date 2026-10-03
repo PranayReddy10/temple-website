@@ -3,6 +3,7 @@
 namespace App\Filament\Schemas;
 
 use App\Enums\PujaKind;
+use App\Filament\Support\PaymentsApproval;
 use App\Models\TemplePuja;
 use App\Models\TemplePujaSlot;
 use App\Support\UploadRules;
@@ -153,7 +154,9 @@ class TemplePujaForm
                                 if ($value && ! $get('is_free') && blank($get('fee_amount'))) {
                                     $fail('To take bookings in the app, publish the fee above or mark the seva free.');
                                 }
-                            }),
+                            })
+                            // Paid booking takes money: only for an approved temple.
+                            ->rule(PaymentsApproval::rule(fn (Get $get, mixed $value): bool => (bool) $value && ! $get('is_free') && filled($get('fee_amount')))),
 
                         Toggle::make('fee_per_person')
                             ->label('Fee is per person')

@@ -1,19 +1,26 @@
 <?php
 
+use App\Enums\TempleStatus;
 use App\Http\Controllers\BookingPageController;
+use App\Http\Controllers\KycDocumentController;
 use App\Http\Controllers\MediaFileController;
+use App\Http\Controllers\MediaPreviewController;
+use App\Http\Controllers\PageController;
 use App\Http\Controllers\PassportPageController;
 use App\Http\Controllers\PayController;
-use App\Http\Controllers\TempleQrPrintController;
+use App\Http\Controllers\PublicTempleController;
 use App\Http\Controllers\PwaController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\TempleCheckinController;
+use App\Http\Controllers\TempleQrPrintController;
+use App\Models\Temple;
 use Illuminate\Support\Facades\Route;
 
 // temple.darshansaathi.com itself: what this server is, and the way in for
 // staff and temples. Devotees are pointed at the website and the app.
 Route::get('/', function () {
     return view('home', [
-        'temples' => \App\Models\Temple::query()->where('status', \App\Enums\TempleStatus::Published)->count(),
+        'temples' => Temple::query()->where('status', TempleStatus::Published)->count(),
     ]);
 })->name('home');
 
@@ -100,10 +107,10 @@ Route::get('/pay/{payment}/done', [PayController::class, 'done'])->name('pay.don
 
 // Public, indexable pages for the devotees' website: darshansaathi.com's
 // .htaccess sends these paths here. See App\Support\Seo.
-Route::get('/temples', [\App\Http\Controllers\PublicTempleController::class, 'index'])->name('site.temples');
-Route::get('/temples/{slug}', [\App\Http\Controllers\PublicTempleController::class, 'show'])->name('site.temple');
-Route::get('/states/{slug}', [\App\Http\Controllers\PublicTempleController::class, 'state'])->name('site.state');
-Route::get('/deities/{slug}', [\App\Http\Controllers\PublicTempleController::class, 'deity'])->name('site.deity');
+Route::get('/temples', [PublicTempleController::class, 'index'])->name('site.temples');
+Route::get('/temples/{slug}', [PublicTempleController::class, 'show'])->name('site.temple');
+Route::get('/states/{slug}', [PublicTempleController::class, 'state'])->name('site.state');
+Route::get('/deities/{slug}', [PublicTempleController::class, 'deity'])->name('site.deity');
 // Search Console's "HTML file" check: the file named in Admin → Analytics & SEO.
 Route::get('/google{token}.html', function (string $token) {
     $file = 'google'.$token.'.html';
@@ -111,13 +118,13 @@ Route::get('/google{token}.html', function (string $token) {
 
     return response('google-site-verification: '.$file, 200, ['Content-Type' => 'text/html; charset=UTF-8']);
 })->where('token', '[0-9a-f]+');
-Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap');
-Route::get('/sitemap-pages.xml', [\App\Http\Controllers\SitemapController::class, 'pages']);
-Route::get('/sitemap-temples-{page}.xml', [\App\Http\Controllers\SitemapController::class, 'temples'])->whereNumber('page');
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+Route::get('/sitemap-pages.xml', [SitemapController::class, 'pages']);
+Route::get('/sitemap-temples-{page}.xml', [SitemapController::class, 'temples'])->whereNumber('page');
 
 // A saved upload, read back same-origin for the admin panel's upload fields.
 // See MediaPreviewController.
-Route::get('/media-preview', \App\Http\Controllers\MediaPreviewController::class)
+Route::get('/media-preview', MediaPreviewController::class)
     ->middleware('signed:relative')
     ->name('media.preview');
 
@@ -128,7 +135,14 @@ Route::get('/storage/{path}', MediaFileController::class)
 // Policy and information pages (privacy, terms, refunds …), edited in
 // Admin → Website → Pages. Last of all, so a page can never take over an
 // address that something else answers.
-Route::post('/account-deletion', [\App\Http\Controllers\PageController::class, 'requestDeletion'])
+Route::post('/account-deletion', [PageController::class, 'requestDeletion'])
     ->middleware('throttle:5,60')
     ->name('site.account-deletion');
-Route::fallback([\App\Http\Controllers\PageController::class, 'show'])->name('site.page');
+Route::fallback([PageController::class, 'show'])->name('site.page');
+
+// A temple owner's verification document (Aadhaar, temple proof, photo), for
+// staff only. See KycDocumentController.
+Route::get('/admin-kyc/{account}/{document}', KycDocumentController::class)
+    ->middleware(['signed', 'auth'])
+    ->whereNumber('account')
+    ->name('kyc.document');

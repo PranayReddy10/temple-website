@@ -5,6 +5,7 @@ namespace App\Filament\Resources\TempleBalances;
 use App\Enums\BookingStatus;
 use App\Filament\Resources\TempleBalances\Pages\ListTempleBalances;
 use App\Filament\Resources\TempleSettlements\TempleSettlementResource;
+use App\Http\Controllers\KycDocumentController;
 use App\Models\Temple;
 use App\Models\TemplePayoutAccount;
 use App\Models\TempleSettlement;
@@ -17,6 +18,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
@@ -163,15 +165,16 @@ class TempleBalanceResource extends Resource
                     ->sortable(),
 
                 TextColumn::make('payout')
-                    ->label('Payout details')
+                    ->label('Payments')
                     ->badge()
-                    ->state(fn (Temple $t): string => match (true) {
-                        $t->payoutAccount === null || ! $t->payoutAccount->isComplete() => 'Missing',
-                        $t->payoutAccount->isVerified() => 'Verified',
-                        default => 'To verify',
+                    ->state(fn (Temple $t): string => match ($t->payoutAccount?->kycStatus() ?? 'missing') {
+                        'approved' => 'Approved',
+                        'pending' => 'To check',
+                        'rejected' => 'Rejected',
+                        default => 'Missing',
                     })
                     ->color(fn (string $state): string => match ($state) {
-                        'Verified' => 'success', 'To verify' => 'warning', default => 'danger',
+                        'Approved' => 'success', 'To check' => 'warning', default => 'danger',
                     })
                     ->description(fn (Temple $t): ?string => $t->payoutAccount?->summary()),
             ])
@@ -185,6 +188,11 @@ class TempleBalanceResource extends Resource
                         ->orWhereHas('settlements', fn (Builder $s) => $s->pending())))
                     ->toggle()
                     ->default(),
+                Filter::make('kyc_to_check')
+                    ->label('Verification waiting to be checked')
+                    ->query(fn (Builder $query): Builder => $query->whereHas('payoutAccount', fn (Builder $a) => $a
+                        ->whereNotNull('kyc_submitted_at')->whereNull('verified_at')->whereNull('rejection_reason')))
+                    ->toggle(),
                 Filter::make('payout_unverified')
                     ->label('Payout details not verified')
                     ->query(fn (Builder $query): Builder => $query->whereDoesntHave('payoutAccount', fn (Builder $a) => $a->whereNotNull('verified_at')))
@@ -194,7 +202,8 @@ class TempleBalanceResource extends Resource
                 self::settleAction(),
                 ActionGroup::make([
                     self::payoutAccountAction(),
-                    self::verifyPayoutAction(),
+                    self::reviewPaymentsAction(),
+                    self::rejectPaymentsAction(),
                     Action::make('history')
                         ->label('Settlements')
                         ->icon('heroicon-o-queue-list')
@@ -284,7 +293,10 @@ class TempleBalanceResource extends Resource
                         TextInput::make('ifsc')->label('IFSC')->regex('/^[A-Za-z]{4}0[A-Za-z0-9]{6}$/')->maxLength(11),
                         TextInput::make('bank_name')->label('Bank and branch')->maxLength(120),
                         TextInput::make('upi_id')->label('UPI ID')->regex('/^[A-Za-z0-9.\-_]{2,256}@[A-Za-z]{2,64}$/')->placeholder('name@bank'),
-                        Toggle::make('verified')->label('Details verified with the temple')->inline(false),
+                        Toggle::make('verified')
+                            ->label('Approved: bank details and documents checked')
+                            ->helperText('Takes effect only once the owner has sent the Aadhaar, temple proof and photo from the Trust app.')
+                            ->inline(false),
                     ]),
                 Section::make('Online hundi')
                     ->schema([
@@ -320,29 +332,93 @@ class TempleBalanceResource extends Resource
                 }
                 $account->save();
 
-                $account->forceFill($data['verified'] && $account->isComplete()
+                $account->forceFill($data['verified'] && $account->isComplete() && $account->hasKyc()
                     ? ['verified_at' => $account->verified_at ?? now(), 'verified_by' => $account->verified_by ?? Auth::id()]
                     : ['verified_at' => null, 'verified_by' => null])->saveQuietly();
 
-                Temple::query()->whereKey($t->getKey())->first()?->forceFill(['accepts_donations' => (bool) ($data['accepts_donations'] ?? false)])->save();
+                $hundi = (bool) ($data['accepts_donations'] ?? false) && $account->refresh()->canReceiveMoney();
+                Temple::query()->whereKey($t->getKey())->first()?->forceFill(['accepts_donations' => $hundi])->save();
 
                 Notification::make()->title('Payout details saved.')->success()->send();
+                if (($data['accepts_donations'] ?? false) && ! $hundi) {
+                    Notification::make()->title('Online hundi left off')->body('It opens once the bank details and the verification documents are approved.')->warning()->send();
+                }
             });
     }
 
-    public static function verifyPayoutAction(): Action
+    /**
+     * Who will collect the money, and where it goes: the bank details and the
+     * owner's documents side by side, then Approve. Until then no devotee can
+     * pay this temple in the app.
+     */
+    public static function reviewPaymentsAction(): Action
     {
-        return Action::make('verifyPayout')
-            ->label('Mark payout details verified')
+        return Action::make('reviewPayments')
+            ->label('Review & approve payments')
             ->icon('heroicon-o-shield-check')
             ->color('success')
-            ->visible(fn (Temple $t): bool => $t->payoutAccount?->isComplete() === true && ! $t->payoutAccount->isVerified())
-            ->requiresConfirmation()
-            ->modalDescription(fn (Temple $t): string => $t->payoutAccount?->summary().'. Only after confirming these with the temple, for example by calling the number on their account.')
+            ->visible(fn (Temple $t): bool => $t->payoutAccount !== null && ! $t->payoutAccount->canReceiveMoney())
+            ->modalHeading(fn (Temple $t): string => 'Payments for '.$t->name)
+            ->modalDescription('Check the person against the Aadhaar and the photo, and that the proof names this temple. Call the temple if anything is unclear.')
+            ->modalSubmitActionLabel('Approve payments')
+            ->schema(fn (Temple $t): array => self::reviewEntries($t->payoutAccount))
             ->action(function (Temple $t): void {
-                $t->payoutAccount->forceFill(['verified_at' => now(), 'verified_by' => Auth::id()])->saveQuietly();
-                Notification::make()->title('Payout details verified.')->success()->send();
+                $account = $t->payoutAccount;
+
+                if (! $account->isComplete() || ! $account->hasKyc()) {
+                    Notification::make()->title('Not everything is in yet')->body('The bank details and all four documents are needed before approval.')->danger()->send();
+
+                    return;
+                }
+
+                $account->forceFill(['verified_at' => now(), 'verified_by' => Auth::id(), 'rejection_reason' => null])->saveQuietly();
+                Notification::make()->title('Approved. The temple can take money in the app.')->success()->send();
             });
+    }
+
+    public static function rejectPaymentsAction(): Action
+    {
+        return Action::make('rejectPayments')
+            ->label('Reject verification')
+            ->icon('heroicon-o-no-symbol')
+            ->color('danger')
+            ->visible(fn (Temple $t): bool => $t->payoutAccount?->kyc_submitted_at !== null)
+            ->modalDescription('Payments stay off (or are switched off). The owner sees your reason in the Trust app and can send the documents again.')
+            ->schema([
+                Textarea::make('reason')->label('Reason')->required()->rows(3)->placeholder('e.g. The Aadhaar photo is not readable; the proof does not name this temple.'),
+            ])
+            ->action(function (Temple $t, array $data): void {
+                $t->payoutAccount->forceFill(['verified_at' => null, 'verified_by' => null, 'rejection_reason' => $data['reason']])->saveQuietly();
+                Notification::make()->title('Verification rejected.')->success()->send();
+            });
+    }
+
+    /** @return array<int, TextEntry> */
+    protected static function reviewEntries(?TemplePayoutAccount $a): array
+    {
+        if ($a === null) {
+            return [];
+        }
+
+        $doc = fn (string $key, string $label): TextEntry => TextEntry::make('doc_'.$key)
+            ->label($label)
+            ->state(filled($a->{TemplePayoutAccount::DOCUMENTS[$key][0]}) ? 'Open' : 'Not sent')
+            ->color(filled($a->{TemplePayoutAccount::DOCUMENTS[$key][0]}) ? 'primary' : 'danger')
+            ->url(filled($a->{TemplePayoutAccount::DOCUMENTS[$key][0]}) ? KycDocumentController::url($a, $key) : null, shouldOpenInNewTab: true);
+
+        return [
+            TextEntry::make('status')->label('Status')->state($a->kycStatusLabel()),
+            TextEntry::make('bank')->label('Bank / UPI')->state($a->isComplete() ? $a->summary() : 'Not complete'),
+            TextEntry::make('person')->label('Name on Aadhaar')->state($a->kyc_name ?? 'Not sent'),
+            TextEntry::make('aadhaar')->label('Aadhaar number')->state(filled($a->aadhaar_number) ? trim(chunk_split((string) $a->aadhaar_number, 4, ' ')) : 'Not sent'),
+            TextEntry::make('proof')->label('Temple proof')->state(TemplePayoutAccount::PROOF_KINDS[$a->temple_proof_kind] ?? '—'),
+            $doc('aadhaar_front', 'Aadhaar (front)'),
+            $doc('aadhaar_back', 'Aadhaar (back)'),
+            $doc('temple_proof', 'Temple proof document'),
+            $doc('person_photo', 'Photo of the person'),
+            TextEntry::make('sent')->label('Sent')->state($a->kyc_submitted_at?->format('d M Y, H:i') ?? '—'),
+            TextEntry::make('rejected')->label('Last rejection')->state($a->rejection_reason)->visible(filled($a->rejection_reason)),
+        ];
     }
 
     public static function getPages(): array

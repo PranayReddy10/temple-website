@@ -3,10 +3,11 @@
 namespace App\Filament\Support;
 
 use App\Enums\PhotoModerationStatus;
-use App\Filament\Support\MediaColumn;
 use App\Models\VisitPhoto;
+use App\Support\PhotoPromotion;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -128,10 +129,10 @@ class PhotoModeration
                 ->modalDescription(fn (VisitPhoto $record): string => 'A copy goes into '.($record->temple?->name ?? 'the temple').'\'s gallery in the app, credited to '.($record->devotee?->name ?? 'the devotee').'. The temple\'s team can object from its portal, which takes it down.')
                 ->action(function (VisitPhoto $record): void {
                     try {
-                        \App\Support\PhotoPromotion::promote($record, Auth::user());
-                        \Filament\Notifications\Notification::make()->title('Added to the temple\'s gallery.')->success()->send();
+                        PhotoPromotion::promote($record, Auth::user());
+                        Notification::make()->title('Added to the temple\'s gallery.')->success()->send();
                     } catch (\Throwable $e) {
-                        \Filament\Notifications\Notification::make()->title($e->getMessage())->danger()->send();
+                        Notification::make()->title($e->getMessage())->danger()->send();
                     }
                 }),
 

@@ -6,6 +6,8 @@ use App\Enums\SevaCause;
 use App\Enums\SevaDriveStatus;
 use App\Models\Devotee;
 use App\Models\SevaDrive;
+use App\Models\SevaDriveMedia;
+use App\Support\PincodeLookup;
 use App\Support\UploadRules;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
@@ -14,7 +16,10 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Creating and correcting a seva drive from the admin.
@@ -68,10 +73,10 @@ class SevaDriveForm
                             ->default(SevaDriveStatus::Approved->value)
                             ->helperText('Open for volunteers lists it at once. It moves to Completed by itself after its last day.'),
 
-                        \Filament\Forms\Components\Toggle::make('verified')
+                        Toggle::make('verified')
                             ->label('Verified by the team')
                             ->helperText('Shows a Verified badge and, with a UPI ID, opens donations. Does not end the drive.')
-                            ->afterStateHydrated(fn (\Filament\Forms\Components\Toggle $component, ?SevaDrive $record) => $component->state($record?->verified_at !== null)),
+                            ->afterStateHydrated(fn (Toggle $component, ?SevaDrive $record) => $component->state($record?->verified_at !== null)),
 
                         Textarea::make('problem')->label('The place now — what is wrong')->required()->rows(4)->columnSpanFull(),
                         Textarea::make('plan')->label('The plan — what will be done')->required()->rows(4)->columnSpanFull(),
@@ -95,8 +100,8 @@ class SevaDriveForm
                             ->regex('/^[1-9][0-9]{5}$/')
                             ->live(onBlur: true)
                             ->helperText('Fills in the state, district and town.')
-                            ->afterStateUpdated(function (?string $state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get): void {
-                                $found = $state ? \App\Support\PincodeLookup::find($state) : null;
+                            ->afterStateUpdated(function (?string $state, Set $set, Get $get): void {
+                                $found = $state ? PincodeLookup::find($state) : null;
 
                                 if ($found === null) {
                                     return;
@@ -146,7 +151,7 @@ class SevaDriveForm
                         FileUpload::make('before_photos')
                             ->hiddenLabel()
                             ->multiple()
-                            ->maxFiles(\App\Models\SevaDriveMedia::MAX_PER_STAGE)
+                            ->maxFiles(SevaDriveMedia::MAX_PER_STAGE)
                             ->image()
                             ->disk(fn (): string => config('filesystems.media'))
                             ->directory('seva-drives/admin')
@@ -176,7 +181,7 @@ class SevaDriveForm
         // button does; switching it off takes the badge away.
         if ($verified && $drive->verified_at === null) {
             $drive->verified_at = now();
-            $drive->verified_by = \Illuminate\Support\Facades\Auth::id();
+            $drive->verified_by = Auth::id();
             $drive->verification_requested_at = null;
         } elseif (! $verified) {
             $drive->verified_at = null;

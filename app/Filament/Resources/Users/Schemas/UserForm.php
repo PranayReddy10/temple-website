@@ -3,12 +3,12 @@
 namespace App\Filament\Resources\Users\Schemas;
 
 use App\Enums\UserRole;
+use App\Support\FormState;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
-use App\Support\FormState;
 use Illuminate\Support\Facades\Hash;
 
 class UserForm
@@ -55,5 +55,4 @@ class UserForm
             ])
             ->columns(2);
     }
-
 }
