@@ -14,6 +14,8 @@ use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\TempleCheckinController;
 use App\Http\Controllers\TempleQrPrintController;
 use App\Models\Temple;
+use App\Support\AppLinks;
+use App\Support\IndexNow;
 use Illuminate\Support\Facades\Route;
 
 // temple.darshansaathi.com itself: what this server is, and the way in for
@@ -118,6 +120,18 @@ Route::get('/google{token}.html', function (string $token) {
 
     return response('google-site-verification: '.$file, 200, ['Content-Type' => 'text/html; charset=UTF-8']);
 })->where('token', '[0-9a-f]+');
+// Open temple links in the installed app (see App\Support\AppLinks).
+Route::get('/.well-known/assetlinks.json', fn () => response()->json(AppLinks::android())->header('Cache-Control', 'public, max-age=3600'));
+Route::get('/.well-known/apple-app-site-association', fn () => response()->json(AppLinks::apple())->header('Cache-Control', 'public, max-age=3600'));
+Route::get('/apple-app-site-association', fn () => response()->json(AppLinks::apple()));
+
+// IndexNow's proof that pings come from this site (see App\Support\IndexNow).
+Route::get('/{key}.txt', function (string $key) {
+    abort_unless(hash_equals(IndexNow::key(), $key), 404);
+
+    return response($key, 200, ['Content-Type' => 'text/plain; charset=utf-8']);
+})->where('key', '[0-9a-f]{32}');
+
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 Route::get('/sitemap-pages.xml', [SitemapController::class, 'pages']);
 Route::get('/sitemap-temples-{page}.xml', [SitemapController::class, 'temples'])->whereNumber('page');

@@ -11,13 +11,24 @@
         <meta name="robots" content="noindex, follow">
     @endif
     <meta property="og:site_name" content="{{ config('brand.name') }}">
-    <meta property="og:type" content="website">
+    <meta property="og:type" content="{{ $ogType ?? 'website' }}">
+    <meta property="og:locale" content="en_IN">
     <meta property="og:title" content="{{ $title }}">
     <meta property="og:description" content="{{ $description }}">
     <meta property="og:url" content="{{ $canonical }}">
     {{-- The temple's own photo, else the brand's share card (web/og.png in the app's web build). --}}
-    <meta property="og:image" content="{{ ! empty($image) ? $image : \App\Support\Seo::url('og.png') }}">
+    @php($shareImage = ! empty($image) ? $image : \App\Support\Seo::url('og.png'))
+    <meta property="og:image" content="{{ $shareImage }}">
+    <meta property="og:image:alt" content="{{ $title }}">
+    @if (empty($image))
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+    @endif
+    {{-- WhatsApp, X and others read these for the preview card. --}}
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $title }}">
+    <meta name="twitter:description" content="{{ $description }}">
+    <meta name="twitter:image" content="{{ $shareImage }}">
     <link rel="icon" href="{{ \App\Support\Seo::url('favicon.png') }}">
     <link rel="apple-touch-icon" href="{{ \App\Support\Seo::url('icons/Icon-192.png') }}">
     @if (filled(setting('google_site_verification')))
@@ -68,7 +79,7 @@
             <span style="width:34px;height:34px;display:inline-block">{!! file_get_contents(public_path('brand/logo-mark-light.svg')) !!}</span>
             {{ config('brand.name') }}
         </a>
-        <a class="cta" href="{{ \App\Support\Seo::url('/') }}">Open the app</a>
+        <a class="cta" href="{{ $appLink ?? \App\Support\Seo::url('/') }}">Open the app</a>
     </div>
 </header>
 <main class="wrap">
