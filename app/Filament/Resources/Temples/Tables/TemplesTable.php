@@ -170,6 +170,13 @@ class TemplesTable
                     ))
                     ->toggle(),
 
+                // Read from the temple's own website, not yet looked at by staff
+                // (temples:read-official-sites, or "Read official website").
+                Filter::make('official_to_review')
+                    ->label('Official details to review')
+                    ->query(fn (Builder $query): Builder => $query->whereNotNull('official_import')->whereNull('official_import_reviewed_at'))
+                    ->toggle(),
+
                 TrashedFilter::make(),
             ])
             ->recordActions([
