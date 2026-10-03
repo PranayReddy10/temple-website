@@ -33,6 +33,11 @@ class EventResource extends JsonResource
             'next_on' => $this->nextDate()?->toDateString(),
             'next_dates' => collect($this->nextDates(null, 6))->map(fn ($d) => $d->toDateString())->values(),
 
+            // Raised by a devotee from the app rather than by the temple's
+            // team; always free.
+            'raised_by_devotee' => $this->isRaisedByDevotee(),
+            'raised_by' => $this->whenLoaded('devotee', fn () => $this->devotee?->name),
+
             // Who leads it, whether anyone may come, what will be sung.
             'group_name' => $this->group_name,
             'open_to_all' => (bool) $this->open_to_all,
