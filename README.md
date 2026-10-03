@@ -182,6 +182,44 @@ are imported; upload them with credit and licence through the admin.
 The API takes `featured=1` and `sort=featured`; the admin has a **Famous
 temple** toggle, column and filter.
 
+### Every temple on OpenStreetMap, district by district
+
+Beyond the curated set, the Hindu places of worship mapped on
+[OpenStreetMap](https://www.openstreetmap.org) can be imported. OSM data is
+open (ODbL): it may be stored and shown as long as it is credited to
+"OpenStreetMap contributors", which every imported record carries as its
+source. Google Maps is not used: its terms forbid storing its place details,
+and its photos belong to the people who uploaded them.
+
+```bash
+# 1. Report only: per district, how many temples OSM has, how many we
+#    already have, how many are new. Writes a CSV of every temple and its
+#    outcome to storage/app/private/imports/. Changes nothing.
+php artisan temples:osm-scan
+php artisan temples:osm-scan --district=Karimnagar --district=Sangareddy
+
+# 2. Import. New temples are published as community records; add --draft to
+#    import them as drafts for review instead.
+php artisan temples:osm-scan --import
+
+# 3. Photos: for temples OSM or Wikidata links to a Wikimedia Commons image,
+#    download it with its photographer and licence (public domain, CC0,
+#    CC BY and CC BY-SA only).
+php artisan temples:fetch-commons-photos --dry-run
+php artisan temples:fetch-commons-photos
+```
+
+- **No duplicates.** Each temple remembers its OSM element (`osm_ref`), so a
+  re-run creates nothing twice. A temple we already had is matched by name
+  near the same spot and linked, not copied; a temple mapped twice on OSM (a
+  point and a building outline) is imported once.
+- **Editors' work is kept.** Existing records only have empty fields filled;
+  verified temples only gain their OSM and Wikidata references.
+- **Unnamed temples are skipped.** The locality comes from the nearest
+  village or town on the map, and the deity is read from the name
+  ("Anjaneya" → Hanuman) when it is clear.
+- Set `OVERPASS_URL` to use another Overpass server if the default one is busy.
+
 ## Slices 2–4 — media, pujas and the public API
 
 **Photos** are stored in DigitalOcean Spaces and served from its CDN. Uploads
