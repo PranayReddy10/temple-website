@@ -321,6 +321,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
                 Route::get('timings', [TrustScheduleController::class, 'timings'])->name('timings.index');
                 Route::post('timings', [TrustScheduleController::class, 'storeTiming'])->name('timings.store');
+                Route::post('timings/weekend', [TrustScheduleController::class, 'splitWeekend'])->name('timings.weekend');
                 Route::put('timings/{timing}', [TrustScheduleController::class, 'updateTiming'])->whereNumber('timing')->name('timings.update');
                 Route::delete('timings/{timing}', [TrustScheduleController::class, 'destroyTiming'])->whereNumber('timing')->name('timings.destroy');
 

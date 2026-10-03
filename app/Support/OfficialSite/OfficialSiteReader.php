@@ -228,7 +228,7 @@ final class OfficialSiteReader
         $found['phones'] = array_values(array_filter($found['phones'], fn ($p) => strlen(preg_replace('/\D/', '', $p)) >= 8));
         $found['emails'] = self::unique(array_map(fn ($e) => strtolower(trim((string) $e)), $found['emails']), fn ($e) => $e);
         $found['emails'] = array_values(array_filter($found['emails'], fn ($e) => filter_var($e, FILTER_VALIDATE_EMAIL) && ! preg_match('/\.(png|jpe?g|gif|webp)$/', $e)));
-        $found['timings'] = array_slice(self::unique($found['timings'], fn ($t) => mb_strtolower($t['label'].'|'.($t['notes'] ?? '')).$t['opens_at'].$t['closes_at']), 0, 30);
+        $found['timings'] = array_slice(self::unique($found['timings'], fn ($t) => mb_strtolower($t['label'].'|'.($t['notes'] ?? '').'|'.implode(',', $t['days'] ?? [])).$t['opens_at'].$t['closes_at']), 0, 30);
         $found['sevas'] = array_slice(self::mergeSevas($found['sevas']), 0, 60);
         $found['description'] = isset($found['description']) ? Str::limit(self::clean($found['description']), 500, '') : null;
         if (isset($found['address'])) {
@@ -495,8 +495,15 @@ final class OfficialSiteReader
                 $carried = $own;
             }
 
+            // "Weekdays (Mon–Fri)", "Sat & Sun" become the timing's days.
+            $days = $notes !== null ? self::daysIn($notes) : null;
+            if ($days !== null && self::isDaysOnly($notes)) {
+                $notes = null;
+            }
+
             $out[] = array_filter([
                 'label' => Str::limit(Str::ucfirst($name), 60, ''),
+                'days' => $days,
                 'opens_at' => $opens,
                 'closes_at' => $closes,
                 'kind' => self::kindFor($name) !== 'general' ? self::kindFor($name) : self::kindFor((string) $heading),
@@ -659,6 +666,49 @@ final class OfficialSiteReader
         }
 
         return $hasPrice ? 'price' : 'time';
+    }
+
+    /**
+     * The days a phrase names, Monday first: "Weekdays (Mon–Fri)", "Sat &
+     * Sun", "Monday to Saturday", "Tue/Thu/Fri". Null when it names none,
+     * or every day.
+     *
+     * @return array<int, int>|null
+     */
+    public static function daysIn(string $text): ?array
+    {
+        $week = [1, 2, 3, 4, 5, 6, 0];
+        $index = ['sun' => 0, 'mon' => 1, 'tue' => 2, 'wed' => 3, 'thu' => 4, 'fri' => 5, 'sat' => 6];
+        $t = mb_strtolower($text);
+        if (preg_match('/daily|every\s*day|all\s*days/', $t)) {
+            return null;
+        }
+        $days = [];
+        // Ranges first: "Mon–Fri", "Monday to Saturday".
+        $t = preg_replace_callback('/\b(sun|mon|tue|wed|thu|fri|sat)[a-z]*\.?\s*(?:-|–|—|to|till|through)\s*(sun|mon|tue|wed|thu|fri|sat)[a-z]*\b/u', function ($m) use (&$days, $week, $index) {
+            $from = array_search($index[$m[1]], $week, true);
+            $to = array_search($index[$m[2]], $week, true);
+            for ($i = $from; $i !== $to; $i = ($i + 1) % 7) {
+                $days[] = $week[$i];
+            }
+            $days[] = $week[$to];
+
+            return ' ';
+        }, $t);
+        if (preg_match_all('/\b(sun|mon|tue|wed|thu|fri|sat)[a-z]*\b/u', $t, $m)) {
+            foreach ($m[1] as $d) {
+                $days[] = $index[$d];
+            }
+        }
+        if ($days === [] && preg_match('/week\s*days?/', $t)) {
+            $days = [1, 2, 3, 4, 5];
+        }
+        if ($days === [] && preg_match('/week\s*ends?/', $t)) {
+            $days = [6, 0];
+        }
+        $days = array_values(array_intersect($week, array_unique($days)));
+
+        return $days === [] || count($days) === 7 ? null : $days;
     }
 
     private static function isDaysOnly(string $text): bool

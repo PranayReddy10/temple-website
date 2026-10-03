@@ -106,6 +106,7 @@ final class OfficialSiteImport
                 ->map(fn ($t) => [
                     'kind' => in_array($t['kind'] ?? null, ['general', 'darshan', 'aarti', 'special'], true) ? $t['kind'] : 'general',
                     'label' => mb_substr(trim($t['label']), 0, 120),
+                    'days' => TempleTiming::normaliseDays($t['days'] ?? null),
                     'opens_at' => OfficialSiteReader::fromTwelveHour($t['opens_at'] ?? null),
                     'closes_at' => OfficialSiteReader::fromTwelveHour($t['closes_at'] ?? null),
                     'notes' => filled($t['notes'] ?? null) ? trim($t['notes']) : null,

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Deity;
 use App\Models\State;
 use App\Models\Temple;
+use App\Models\TempleTiming;
 use App\Support\DevotionalClock;
 use App\Support\Seo;
 use App\Support\TempleFinder;
@@ -135,7 +136,8 @@ class PublicTempleController extends Controller
         $about = $temple->translate('short_description', null, reviewedOnly: true);
         $dressCode = $temple->translate('dress_code', null, reviewedOnly: true);
         $today = (int) DevotionalClock::now()->dayOfWeek;
-        $todays = $temple->timings->filter(fn ($t) => $t->day_of_week === null || $t->day_of_week === $today)->values();
+        // A Sat & Sun timing replaces the every-day one of its kind that day.
+        $todays = TempleTiming::forDay($temple->timings, $today);
         $bookable = $temple->pujas->contains(fn ($p) => $p->isBookableInApp());
 
         return view('site.temple', [

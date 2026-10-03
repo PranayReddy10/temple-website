@@ -118,7 +118,7 @@ class PublicSiteTest extends TestCase
         $temple->timings()->create(['kind' => 'darshan', 'opens_at' => '05:30', 'closes_at' => '12:00']);
 
         $this->get('https://darshansaathi.com/temples/someshwara-kolanupaka')
-            ->assertSee('"openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Sunday"', false)
+            ->assertSee('"openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday"', false)
             ->assertSee('"opens":"05:30","closes":"12:00"', false);
     }
 

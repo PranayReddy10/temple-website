@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\Trust\Concerns\ScopesToTrustTemples;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\ClosureResource;
 use App\Http\Resources\V1\TimingResource;
+use App\Models\TempleTiming;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -20,14 +21,31 @@ class TrustScheduleController extends Controller
 
     public function timings(Request $request, int $temple): JsonResponse
     {
-        $rows = $this->managedTemple($request, $temple)->timings()
-            ->orderByRaw('day_of_week is null desc')
-            ->orderBy('day_of_week')
-            ->orderBy('sort_order')
-            ->orderBy('opens_at')
-            ->get();
+        $rows = TempleTiming::inReadingOrder($this->managedTemple($request, $temple)->timings()->get());
 
         return response()->json(['data' => TimingResource::collection($rows)->resolve($request)]);
+    }
+
+    /**
+     * "Different timings on Sat & Sun": the every-day timings (or the ones
+     * picked) become Mon–Fri, with a Sat & Sun copy of each to change.
+     */
+    public function splitWeekend(Request $request, int $temple): JsonResponse
+    {
+        $validated = $request->validate([
+            'timing_ids' => ['nullable', 'array'],
+            'timing_ids.*' => ['integer'],
+        ]);
+        $query = $this->managedTemple($request, $temple)->timings();
+        if (! empty($validated['timing_ids'])) {
+            $query->whereIn('id', $validated['timing_ids']);
+        }
+        $copies = TempleTiming::splitWeekend($query->get());
+        if ($copies->isEmpty()) {
+            return response()->json(['message' => 'There are no every-day timings to split. Add a timing, or pick its days.'], 422);
+        }
+
+        return response()->json(['data' => TimingResource::collection($copies)->resolve($request)], 201);
     }
 
     public function storeTiming(Request $request, int $temple): JsonResponse
@@ -87,7 +105,10 @@ class TrustScheduleController extends Controller
         $validated = $request->validate([
             'kind' => ['required', Rule::enum(TimingKind::class)],
             'label' => ['nullable', 'string', 'max:120'],
-            // null is "every day".
+            // The days it holds on; none (or all seven) is every day. An
+            // older app sends one day_of_week instead (null is every day).
+            'days' => ['nullable', 'array', 'max:7'],
+            'days.*' => ['integer', 'between:0,6'],
             'day_of_week' => ['nullable', 'integer', 'between:0,6'],
             'opens_at' => ['nullable', 'date_format:H:i'],
             'closes_at' => ['nullable', 'date_format:H:i'],
@@ -96,6 +117,12 @@ class TrustScheduleController extends Controller
         ]);
 
         $validated['sort_order'] = (int) ($validated['sort_order'] ?? 0);
+        if ($request->has('days')) {
+            $validated['days'] = TempleTiming::normaliseDays($validated['days'] ?? null);
+            unset($validated['day_of_week']);
+        } elseif ($request->has('day_of_week')) {
+            $validated['days'] = $validated['day_of_week'] === null ? null : [(int) $validated['day_of_week']];
+        }
 
         return $validated;
     }

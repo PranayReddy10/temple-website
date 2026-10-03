@@ -5,6 +5,7 @@ namespace App\Http\Resources\V1;
 use App\Http\Controllers\Api\V1\EngagementController;
 use App\Models\Temple;
 use App\Models\TempleDonation;
+use App\Models\TempleTiming;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -108,7 +109,7 @@ class TempleDetailResource extends JsonResource
                 'is_stale' => $this->isStale(),
             ],
 
-            'timings' => TimingResource::collection($this->whenLoaded('timings')),
+            'timings' => TimingResource::collection($this->whenLoaded('timings', fn () => TempleTiming::inReadingOrder($this->timings))),
             'pujas' => PujaResource::collection($this->whenLoaded('pujas')),
             'photos' => PhotoResource::collection($this->whenLoaded('photos')),
 

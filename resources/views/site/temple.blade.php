@@ -25,7 +25,7 @@
             ->filter(fn ($t) => in_array($t->kind?->value, ['general', 'darshan'], true) && filled($t->opens_at) && filled($t->closes_at))
             ->map(fn ($t) => [
                 '@type' => 'OpeningHoursSpecification',
-                'dayOfWeek' => $t->day_of_week === null ? array_values(\App\Models\TempleTiming::dayNames()) : \App\Models\TempleTiming::dayNames()[$t->day_of_week] ?? null,
+                'dayOfWeek' => array_map(fn ($d) => \App\Models\TempleTiming::dayNames()[$d], $t->dayList()),
                 'opens' => substr((string) $t->opens_at, 0, 5),
                 'closes' => substr((string) $t->closes_at, 0, 5),
             ])->values()->all() ?: null,
@@ -148,7 +148,7 @@
             @if ($temple->timings->isNotEmpty())
                 <h2>Darshan timings</h2>
                 <table>
-                    @foreach ($temple->timings as $t)
+                    @foreach (\App\Models\TempleTiming::inReadingOrder($temple->timings) as $t)
                         <tr><td>{{ $t->label ?: $t->kind?->getLabel() }}</td><td>{{ $t->dayLabel() }}</td><td>{{ $t->window() }}</td></tr>
                     @endforeach
                 </table>

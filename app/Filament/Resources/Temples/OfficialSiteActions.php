@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Temples;
 
 use App\Enums\PujaKind;
 use App\Enums\TimingKind;
+use App\Filament\Resources\Temples\RelationManagers\TimingsRelationManager;
 use App\Models\Temple;
 use App\Support\OfficialSite\OfficialSiteImport;
 use App\Support\OfficialSite\OfficialSiteReader;
@@ -105,6 +106,7 @@ final class OfficialSiteActions
                 'take' => ! $hasTimings,
                 'label' => $x['label'] ?? '',
                 'kind' => $x['kind'] ?? 'general',
+                'days' => array_map('strval', $x['days'] ?? []),
                 'opens_at' => $twelve($x['opens_at'] ?? null),
                 'closes_at' => $twelve($x['closes_at'] ?? null),
                 'notes' => $x['notes'] ?? null,
@@ -176,6 +178,7 @@ final class OfficialSiteActions
                             TableColumn::make('Take')->width('60px'),
                             TableColumn::make('Name'),
                             TableColumn::make('Kind')->width('150px'),
+                            TableColumn::make('Days')->width('190px'),
                             TableColumn::make('Opens')->width('120px'),
                             TableColumn::make('Closes')->width('120px'),
                             TableColumn::make('Days / note'),
@@ -184,6 +187,8 @@ final class OfficialSiteActions
                             Toggle::make('take')->hiddenLabel(),
                             TextInput::make('label')->hiddenLabel()->maxLength(120),
                             Select::make('kind')->hiddenLabel()->options(TimingKind::class)->selectablePlaceholder(false),
+                            Select::make('days')->hiddenLabel()->multiple()->placeholder('Every day')
+                                ->options(TimingsRelationManager::dayOptions()),
                             $time('opens_at', 'Opens'),
                             $time('closes_at', 'Closes'),
                             TextInput::make('notes')->hiddenLabel()->maxLength(120),

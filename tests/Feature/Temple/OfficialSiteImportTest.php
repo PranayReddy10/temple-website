@@ -53,7 +53,7 @@ class OfficialSiteImportTest extends TestCase
     /** @return array<string, array<string, mixed>> */
     private function byLabel(array $timings): array
     {
-        return collect($timings)->mapWithKeys(fn ($t) => [$t['label'].'|'.($t['notes'] ?? '') => $t])->all();
+        return collect($timings)->mapWithKeys(fn ($t) => [$t['label'].'|'.implode(',', $t['days'] ?? []) => $t])->all();
     }
 
     public function test_the_reader_finds_contact_timings_and_sevas(): void
@@ -81,14 +81,14 @@ class OfficialSiteImportTest extends TestCase
     {
         $t = $this->byLabel(OfficialSiteReader::extract(['https://hk.example/' => $this->fixture('golden-temple.html')])['timings']);
 
-        $this->assertSame(['07:15', '13:00'], [$t['Darshan – Morning|Weekdays (Mon–Fri)']['opens_at'], $t['Darshan – Morning|Weekdays (Mon–Fri)']['closes_at']]);
-        $this->assertSame('20:45', $t['Darshan – Evening|Weekdays (Mon–Fri)']['closes_at']);
-        $this->assertSame('21:00', $t['Darshan – Evening|Weekends (Sat–Sun)']['closes_at']);
+        $this->assertSame(['07:15', '13:00'], [$t['Darshan – Morning|1,2,3,4,5']['opens_at'], $t['Darshan – Morning|1,2,3,4,5']['closes_at']]);
+        $this->assertSame('20:45', $t['Darshan – Evening|1,2,3,4,5']['closes_at']);
+        $this->assertSame('21:00', $t['Darshan – Evening|6,0']['closes_at']);
         $this->assertSame(['04:30', '05:05', 'aarti'], [$t['Mangala Arati|']['opens_at'], $t['Mangala Arati|']['closes_at'], $t['Mangala Arati|']['kind']]);
         // A single time is a timing too.
         $this->assertSame(['19:00', null], [$t['Sandhya Arati|']['opens_at'], $t['Sandhya Arati|']['closes_at']]);
-        // "(Sat & Sun 8:35 PM – 9:00 PM)" is the same aarti on other days.
-        $this->assertSame('20:35', $t['Shayana Arati|Sat & Sun']['opens_at']);
+        // "Weekdays (Mon–Fri)" and "(Sat & Sun 8:35 PM – 9:00 PM)" become the timing's days.
+        $this->assertSame('20:35', $t['Shayana Arati|6,0']['opens_at']);
         $this->assertSame('20:10', $t['Shayana Arati|']['opens_at']);
         $this->assertCount(11, $t);
     }
