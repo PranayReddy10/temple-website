@@ -5,8 +5,10 @@ namespace App\Filament\Resources\PaymentVerifications\Pages;
 use App\Filament\Resources\PaymentVerifications\PaymentVerificationResource;
 use App\Http\Controllers\KycDocumentController;
 use App\Models\TemplePayoutAccount;
+use App\Models\TemplePayoutVerificationEvent;
 use App\Models\TempleUser;
 use Filament\Infolists\Components\ImageEntry;
+use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Component;
@@ -120,6 +122,49 @@ class ViewPaymentVerification extends ViewRecord
                     TextEntry::make('ifsc')->label('IFSC')->placeholder('—'),
                     TextEntry::make('bank_name')->label('Bank and branch')->placeholder('—'),
                     TextEntry::make('upi_id')->label('UPI ID')->placeholder('—'),
+                ]),
+
+            Section::make('History')
+                ->columnSpanFull()
+                ->icon('heroicon-o-clock')
+                ->description('Every time documents were sent, approved or rejected, newest first. Each step keeps what was on file then: open the documents of a rejected attempt to compare with the latest.')
+                ->schema([
+                    RepeatableEntry::make('verificationEvents')
+                        ->hiddenLabel()
+                        ->placeholder('No history yet.')
+                        ->columns(4)
+                        ->schema([
+                            TextEntry::make('event')->label('What happened')->badge()
+                                ->formatStateUsing(fn (TemplePayoutVerificationEvent $record): string => $record->label())
+                                ->color(fn (string $state): string => match ($state) {
+                                    'approved' => 'success', 'rejected', 'approval_removed' => 'danger', 'bank_changed' => 'warning', default => 'gray',
+                                }),
+                            TextEntry::make('created_at')->label('When')->dateTime('d M Y, H:i'),
+                            TextEntry::make('user.name')->label('By')->placeholder('—'),
+                            TextEntry::make('sent_as')->label('On file then')
+                                ->state(fn (TemplePayoutVerificationEvent $record): string => collect([
+                                    $record->snapshot['kyc_name'] ?? null,
+                                    filled($record->snapshot['aadhaar_last4'] ?? null) ? 'Aadhaar XXXX '.$record->snapshot['aadhaar_last4'] : null,
+                                    $record->snapshot['bank'] ?? null,
+                                ])->filter()->implode(' · ') ?: '—'),
+                            TextEntry::make('reason')->label('Reason')->placeholder('—')->columnSpanFull()
+                                ->visible(fn (TemplePayoutVerificationEvent $record): bool => filled($record->reason))
+                                ->color(fn (TemplePayoutVerificationEvent $record): string => $record->event === 'rejected' ? 'danger' : 'gray')
+                                ->weight('medium'),
+                            ...collect(['person_photo' => 'Selfie', 'aadhaar_front' => 'Aadhaar front', 'aadhaar_back' => 'Aadhaar back', 'temple_proof' => 'Temple proof'])
+                                ->map(fn (string $label, string $key): TextEntry => TextEntry::make('doc_'.$key)
+                                    ->label($label)
+                                    ->state(fn (TemplePayoutVerificationEvent $record): ?string => filled($record->documentPath($key)) ? 'Open' : null)
+                                    ->placeholder('—')
+                                    ->icon('heroicon-o-arrow-top-right-on-square')
+                                    ->color('primary')
+                                    ->url(fn (TemplePayoutVerificationEvent $record): ?string => filled($record->documentPath($key))
+                                        ? KycDocumentController::url($record->account, $key, $record->getKey())
+                                        : null, shouldOpenInNewTab: true)
+                                    ->visible(fn (TemplePayoutVerificationEvent $record): bool => in_array($record->event, ['submitted', 'rejected'], true)))
+                                ->values()
+                                ->all(),
+                        ]),
                 ]),
 
             Section::make('Temple')

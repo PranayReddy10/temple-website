@@ -12,6 +12,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -44,7 +45,8 @@ class PaymentVerificationResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->with(['temple:id,name,city', 'verifier:id,name']))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['temple:id,name,city', 'verifier:id,name'])
+                ->withCount(['verificationEvents as rejections_count' => fn (Builder $q) => $q->where('event', 'rejected')]))
             ->columns([
                 TextColumn::make('temple.name')->label('Temple')->searchable()->weight('medium')->wrap()
                     ->description(fn (TemplePayoutAccount $a): ?string => $a->temple?->city),
@@ -58,6 +60,9 @@ class PaymentVerificationResource extends Resource
                     ->color(fn (TemplePayoutAccount $a): string => match ($a->kycStatus()) {
                         'approved' => 'success', 'pending' => 'warning', 'rejected' => 'danger', default => 'gray',
                     }),
+                TextColumn::make('rejections_count')->label('Times rejected')->badge()
+                    ->color(fn (int $state): string => $state > 0 ? 'danger' : 'gray')
+                    ->sortable(),
                 TextColumn::make('kyc_submitted_at')->label('Sent')->since()->sortable()->placeholder('—'),
             ])
             ->filters([
@@ -72,6 +77,10 @@ class PaymentVerificationResource extends Resource
                         'missing' => $query->whereNull('kyc_submitted_at'),
                         default => $query,
                     }),
+                Filter::make('rejected_before')
+                    ->label('Rejected at least once')
+                    ->query(fn (Builder $query): Builder => $query->whereHas('verificationEvents', fn (Builder $q) => $q->where('event', 'rejected')))
+                    ->toggle(),
             ])
             ->recordActions([
                 ViewAction::make()->label('Check documents'),
@@ -108,7 +117,8 @@ class PaymentVerificationResource extends Resource
             ->modalDescription('Only after checking that the photo matches the Aadhaar, the name matches the bank account, and the proof names this temple. Devotees can then pay this temple in the app.')
             ->modalSubmitActionLabel('Approve')
             ->action(function (TemplePayoutAccount $record): void {
-                $record->forceFill(['verified_at' => now(), 'verified_by' => Auth::id(), 'rejection_reason' => null])->saveQuietly();
+                $record->forceFill(['verified_at' => now(), 'verified_by' => Auth::id(), 'rejection_reason' => null, 'rejected_at' => null])->saveQuietly();
+                $record->recordEvent('approved', null, Auth::id());
                 Notification::make()->title('Approved. The temple can take money in the app.')->success()->send();
             });
     }
@@ -126,7 +136,8 @@ class PaymentVerificationResource extends Resource
                     ->placeholder('e.g. The Aadhaar photo is not readable; the proof does not name this temple; the selfie does not match the Aadhaar.'),
             ])
             ->action(function (TemplePayoutAccount $record, array $data): void {
-                $record->forceFill(['verified_at' => null, 'verified_by' => null, 'rejection_reason' => $data['reason']])->saveQuietly();
+                $record->forceFill(['verified_at' => null, 'verified_by' => null, 'rejection_reason' => $data['reason'], 'rejected_at' => now()])->saveQuietly();
+                $record->recordEvent('rejected', $data['reason'], Auth::id());
                 Notification::make()->title('Rejected. The owner will see the reason.')->success()->send();
             });
     }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -49,6 +50,7 @@ class TemplePayoutAccount extends Model
             'verified_at' => 'datetime',
             'aadhaar_number' => 'encrypted',
             'kyc_submitted_at' => 'datetime',
+            'rejected_at' => 'datetime',
         ];
     }
 
@@ -76,6 +78,38 @@ class TemplePayoutAccount extends Model
     public function temple(): BelongsTo
     {
         return $this->belongsTo(Temple::class);
+    }
+
+    public function verificationEvents(): HasMany
+    {
+        return $this->hasMany(TemplePayoutVerificationEvent::class)->latest('id');
+    }
+
+    /**
+     * Writes a step into the verification history, with what was on file at
+     * that moment, so it can be looked at later even after it is replaced.
+     */
+    public function recordEvent(string $event, ?string $reason = null, ?int $userId = null): TemplePayoutVerificationEvent
+    {
+        return $this->verificationEvents()->create([
+            'temple_id' => $this->temple_id,
+            'event' => $event,
+            'reason' => $reason,
+            'user_id' => $userId,
+            'snapshot' => [
+                'kyc_name' => $this->kyc_name,
+                'aadhaar_last4' => $this->aadhaar_last4,
+                'temple_proof_kind' => $this->temple_proof_kind,
+                'bank' => $this->isComplete() ? $this->summary() : null,
+                'disk' => $this->kycDisk(),
+                'documents' => collect(self::DOCUMENTS)->mapWithKeys(fn (array $d, string $key): array => [$key => $this->{$d[0]}])->all(),
+            ],
+        ]);
+    }
+
+    public function rejectionCount(): int
+    {
+        return $this->verificationEvents()->where('event', 'rejected')->count();
     }
 
     /** Who last changed the details or sent the documents. */
@@ -197,6 +231,7 @@ class TemplePayoutAccount extends Model
                 'documents' => collect(self::DOCUMENTS)->map(fn (array $d): bool => filled($this->{$d[0]}))->all(),
                 'submitted_at' => $this->kyc_submitted_at?->toIso8601String(),
                 'rejection_reason' => $this->rejection_reason,
+                'rejected_at' => $this->rejected_at?->toIso8601String(),
             ],
         ];
     }

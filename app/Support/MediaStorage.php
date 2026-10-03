@@ -96,6 +96,16 @@ final class MediaStorage
         }
     }
 
+    /**
+     * Where private files go (a temple owner's identity documents): the
+     * Space when uploads go there, written as private objects that only the
+     * staff link can open; otherwise the server's private disk.
+     */
+    public static function privateDisk(): string
+    {
+        return config('filesystems.media') === self::SPACES_DISK ? self::SPACES_DISK : 'local';
+    }
+
     /** What the panel should show as selected. */
     public static function selectedDisk(): string
     {

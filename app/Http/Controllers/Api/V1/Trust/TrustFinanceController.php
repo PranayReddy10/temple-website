@@ -11,6 +11,7 @@ use App\Models\TempleSettlement;
 use App\Models\TempleUser;
 use App\Support\DevotionalClock;
 use App\Support\Finance\Settlements;
+use App\Support\MediaStorage;
 use App\Support\UploadRules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -118,7 +119,12 @@ class TrustFinanceController extends Controller
             ], 422);
         }
 
+        $wasApproved = $account->exists && $account->isVerified();
         $account->save();
+
+        if ($wasApproved && ! $account->isVerified()) {
+            $account->recordEvent('bank_changed', 'Changed by the temple; payments paused until approved again.', $this->trustUser($request)->getKey());
+        }
 
         return response()->json(['data' => $account->refresh()->toPublicArray()]);
     }
@@ -164,16 +170,22 @@ class TrustFinanceController extends Controller
             'kyc_name.required' => 'Enter the name as it is on the Aadhaar card.',
         ]);
 
-        $account->kyc_disk ??= 'local';
-        $disk = $account->kycDisk();
-        $old = [];
+        // Documents go where uploads go (privately on Spaces when it is on).
+        // Ones already sent elsewhere are carried over, so one account's
+        // documents always sit on one disk.
+        $disk = MediaStorage::privateDisk();
+        if (filled($account->kyc_disk) && $account->kyc_disk !== $disk) {
+            foreach (TemplePayoutAccount::DOCUMENTS as $field => [$column]) {
+                if (filled($account->{$column}) && ! $request->hasFile($field) && Storage::disk($account->kyc_disk)->exists($account->{$column})) {
+                    Storage::disk($disk)->writeStream($account->{$column}, Storage::disk($account->kyc_disk)->readStream($account->{$column}), ['visibility' => 'private']);
+                }
+            }
+        }
+        $account->kyc_disk = $disk;
 
         foreach (TemplePayoutAccount::DOCUMENTS as $field => [$column]) {
             if ($request->hasFile($field)) {
-                if (filled($account->{$column})) {
-                    $old[] = $account->{$column};
-                }
-                $account->{$column} = $request->file($field)->store('kyc/'.$record->getKey(), ['disk' => $disk]);
+                $account->{$column} = $request->file($field)->store('kyc/'.$record->getKey(), ['disk' => $disk, 'visibility' => 'private']);
             }
         }
 
@@ -187,15 +199,18 @@ class TrustFinanceController extends Controller
             'temple_id' => $record->getKey(),
             'kyc_submitted_at' => now(),
             'rejection_reason' => null,
+            'rejected_at' => null,
             'updated_by' => $this->trustUser($request)->getKey(),
             // New documents are always checked again.
             'verified_at' => null,
             'verified_by' => null,
         ])->save();
 
-        Storage::disk($disk)->delete($old);
+        // The replaced files are kept: the history shows what each
+        // submission (and each rejection) was about.
+        $account->refresh()->recordEvent('submitted', null, $this->trustUser($request)->getKey());
 
-        return response()->json(['data' => $account->refresh()->toPublicArray()]);
+        return response()->json(['data' => $account->toPublicArray()]);
     }
 
     /** Online hundi: every gift, newest first, with today's and the month's totals. */
