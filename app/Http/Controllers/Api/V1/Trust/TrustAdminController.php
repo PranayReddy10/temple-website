@@ -137,7 +137,7 @@ class TrustAdminController extends Controller
 
     public function events(): JsonResponse
     {
-        $rows = TempleEvent::query()->awaitingReview()->with('temple:id,slug,name,city')->oldest('starts_on')->limit(200)->get();
+        $rows = TempleEvent::query()->awaitingReview()->with(['temple:id,slug,name,city', 'devotee:id,name'])->oldest('starts_on')->limit(200)->get();
 
         return response()->json(['data' => $rows->map(fn (TempleEvent $e): array => $this->event($e))->values()]);
     }

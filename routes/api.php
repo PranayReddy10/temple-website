@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AppConfigController;
 use App\Http\Controllers\Api\V1\Auth\DevoteeAuthController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\SocialAuthController;
+use App\Http\Controllers\Api\V1\BhajanController;
 use App\Http\Controllers\Api\V1\DeityController;
 use App\Http\Controllers\Api\V1\DevoteeProfileController;
 use App\Http\Controllers\Api\V1\DevotionalDayController;
@@ -384,6 +385,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('me/likes', [EngagementController::class, 'likes'])->name('me.likes.index');
         Route::put('me/likes/{temple:slug}', [EngagementController::class, 'like'])->name('me.likes.store');
         Route::delete('me/likes/{temple:slug}', [EngagementController::class, 'unlike'])->name('me.likes.destroy');
+        // A bhajan gathering raised by a devotee: reviewed by the editors, always free.
+        Route::post('temples/{temple:slug}/bhajans', [BhajanController::class, 'store'])->middleware('throttle:10,1')->name('temples.bhajans.store');
+        Route::get('me/bhajans', [BhajanController::class, 'mine'])->name('me.bhajans.index');
         Route::get('me/follows', [EngagementController::class, 'follows'])->name('me.follows.index');
         Route::put('me/follows/{temple:slug}', [EngagementController::class, 'follow'])->name('me.follows.store');
         Route::delete('me/follows/{temple:slug}', [EngagementController::class, 'unfollow'])->name('me.follows.destroy');

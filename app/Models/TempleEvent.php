@@ -25,7 +25,7 @@ class TempleEvent extends Model
         'image_disk', 'image_path',
         'starts_on', 'ends_on', 'is_all_day', 'starts_at', 'ends_at',
         'recurrence', 'status', 'published_at',
-        'created_by', 'reviewed_by', 'review_note',
+        'created_by', 'devotee_id', 'reviewed_by', 'review_note',
         'group_name', 'open_to_all', 'registration_enabled', 'ticket_price_paise',
         'capacity', 'max_people_per_registration', 'songs',
     ];
@@ -80,6 +80,17 @@ class TempleEvent extends Model
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** The devotee who raised it from the app, when it was not the temple's own. */
+    public function devotee(): BelongsTo
+    {
+        return $this->belongsTo(Devotee::class);
+    }
+
+    public function isRaisedByDevotee(): bool
+    {
+        return $this->devotee_id !== null;
     }
 
     public function reviewer(): BelongsTo
