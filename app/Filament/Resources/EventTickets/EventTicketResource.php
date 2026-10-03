@@ -80,7 +80,7 @@ class EventTicketResource extends Resource
                     ->description(fn (EventRegistration $r): ?string => $r->payment ? ucfirst($r->payment->status).($r->payment->gateway_payment_id ? ' · '.$r->payment->gateway_payment_id : '') : null)
                     ->alignEnd()->sortable(),
                 TextColumn::make('status')->badge()->sortable()
-                    ->description(fn (EventRegistration $r): ?string => $r->isVerified() ? 'at '.$r->verified_at?->timezone(DevotionalClock::timezone())->format('d M, H:i') : $r->cancel_reason),
+                    ->description(fn (EventRegistration $r): ?string => $r->isVerified() ? 'at '.$r->verified_at?->timezone(DevotionalClock::timezone())->format('d M, g:i A') : $r->cancel_reason),
                 TextColumn::make('settlement_id')->label('Settled')->state(fn (EventRegistration $r): string => $r->settlement_id ? 'Yes' : '—')->toggleable(),
             ])
             ->filters([

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\TimingKind;
+use App\Support\Clock;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -47,7 +48,7 @@ class TempleTiming extends Model
     }
 
     /**
-     * Human-readable window, e.g. "04:00 – 21:30". Temples routinely publish a
+     * Human-readable window, e.g. "4:00 AM – 9:30 PM". Temples routinely publish a
      * one-sided time ("opens 04:00"), so both halves are optional.
      */
     public function window(): string
@@ -63,13 +64,9 @@ class TempleTiming extends Model
         };
     }
 
+    /** "05:30:00" → "5:30 AM": devotees read the 12-hour clock. */
     protected function formatTime(?string $time): ?string
     {
-        if (blank($time)) {
-            return null;
-        }
-
-        // Stored as H:i:s by MySQL but H:i by SQLite; normalise to H:i.
-        return substr($time, 0, 5);
+        return Clock::twelve($time);
     }
 }

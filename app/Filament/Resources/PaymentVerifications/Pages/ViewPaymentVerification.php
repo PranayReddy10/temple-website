@@ -35,7 +35,7 @@ class ViewPaymentVerification extends ViewRecord
         $a = $this->record;
 
         return PaymentVerificationResource::statusLabel($a->kycStatus())
-            .($a->kyc_submitted_at ? ' · sent '.$a->kyc_submitted_at->format('d M Y, H:i') : '');
+            .($a->kyc_submitted_at ? ' · sent '.$a->kyc_submitted_at->format('d M Y, g:i A') : '');
     }
 
     protected function getHeaderActions(): array
@@ -60,7 +60,7 @@ class ViewPaymentVerification extends ViewRecord
                             'approved' => 'success', 'pending' => 'warning', 'rejected' => 'danger', default => 'gray',
                         }),
                     TextEntry::make('approved')->label('Approved by')
-                        ->state(fn (TemplePayoutAccount $record): ?string => $record->verified_at ? ($record->verifier?->name ?? 'Staff').' · '.$record->verified_at->format('d M Y, H:i') : null)
+                        ->state(fn (TemplePayoutAccount $record): ?string => $record->verified_at ? ($record->verifier?->name ?? 'Staff').' · '.$record->verified_at->format('d M Y, g:i A') : null)
                         ->placeholder('—'),
                     TextEntry::make('rejection_reason')->label('Reason refused (the owner sees this)')->placeholder('—'),
                 ]),
@@ -139,7 +139,7 @@ class ViewPaymentVerification extends ViewRecord
                                 ->color(fn (string $state): string => match ($state) {
                                     'approved' => 'success', 'rejected', 'approval_removed' => 'danger', 'bank_changed' => 'warning', default => 'gray',
                                 }),
-                            TextEntry::make('created_at')->label('When')->dateTime('d M Y, H:i'),
+                            TextEntry::make('created_at')->label('When')->dateTime('d M Y, g:i A'),
                             TextEntry::make('user.name')->label('By')->placeholder('—'),
                             TextEntry::make('sent_as')->label('On file then')
                                 ->state(fn (TemplePayoutVerificationEvent $record): string => collect([

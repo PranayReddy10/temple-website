@@ -139,7 +139,7 @@ class TempleAccessTable
                         ->state($record->claimLocationSummary())
                         ->url($record->claimMapUrl(), shouldOpenInNewTab: true)
                         ->helperText($record->hasClaimLocation() ? $record->claim_latitude.', '.$record->claim_longitude.' — open on the map' : null),
-                    TextEntry::make('asked')->label('Asked on')->state($record->requested_at?->format('d M Y, H:i') ?? '—'),
+                    TextEntry::make('asked')->label('Asked on')->state($record->requested_at?->format('d M Y, g:i A') ?? '—'),
                     TextEntry::make('status')->label('Status')->state(ucfirst($record->status())),
                     TextEntry::make('reason')->label('Reason refused')->state($record->rejection_reason)->visible($record->isRejected()),
                 ]),

@@ -110,7 +110,7 @@ class AppNotificationResource extends Resource
                 TextColumn::make('status')->badge()->color(fn (string $state) => match ($state) {
                     'sent' => 'success', 'scheduled' => 'info', 'failed' => 'danger', default => 'gray'
                 }),
-                TextColumn::make('when')->label('When')->state(fn (AppNotification $r) => $r->sent_at ?? $r->scheduled_at)->dateTime('d M Y, H:i')->placeholder('—'),
+                TextColumn::make('when')->label('When')->state(fn (AppNotification $r) => $r->sent_at ?? $r->scheduled_at)->dateTime('d M Y, g:i A')->placeholder('—'),
                 TextColumn::make('reads_count')->counts('reads')->label('Read')->alignEnd(),
                 TextColumn::make('last_error')->label('Push error')->color('danger')->limit(40)->placeholder('—')->toggleable(),
             ])

@@ -191,7 +191,7 @@ class ViewSupportTicket extends ViewRecord
                         ->extraAttributes(['class' => 'break-all'])
                         ->columnSpan(2),
 
-                    TextEntry::make('created_at')->label('Received')->dateTime('d M Y, H:i'),
+                    TextEntry::make('created_at')->label('Received')->dateTime('d M Y, g:i A'),
 
                     /*
                      * What it is about, and a way to open it.
@@ -218,7 +218,7 @@ class ViewSupportTicket extends ViewRecord
                 ->schema([
                     TextEntry::make('resolution_note')->hiddenLabel()->prose(),
                     TextEntry::make('resolver.name')->label('Resolved by')->placeholder('—'),
-                    TextEntry::make('resolved_at')->label('When')->dateTime('d M Y, H:i'),
+                    TextEntry::make('resolved_at')->label('When')->dateTime('d M Y, g:i A'),
                 ])
                 ->columns(2),
         ]);

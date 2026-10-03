@@ -117,7 +117,7 @@ class SupportTicketResource extends Resource
                     ->label('Waiting')
                     ->since()
                     ->sortable()
-                    ->tooltip(fn (SupportTicket $record): string => $record->created_at?->format('d M Y, H:i') ?? ''),
+                    ->tooltip(fn (SupportTicket $record): string => $record->created_at?->format('d M Y, g:i A') ?? ''),
             ])
             ->filters([
                 Filter::make('open')

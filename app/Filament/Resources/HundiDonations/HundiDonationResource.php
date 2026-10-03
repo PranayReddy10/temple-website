@@ -63,7 +63,7 @@ class HundiDonationResource extends Resource
             ->searchPlaceholder('Name, phone or reference')
             ->modifyQueryUsing(fn (Builder $query) => $query->with(['temple:id,name,city', 'devotee:id,name,email,phone', 'payment:id,status,gateway,gateway_payment_id']))
             ->columns([
-                TextColumn::make('paid_at')->label('When')->dateTime('d M Y, H:i', DevotionalClock::timezone())->placeholder('Not paid')->sortable(),
+                TextColumn::make('paid_at')->label('When')->dateTime('d M Y, g:i A', DevotionalClock::timezone())->placeholder('Not paid')->sortable(),
                 TextColumn::make('temple.name')->label('Temple')->weight('medium')->searchable(),
                 TextColumn::make('donor_name')->label('Given by')->searchable(query: DevoteeSearch::query('donor_name', null))
                     ->description(fn (TempleDonation $d): string => ($d->is_anonymous ? 'Anonymous to the temple · ' : '').($d->devotee?->email ?? $d->devotee?->phone ?? '')),

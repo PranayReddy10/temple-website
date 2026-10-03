@@ -327,7 +327,7 @@ class TrustAppApiTest extends TestCase
 
         $id = $this->as($token)->postJson($base.'/timings', [
             'kind' => 'darshan', 'opens_at' => '06:00', 'closes_at' => '12:30',
-        ])->assertCreated()->assertJsonPath('data.window', '06:00 – 12:30')->json('data.id');
+        ])->assertCreated()->assertJsonPath('data.window', '6:00 AM – 12:30 PM')->json('data.id');
 
         $this->as($token)->putJson($base.'/timings/'.$id, ['kind' => 'darshan', 'opens_at' => '05:30', 'closes_at' => '12:30', 'day_of_week' => 1])
             ->assertOk()->assertJsonPath('data.day_of_week', 1);

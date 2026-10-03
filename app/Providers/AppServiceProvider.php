@@ -21,8 +21,13 @@ use App\Support\MediaStorage;
 use App\Support\Pwa;
 use App\Support\TempleTheme;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\TimePicker;
+use Filament\Schemas\Schema;
 use Filament\Support\Facades\FilamentView;
+use Filament\Tables\Table;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
@@ -44,6 +49,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         self::previewUploadsFromThisHost();
+        self::twelveHourClock();
 
         // Photo and link URLs the API hands out must be https when the site
         // is: Android refuses plain-http images, so a proxy or CDN that
@@ -149,6 +155,27 @@ class AppServiceProvider extends ServiceProvider
                 Pwa::headTags(Filament::getCurrentOrDefaultPanel()?->getId() ?? ''),
             ]),
         );
+    }
+
+    /**
+     * The admin shows times on the 12-hour clock ("5:30 PM"), as the apps
+     * and the site do. Pickers draw their own field so the browser's
+     * locale cannot turn it back to 24 hours; what is stored is unchanged.
+     */
+    protected static function twelveHourClock(): void
+    {
+        Table::configureUsing(fn (Table $table) => $table
+            ->defaultDateTimeDisplayFormat('d M Y, g:i A')
+            ->defaultTimeDisplayFormat('g:i A'));
+        Schema::configureUsing(fn (Schema $schema) => $schema
+            ->defaultDateTimeDisplayFormat('d M Y, g:i A')
+            ->defaultTimeDisplayFormat('g:i A'));
+        DateTimePicker::configureUsing(function (DateTimePicker $picker): void {
+            if ($picker instanceof DatePicker) {
+                return;
+            }
+            $picker->native(false)->displayFormat($picker instanceof TimePicker ? 'h:i A' : 'd M Y, h:i A');
+        });
     }
 
     /**

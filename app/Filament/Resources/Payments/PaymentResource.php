@@ -51,7 +51,7 @@ class PaymentResource extends Resource
             ->searchPlaceholder('Name, phone, reference or gateway id')
             ->modifyQueryUsing(fn (Builder $query) => $query->with(['devotee:id,name,email,phone', 'plan:id,name', 'booking.puja:id,name', 'booking.temple:id,name']))
             ->columns([
-                TextColumn::make('created_at')->label('When')->dateTime('d M Y, H:i')->sortable(),
+                TextColumn::make('created_at')->label('When')->dateTime('d M Y, g:i A')->sortable(),
                 TextColumn::make('devotee.name')->label('Devotee')
                     // The devotee's name, email or phone (however saved), the
                     // name and phone on the booking, ticket or gift it paid

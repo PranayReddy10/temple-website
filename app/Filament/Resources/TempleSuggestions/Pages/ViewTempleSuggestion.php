@@ -8,6 +8,7 @@ use App\Filament\Resources\Temples\TempleResource;
 use App\Filament\Resources\TempleSuggestions\TempleSuggestionResource;
 use App\Models\Temple;
 use App\Models\TempleSuggestion;
+use App\Support\Clock;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\Select;
@@ -120,7 +121,7 @@ class ViewTempleSuggestion extends ViewRecord
                     TextEntry::make('timings')
                         ->label('Timings')
                         ->state(fn (TempleSuggestion $r): string => collect([
-                            $r->opens_at && $r->closes_at ? substr($r->opens_at, 0, 5).' – '.substr($r->closes_at, 0, 5) : null,
+                            $r->opens_at && $r->closes_at ? Clock::twelve($r->opens_at).' – '.Clock::twelve($r->closes_at) : null,
                             $r->timings_note,
                         ])->filter()->implode(' · ') ?: '—'),
                     TextEntry::make('contact_phone')->label('Temple phone')->copyable()->placeholder('—'),
@@ -167,7 +168,7 @@ class ViewTempleSuggestion extends ViewRecord
                 ->schema([
                     TextEntry::make('status')->badge(),
                     TextEntry::make('reviewer.name')->label('By')->placeholder('—'),
-                    TextEntry::make('reviewed_at')->label('When')->dateTime('d M Y, H:i'),
+                    TextEntry::make('reviewed_at')->label('When')->dateTime('d M Y, g:i A'),
                     TextEntry::make('review_note')->label('Note to the sender')->placeholder('—')->columnSpanFull(),
                 ]),
         ]);

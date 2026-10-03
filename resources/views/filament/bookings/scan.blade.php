@@ -75,7 +75,7 @@
                     <div>
                         <p style="font-weight:700;font-size:1.05rem;color:rgb(185 28 28)">Already verified — this code does not work again</p>
                         <p style="font-size:.9rem;margin-top:.25rem">
-                            Received by {{ $booking->verifier?->name ?? 'the temple' }} on {{ $booking->verified_at?->timezone($tz)->format('d M Y') }} at {{ $booking->verified_at?->timezone($tz)->format('H:i') }}.
+                            Received by {{ $booking->verifier?->name ?? 'the temple' }} on {{ $booking->verified_at?->timezone($tz)->format('d M Y') }} at {{ $booking->verified_at?->timezone($tz)->format('g:i A') }}.
                             The same {{ $what }} is being shown a second time.
                         </p>
                     </div>
