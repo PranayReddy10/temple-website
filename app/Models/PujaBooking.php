@@ -190,10 +190,17 @@ class PujaBooking extends Model
      * paid booking are the temple's to make, in the gateway's dashboard, and
      * recorded afterwards; the app never promises money back on its own.
      */
+    /**
+     * Before the day, and only while no money has changed hands: a booking
+     * still waiting for its payment, or a free one. A paid seva is the
+     * temple's once booked; it is not refunded, whether the devotee comes
+     * or not.
+     */
     public function canBeCancelledByDevotee(): bool
     {
-        return in_array($this->status, [BookingStatus::PendingPayment, BookingStatus::Confirmed], true)
-            && $this->booked_for->toDateString() >= DevotionalClock::now()->toDateString();
+        $unpaid = $this->status === BookingStatus::PendingPayment || ($this->status === BookingStatus::Confirmed && $this->isFree());
+
+        return $unpaid && $this->booked_for->toDateString() >= DevotionalClock::now()->toDateString();
     }
 
     public function isFree(): bool

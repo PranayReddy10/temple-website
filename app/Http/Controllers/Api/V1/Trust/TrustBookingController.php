@@ -42,7 +42,9 @@ class TrustBookingController extends Controller
 
         $validated = $request->validate([
             'date' => ['nullable', 'date_format:Y-m-d'],
-            'status' => ['nullable', Rule::enum(BookingStatus::class)],
+            // One status, or "successful" (confirmed and received) which is
+            // what the counter looks at by default, or "all".
+            'status' => ['nullable', 'string', Rule::in([...array_map(fn (BookingStatus $s) => $s->value, BookingStatus::cases()), 'successful', 'all'])],
             'puja_id' => ['nullable', 'integer'],
             // Name, phone number (or part of it) or reference.
             'q' => ['nullable', 'string', 'max:60'],
@@ -53,9 +55,13 @@ class TrustBookingController extends Controller
             ->with(['puja', 'temple', 'payment'])
             ->when(mb_strlen($q) >= 2, fn (Builder $query) => $query->tap(self::matching($q, partial: true)))
             ->when($validated['date'] ?? null, fn (Builder $q, string $d) => $q->whereDate('booked_for', $d))
-            ->when($validated['status'] ?? null, fn (Builder $q, string $s) => $q->where('status', $s))
+            ->when(($validated['status'] ?? 'all') !== 'all', fn (Builder $q) => $validated['status'] === 'successful'
+                ? $q->whereIn('status', [BookingStatus::Confirmed->value, BookingStatus::Verified->value])
+                : $q->where('status', $validated['status']))
             ->when($validated['puja_id'] ?? null, fn (Builder $q, int $p) => $q->where('temple_puja_id', $p))
-            ->orderBy('booked_for')
+            // Latest on top: the newest day first, and within a day the
+            // booking made last.
+            ->orderByDesc('booked_for')
             ->latest('id')
             ->paginate(50);
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Enums\BookingStatus;
 use App\Models\PujaBooking;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -60,7 +61,7 @@ class PujaBookingResource extends JsonResource
             'expired_at' => $this->expired_at?->toIso8601String(),
             'people' => $this->people,
             'devotee_name' => $this->devotee_name,
-            'devotee_phone' => $this->devotee_phone,
+            'devotee_phone' => $this->phoneFor($request),
             'gotram' => $this->gotram,
             'nakshatram' => $this->nakshatram,
             'note' => $this->note,
@@ -82,5 +83,19 @@ class PujaBookingResource extends JsonResource
             'can_pay' => $this->canBePaidFor(),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * The temple's team sees the number only while the devotee is still to
+     * come: once received, or if the booking fell through, there is no call
+     * to make. The devotee always sees their own.
+     */
+    protected function phoneFor(Request $request): ?string
+    {
+        if ($request->user('trust') !== null && $this->status !== BookingStatus::Confirmed) {
+            return null;
+        }
+
+        return $this->devotee_phone;
     }
 }
