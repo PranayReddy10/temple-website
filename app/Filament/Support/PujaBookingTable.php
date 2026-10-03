@@ -40,6 +40,7 @@ class PujaBookingTable
     public static function configure(Table $table, bool $showTemple = true, bool $staff = false): Table
     {
         return $table
+            ->searchPlaceholder('Name, phone or reference')
             ->modifyQueryUsing(fn (Builder $query) => $query->with(['puja:id,name,kind,starts_at', 'temple:id,name,city', 'devotee:id,name,email,phone', 'payment:id,uuid,status,gateway,gateway_payment_id', 'verifier:id,name']))
             ->columns([
                 TextColumn::make('booked_for')
@@ -58,7 +59,8 @@ class PujaBookingTable
 
                 TextColumn::make('devotee_name')
                     ->label('Booked by')
-                    ->searchable()
+                    // Name or phone number, on the booking or the devotee's account.
+                    ->searchable(query: DevoteeSearch::query())
                     ->description(fn (PujaBooking $record): string => collect([
                         $record->devotee_phone,
                         $record->gotram ? 'Gotram '.$record->gotram : null,

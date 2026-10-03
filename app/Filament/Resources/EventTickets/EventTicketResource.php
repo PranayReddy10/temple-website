@@ -4,6 +4,7 @@ namespace App\Filament\Resources\EventTickets;
 
 use App\Enums\BookingStatus;
 use App\Filament\Resources\EventTickets\Pages\ListEventTickets;
+use App\Filament\Support\DevoteeSearch;
 use App\Models\EventRegistration;
 use App\Support\DevotionalClock;
 use App\Support\Payments\Payments;
@@ -63,11 +64,12 @@ class EventTicketResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query->with(['event:id,title,type', 'temple:id,name,city', 'payment:id,status,gateway,gateway_payment_id']))
+            ->searchPlaceholder('Name, phone or reference')
             ->columns([
                 TextColumn::make('occurs_on')->label('Day')->date('D, d M Y')->sortable(),
                 TextColumn::make('event.title')->label('Event')->weight('medium')->wrap()
                     ->description(fn (EventRegistration $r): ?string => $r->temple?->name)->searchable(),
-                TextColumn::make('devotee_name')->label('For')->searchable()->description(fn (EventRegistration $r): ?string => $r->devotee_phone),
+                TextColumn::make('devotee_name')->label('For')->searchable(query: DevoteeSearch::query())->description(fn (EventRegistration $r): ?string => $r->devotee_phone),
                 TextColumn::make('people')->numeric()->alignCenter(),
                 TextColumn::make('reference')->fontFamily('mono')->copyable()->searchable(),
                 TextColumn::make('amount_paise')->label('Paid')->state(fn (EventRegistration $r): string => $r->amountLabel())
