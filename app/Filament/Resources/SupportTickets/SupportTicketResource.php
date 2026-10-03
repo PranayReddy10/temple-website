@@ -9,6 +9,7 @@ use App\Enums\TicketStatus;
 use App\Filament\Resources\SupportTickets\Pages\ListSupportTickets;
 use App\Filament\Resources\SupportTickets\Pages\ViewSupportTicket;
 use App\Filament\Resources\SupportTickets\RelationManagers\MessagesRelationManager;
+use App\Filament\Support\DevoteeSearch;
 use App\Models\SupportTicket;
 use App\Models\User;
 use BackedEnum;
@@ -59,8 +60,9 @@ class SupportTicketResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query->with([
-                'devotee:id,name,email', 'user:id,name,email', 'assignee:id,name',
+                'devotee:id,name,email,phone', 'user:id,name,email,phone', 'assignee:id,name',
             ]))
+            ->searchPlaceholder('Reference, name, email or phone')
             ->columns([
                 TextColumn::make('reference')
                     ->label('Ref')
@@ -83,11 +85,21 @@ class SupportTicketResource extends Resource
                 TextColumn::make('reporter')
                     ->label('From')
                     ->state(fn (SupportTicket $record): string => $record->reporterName())
-                    ->description(fn (SupportTicket $record): ?string => $record->reporterEmail())
-                    ->searchable(query: fn (Builder $query, string $search): Builder => $query
-                        ->where('reporter_name', 'like', "%{$search}%")
-                        ->orWhere('reporter_email', 'like', "%{$search}%")
-                        ->orWhereHas('devotee', fn ($q) => $q->where('name', 'like', "%{$search}%"))),
+                    ->description(fn (SupportTicket $record): ?string => collect([$record->reporterEmail(), $record->devotee?->phone ?? $record->user?->phone])->filter()->unique()->implode(' · ') ?: null)
+                    // Name, email, or phone number (however it was saved) of the
+                    // devotee or the temple team member who wrote in.
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        $digits = preg_replace('/\D/', '', $search);
+                        $phone = strlen($digits) >= 4 && preg_match('/[A-Za-z]/', $search) !== 1 ? substr($digits, -10) : null;
+                        $byPhone = fn ($q) => $q->whereRaw(DevoteeSearch::digitsOf('phone').' like ?', ["%{$phone}%"]);
+
+                        return $query->where(fn (Builder $w) => $w
+                            ->where('reporter_name', 'like', "%{$search}%")
+                            ->orWhere('reporter_email', 'like', "%{$search}%")
+                            ->orWhereHas('devotee', fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"))
+                            ->orWhereHas('user', fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"))
+                            ->when($phone !== null, fn (Builder $p) => $p->orWhereHas('devotee', $byPhone)->orWhereHas('user', $byPhone)));
+                    }),
 
                 TextColumn::make('priority')->badge()->sortable()->toggleable(),
 

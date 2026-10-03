@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Devotees\Tables;
 
 use App\Filament\Resources\Devotees\DevoteeAdminActions;
+use App\Filament\Support\DevoteeSearch;
 use App\Filament\Support\MediaColumn;
 use App\Models\Devotee;
 use App\Support\InitialsAvatarProvider;
@@ -43,7 +44,16 @@ class DevoteesTable
                     ->defaultImageUrl(fn (Devotee $record): string => app(InitialsAvatarProvider::class)->get($record)),
 
                 TextColumn::make('name')
-                    ->searchable()
+                    // Name, email, or phone number however it was saved.
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        $digits = preg_replace('/\D/', '', $search);
+                        $phone = strlen($digits) >= 4 && preg_match('/[A-Za-z]/', $search) !== 1 ? substr($digits, -10) : null;
+
+                        return $query->where(fn (Builder $w) => $w
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%")
+                            ->when($phone !== null, fn (Builder $p) => $p->orWhereRaw(DevoteeSearch::digitsOf('phone').' like ?', ["%{$phone}%"])));
+                    })
                     ->sortable()
                     ->weight('medium')
                     ->description(fn (Devotee $record): ?string => $record->email ?? $record->phone),

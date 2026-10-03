@@ -110,10 +110,17 @@ class TrustAdminFinanceController extends Controller
         $validated = $request->validate([
             'status' => ['nullable', Rule::in(array_keys(TempleSettlement::STATUSES))],
             'temple_id' => ['nullable', 'integer'],
+            // Temple name or town, settlement reference, or the bank's UTR.
+            'q' => ['nullable', 'string', 'max:80'],
         ]);
+        $search = trim((string) ($validated['q'] ?? ''));
 
         $rows = TempleSettlement::query()
             ->with('temple:id,name,city')
+            ->when(mb_strlen($search) >= 2, fn ($q) => $q->where(fn ($w) => $w
+                ->where('reference', 'like', strtoupper($search).'%')
+                ->orWhere('transaction_ref', 'like', '%'.$search.'%')
+                ->orWhereHas('temple', fn ($t) => $t->where('name', 'like', '%'.$search.'%')->orWhere('city', 'like', '%'.$search.'%'))))
             ->when($validated['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
             ->when($validated['temple_id'] ?? null, fn ($q, $t) => $q->where('temple_id', $t))
             ->latest('id')

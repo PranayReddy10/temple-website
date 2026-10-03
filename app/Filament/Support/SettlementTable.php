@@ -32,10 +32,17 @@ class SettlementTable
     public static function configure(Table $table, bool $staff = false): Table
     {
         return $table
+            ->searchPlaceholder('Temple, town, reference or UTR')
             ->modifyQueryUsing(fn (Builder $query) => $query->with(['temple:id,name,city', 'payer:id,name']))
             ->columns([
-                TextColumn::make('reference')->label('Reference')->fontFamily('mono')->copyable()->searchable(),
-                TextColumn::make('temple.name')->label('Temple')->weight('medium')->description(fn (TempleSettlement $s): ?string => $s->temple?->city)->searchable(),
+                // The settlement's reference, or the bank's UTR once paid.
+                TextColumn::make('reference')->label('Reference')->fontFamily('mono')->copyable()
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->where(fn (Builder $w) => $w
+                        ->where('reference', 'like', '%'.$search.'%')->orWhere('transaction_ref', 'like', '%'.$search.'%'))),
+                // The temple's name or its town.
+                TextColumn::make('temple.name')->label('Temple')->weight('medium')->description(fn (TempleSettlement $s): ?string => $s->temple?->city)
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->whereHas('temple', fn (Builder $t) => $t
+                        ->where('name', 'like', '%'.$search.'%')->orWhere('city', 'like', '%'.$search.'%'))),
                 TextColumn::make('period_to')->label('Seva days')->state(fn (TempleSettlement $s): string => $s->periodLabel())->sortable(),
                 TextColumn::make('bookings_count')->label('Covers')->state(fn (TempleSettlement $s): string => $s->itemsLabel())->wrap(),
                 TextColumn::make('gross_paise')->label('Paid by devotees')->state(fn (TempleSettlement $s): string => TempleSettlement::rupees($s->gross_paise))->alignEnd(),

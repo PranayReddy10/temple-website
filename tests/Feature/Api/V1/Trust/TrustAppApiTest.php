@@ -368,6 +368,51 @@ class TrustAppApiTest extends TestCase
         ], self::JSON)->assertUnprocessable();
     }
 
+    /** A devotee at the counter without a phone: found by number or reference, then received. */
+    public function test_a_booking_is_found_by_phone_or_reference_and_received(): void
+    {
+        [$token] = $this->manager();
+        $puja = TemplePuja::create(['temple_id' => $this->temple->id, 'name' => 'Archana', 'is_free' => true, 'app_booking_enabled' => true, 'is_published' => true]);
+        $mine = PujaBooking::create([
+            'temple_id' => $this->temple->id, 'temple_puja_id' => $puja->id,
+            'devotee_id' => Devotee::factory()->create(['phone' => '+91 98480 22338'])->id,
+            'booked_for' => DevotionalClock::now()->toDateString(), 'people' => 3,
+            'devotee_name' => 'Lakshmi', 'devotee_phone' => null, 'amount_paise' => 0,
+            'status' => BookingStatus::Confirmed, 'confirmed_at' => now(),
+        ]);
+        $otherPuja = TemplePuja::create(['temple_id' => $this->other->id, 'name' => 'Seva', 'is_free' => true, 'app_booking_enabled' => true, 'is_published' => true]);
+        PujaBooking::create([
+            'temple_id' => $this->other->id, 'temple_puja_id' => $otherPuja->id,
+            'devotee_id' => Devotee::factory()->create()->id, 'booked_for' => DevotionalClock::now()->toDateString(),
+            'people' => 1, 'devotee_name' => 'Elsewhere', 'devotee_phone' => '9848022338', 'amount_paise' => 0,
+            'status' => BookingStatus::Confirmed, 'confirmed_at' => now(),
+        ]);
+
+        // By the account's number, typed any way; never another temple's booking.
+        $this->as($token)->getJson('/api/v1/trust/bookings/search?q=98480 22338')->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.reference', $mine->reference)
+            ->assertJsonPath('data.0.devotee_name', 'Lakshmi')
+            ->assertJsonPath('meta.matched_by', 'phone');
+
+        // By reference, in lower case, and by name.
+        $this->as($token)->getJson('/api/v1/trust/bookings/search?q='.strtolower($mine->reference))->assertOk()->assertJsonPath('data.0.reference', $mine->reference);
+        $this->as($token)->getJson('/api/v1/trust/bookings/search?q=laksh')->assertOk()->assertJsonPath('data.0.reference', $mine->reference);
+        $this->as($token)->getJson('/api/v1/trust/bookings/search?q=Elsewhere')->assertOk()->assertJsonCount(0, 'data');
+
+        // The day's list narrows by name, part of a number, or reference.
+        $list = '/api/v1/trust/temples/'.$this->temple->id.'/bookings';
+        $this->as($token)->getJson($list.'?q=laks')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.reference', $mine->reference);
+        $this->as($token)->getJson($list.'?q=22338')->assertOk()->assertJsonCount(1, 'data');
+        $this->as($token)->getJson($list.'?q='.strtolower($mine->reference))->assertOk()->assertJsonCount(1, 'data');
+        $this->as($token)->getJson($list.'?q=nobody')->assertOk()->assertJsonCount(0, 'data');
+        $this->as($token)->getJson($list)->assertOk()->assertJsonCount(1, 'data');
+
+        // Received by its reference, once.
+        $this->as($token)->postJson('/api/v1/trust/bookings/verify', ['code' => $mine->reference])->assertOk()->assertJsonPath('data.outcome', 'verified');
+        $this->as($token)->postJson('/api/v1/trust/bookings/verify', ['code' => $mine->reference])->assertOk()->assertJsonPath('data.outcome', 'already_verified');
+    }
+
     public function test_sevas_keep_their_fee_rules_and_bookings_are_received_once(): void
     {
         [$token] = $this->manager();
