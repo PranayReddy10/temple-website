@@ -400,6 +400,14 @@ class TrustAppApiTest extends TestCase
         $this->as($token)->getJson('/api/v1/trust/bookings/search?q=laksh')->assertOk()->assertJsonPath('data.0.reference', $mine->reference);
         $this->as($token)->getJson('/api/v1/trust/bookings/search?q=Elsewhere')->assertOk()->assertJsonCount(0, 'data');
 
+        // The day's list narrows by name, part of a number, or reference.
+        $list = '/api/v1/trust/temples/'.$this->temple->id.'/bookings';
+        $this->as($token)->getJson($list.'?q=laks')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.reference', $mine->reference);
+        $this->as($token)->getJson($list.'?q=22338')->assertOk()->assertJsonCount(1, 'data');
+        $this->as($token)->getJson($list.'?q='.strtolower($mine->reference))->assertOk()->assertJsonCount(1, 'data');
+        $this->as($token)->getJson($list.'?q=nobody')->assertOk()->assertJsonCount(0, 'data');
+        $this->as($token)->getJson($list)->assertOk()->assertJsonCount(1, 'data');
+
         // Received by its reference, once.
         $this->as($token)->postJson('/api/v1/trust/bookings/verify', ['code' => $mine->reference])->assertOk()->assertJsonPath('data.outcome', 'verified');
         $this->as($token)->postJson('/api/v1/trust/bookings/verify', ['code' => $mine->reference])->assertOk()->assertJsonPath('data.outcome', 'already_verified');

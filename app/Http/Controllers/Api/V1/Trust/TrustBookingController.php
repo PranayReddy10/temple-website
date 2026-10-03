@@ -44,10 +44,14 @@ class TrustBookingController extends Controller
             'date' => ['nullable', 'date_format:Y-m-d'],
             'status' => ['nullable', Rule::enum(BookingStatus::class)],
             'puja_id' => ['nullable', 'integer'],
+            // Name, phone number (or part of it) or reference.
+            'q' => ['nullable', 'string', 'max:60'],
         ]);
+        $q = trim((string) ($validated['q'] ?? ''));
 
         $page = $record->pujaBookings()
             ->with(['puja', 'temple', 'payment'])
+            ->when(mb_strlen($q) >= 2, fn (Builder $query) => $query->tap(self::matching($q, partial: true)))
             ->when($validated['date'] ?? null, fn (Builder $q, string $d) => $q->whereDate('booked_for', $d))
             ->when($validated['status'] ?? null, fn (Builder $q, string $s) => $q->where('status', $s))
             ->when($validated['puja_id'] ?? null, fn (Builder $q, int $p) => $q->where('temple_puja_id', $p))
@@ -183,27 +187,10 @@ class TrustBookingController extends Controller
     {
         $validated = $request->validate(['q' => ['required', 'string', 'min:3', 'max:60']]);
         $q = trim($validated['q']);
-        $digits = preg_replace('/\D/', '', $q);
-        // A number with no letters is a phone; references always have letters.
-        $isPhone = strlen($digits) >= 6 && preg_match('/[A-Za-z]/', $q) !== 1;
-        $phone = $isPhone ? substr($digits, -10) : null;
-        $ref = strtoupper(preg_replace('/\s+/', '', $q));
         $ids = $this->bookableTempleIds($request);
         $today = DevotionalClock::now()->toDateString();
-
-        $match = function (Builder $query) use ($phone, $ref, $q): void {
-            $query->where(function (Builder $w) use ($phone, $ref, $q): void {
-                $w->where('reference', $ref)->orWhere('reference', 'like', $ref.'%');
-                if ($phone !== null) {
-                    // Numbers are stored as typed ("+91 98480 22338"); compare digits.
-                    $digitsOf = fn (string $column) => "replace(replace(replace(replace(replace({$column}, ' ', ''), '-', ''), '+', ''), '(', ''), ')', '')";
-                    $w->orWhereRaw($digitsOf('devotee_phone').' like ?', ['%'.$phone])
-                        ->orWhereHas('devotee', fn (Builder $d) => $d->whereRaw($digitsOf('phone').' like ?', ['%'.$phone]));
-                } elseif (mb_strlen($q) >= 3 && ! preg_match('/\d/', $q)) {
-                    $w->orWhere('devotee_name', 'like', '%'.$q.'%');
-                }
-            });
-        };
+        $phone = self::phoneIn($q);
+        $match = self::matching($q);
 
         $order = fn (string $dateColumn) => fn (Builder $query) => $query
             ->orderByRaw("case when {$dateColumn} = ? then 0 when {$dateColumn} > ? then 1 else 2 end", [$today, $today])
@@ -228,6 +215,42 @@ class TrustBookingController extends Controller
             ->values();
 
         return response()->json(['data' => $rows, 'meta' => ['matched_by' => $phone !== null ? 'phone' : 'reference_or_name']]);
+    }
+
+    /** The last ten digits of a typed phone number, or null when it is not one (references have letters). */
+    protected static function phoneIn(string $q, int $min = 6): ?string
+    {
+        $digits = preg_replace('/\D/', '', $q);
+
+        return strlen($digits) >= $min && preg_match('/[A-Za-z]/', $q) !== 1 ? substr($digits, -10) : null;
+    }
+
+    /**
+     * Bookings or tickets a typed search means: by reference, by the phone
+     * number given when booking or on the account (compared digit by digit,
+     * however it was saved), or by name. With $partial, part of a number is
+     * enough (the list on screen); otherwise it must end the number.
+     */
+    protected static function matching(string $q, bool $partial = false): \Closure
+    {
+        $q = trim($q);
+        $phone = self::phoneIn($q, $partial ? 4 : 6);
+        $ref = strtoupper(preg_replace('/\s+/', '', $q));
+        $like = $partial ? '%'.$phone.'%' : '%'.$phone;
+
+        return function (Builder $query) use ($phone, $ref, $q, $like): void {
+            $query->where(function (Builder $w) use ($phone, $ref, $q, $like): void {
+                $w->where('reference', $ref)->orWhere('reference', 'like', $ref.'%');
+                if ($phone !== null) {
+                    // Numbers are stored as typed ("+91 98480 22338"); compare digits.
+                    $digitsOf = fn (string $column) => "replace(replace(replace(replace(replace({$column}, ' ', ''), '-', ''), '+', ''), '(', ''), ')', '')";
+                    $w->orWhereRaw($digitsOf('devotee_phone').' like ?', [$like])
+                        ->orWhereHas('devotee', fn (Builder $d) => $d->whereRaw($digitsOf('phone').' like ?', [$like]));
+                } elseif (mb_strlen($q) >= 2 && ! preg_match('/\d/', $q)) {
+                    $w->orWhere('devotee_name', 'like', '%'.$q.'%');
+                }
+            });
+        };
     }
 
     protected function findTicket(Request $request, string $code): ?EventRegistration
