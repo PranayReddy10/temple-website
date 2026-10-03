@@ -430,3 +430,13 @@ Note that none of these is about storage any more.
 
 Because the Flutter app only ever talks to `/api/v1`, that move is a hosting
 change, not an app release.
+
+## Search Console tag and code for every page
+
+`darshansaathi.com/` is served by Laravel from the web build's own
+`public_html/index.html` (the web build's `.htaccess` sends `/` here), so the
+Google/Bing verification tags and anything pasted under **Admin → Website →
+Analytics & SEO → Code for every page** reach the home page as well as the
+temple pages. If the build is somewhere else, set `WEB_APP_INDEX` in `.env`
+to the full path of its `index.html`. Upload the web build with its
+`.htaccess` for this to take effect.

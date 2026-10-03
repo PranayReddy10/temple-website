@@ -2,11 +2,15 @@
 
 namespace App\Filament\Pages\Settings;
 
+use App\Support\Seo;
 use BackedEnum;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\HtmlString;
 
 /**
  * Google Analytics (through Firebase) and Google Search Console.
@@ -38,6 +42,8 @@ class ManageAnalytics extends SettingsPage
             'google_site_verification' => ['string', null],
             'google_site_verification_file' => ['string', null],
             'bing_site_verification' => ['string', null],
+            'custom_head_html' => ['string', null],
+            'custom_body_html' => ['string', null],
         ];
     }
 
@@ -68,11 +74,37 @@ class ManageAnalytics extends SettingsPage
                         ->placeholder('google1234567890abcdef.html')
                         ->regex('/^google[0-9a-f]+\.html$/')
                         ->helperText('From "HTML file" verification: only the file name is needed; the website serves it.'),
-                    TextInput::make('google_site_verification')->label('HTML tag content')
-                        ->placeholder('The content="…" value of the google-site-verification tag')
-                        ->helperText('Added to the temple pages. The home page is the web app, so Google may prefer the HTML file or DNS.'),
+                    TextInput::make('google_site_verification')->label('HTML tag')
+                        ->placeholder('<meta name="google-site-verification" content="…" />')
+                        ->helperText('Paste the whole tag from Search Console, or just its content. It goes on every page of darshansaathi.com, the home page included. Check with "Open the home page source" below, then press Verify in Search Console.')
+                        ->rule(fn (): \Closure => function (string $attribute, mixed $value, \Closure $fail): void {
+                            if (filled($value) && Seo::verificationCode($value) === null) {
+                                $fail('Paste the google-site-verification tag, or the code inside content="…".');
+                            }
+                        }),
                     TextInput::make('bing_site_verification')->label('Bing Webmaster (msvalidate.01)')
-                        ->helperText('Optional: Bing can also import the site straight from Search Console.'),
+                        ->placeholder('<meta name="msvalidate.01" content="…" />')
+                        ->helperText('The whole tag or its content. Optional: Bing can also import the site straight from Search Console.'),
+                    Placeholder::make('home_source')->label('Check')
+                        ->content(fn () => new HtmlString('<a href="view-source:'.e(Seo::url('/')).'" target="_blank" rel="noopener">Open the home page source</a> (or open '.e(Seo::url('/')).' and press Ctrl+U) and look for the tag in &lt;head&gt;.')),
+                ]),
+
+            Section::make('Code for every page')
+                ->description('For tags other services ask you to add: Google Tag Manager, Meta (Facebook) Pixel, Microsoft Clarity, a chat widget, another site verification. Added to every page of darshansaathi.com — the home page, the temple, state and deity pages, and the policy pages. Not added to the admin panel or the temple portal.')
+                ->icon('heroicon-o-code-bracket')
+                ->collapsible()
+                ->schema([
+                    Textarea::make('custom_head_html')
+                        ->label('Head code — goes just before </head>')
+                        ->rows(8)
+                        ->extraInputAttributes(['style' => 'font-family: ui-monospace, monospace; font-size: 12px'])
+                        ->placeholder("<!-- e.g. Google Tag Manager -->\n<script>…</script>")
+                        ->helperText('Paste exactly what the service gives you. Only paste code from services you trust: it runs on every page devotees open.'),
+                    Textarea::make('custom_body_html')
+                        ->label('Body code — goes just after <body>')
+                        ->rows(6)
+                        ->extraInputAttributes(['style' => 'font-family: ui-monospace, monospace; font-size: 12px'])
+                        ->placeholder('<!-- e.g. Google Tag Manager (noscript) -->\n<noscript>…</noscript>'),
                 ]),
         ]);
     }
