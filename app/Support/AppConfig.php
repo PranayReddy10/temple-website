@@ -185,6 +185,11 @@ final class AppConfig
             'enabled' => $allowedHere && $gateways !== [] && (bool) setting('payments_enabled', null, false),
             // Plans are still listed on iOS, so the app can say where to buy.
             'available_elsewhere' => ! $allowedHere && $gateways !== [] && (bool) setting('payments_enabled', null, false),
+            // Paying a temple (a seva, an event ticket, the online hundi) is
+            // the temple's own money, not a subscription: it needs only a
+            // gateway, whatever the plans toggle says. Each temple is still
+            // gated by its own approval (PujaResource's app_booking.enabled).
+            'temple_payments' => $allowedHere && $gateways !== [] && (bool) setting('temple_payments_enabled', null, true),
             'gateways' => array_map(fn (string $g): array => [
                 'code' => $g,
                 'name' => Payment::GATEWAYS[$g],

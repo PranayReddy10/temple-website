@@ -34,6 +34,7 @@ class ManagePayments extends SettingsPage
     {
         return [
             'payments_enabled' => ['boolean', false],
+            'temple_payments_enabled' => ['boolean', true],
             'payments_android' => ['boolean', true],
             'payments_ios' => ['boolean', false],
             'payments_default_gateway' => ['string', 'razorpay'],
@@ -74,6 +75,8 @@ class ManagePayments extends SettingsPage
                 ->icon('heroicon-o-credit-card')
                 ->schema([
                     Toggle::make('payments_enabled')->label('Sell subscriptions in the app'),
+                    Toggle::make('temple_payments_enabled')->label('Take seva, ticket and hundi payments in the app')
+                        ->helperText('Paid sevas, event tickets and the online hundi, for temples whose payout details are approved. Independent of subscriptions; needs an enabled gateway. Turn off to pause every temple at once.'),
                     Toggle::make('payments_android')->label('Offer on Android')
                         ->helperText('Google Play requires Play Billing for digital goods such as ad removal. In India, Play\'s user-choice billing allows another gateway alongside it once you enrol; check your Play Console before going live.'),
                     Toggle::make('payments_ios')->label('Offer on iPhone and iPad')

@@ -54,6 +54,7 @@ class PaymentsTest extends TestCase
             ->assertJsonPath('data.0.price', '₹49')
             ->assertJsonPath('data.0.period', 'per month')
             ->assertJsonPath('meta.payments.enabled', true)
+            ->assertJsonPath('meta.payments.temple_payments', true)
             ->assertJsonPath('meta.payments.gateways.0.code', 'razorpay');
 
         // Off on iOS by default: Apple requires its own purchase system.
@@ -315,6 +316,25 @@ class PaymentsTest extends TestCase
 
         $this->assertSame(10, $devotee->entitlements()['memory_photos_per_visit']);
         $this->assertTrue($devotee->entitlements()['no_ads']);
+    }
+
+    /** A temple approved to take money must not wait on the plans switch. */
+    public function test_temple_payments_do_not_wait_on_the_subscriptions_switch(): void
+    {
+        Setting::set('payments_enabled', '0', 'boolean');
+
+        $this->getJson('/api/v1/app/config?platform=android')->assertOk()
+            ->assertJsonPath('data.payments.enabled', false)
+            ->assertJsonPath('data.payments.temple_payments', true);
+
+        // The admin can still pause every temple at once.
+        Setting::set('temple_payments_enabled', '0', 'boolean');
+        $this->getJson('/api/v1/app/config?platform=android')->assertJsonPath('data.payments.temple_payments', false);
+
+        // And no gateway means nothing can be paid, plans or temples.
+        Setting::set('temple_payments_enabled', '1', 'boolean');
+        Setting::set('payments_razorpay_enabled', '0', 'boolean');
+        $this->getJson('/api/v1/app/config?platform=android')->assertJsonPath('data.payments.temple_payments', false);
     }
 
     public function test_checkout_is_refused_when_payments_are_off_for_the_platform(): void
