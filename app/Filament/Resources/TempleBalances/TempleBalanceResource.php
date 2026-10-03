@@ -77,17 +77,10 @@ class TempleBalanceResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $cutoff = app(Settlements::class)->defaultCutoff()->toDateString();
-        $live = [BookingStatus::Confirmed->value, BookingStatus::Verified->value];
 
         return parent::getEloquentQuery()
             ->select(['temples.id', 'temples.name', 'temples.city', 'temples.slug'])
             ->with('payoutAccount')
-            ->where(fn (Builder $q) => $q
-                ->whereHas('pujaBookings', fn (Builder $b) => $b->where('amount_paise', '>', 0)->whereIn('status', $live))
-                ->orWhereHas('eventRegistrations', fn (Builder $b) => $b->where('amount_paise', '>', 0)->whereIn('status', $live))
-                ->orWhereHas('donations', fn (Builder $b) => $b->paid())
-                ->orWhereHas('payoutAccount')
-                ->orWhereHas('settlements'))
             // Seva bookings (b), event tickets (t) and hundi gifts (d), each
             // ready (dated up to yesterday) and ahead.
             ->withCount(['pujaBookings as rb_count' => fn (Builder $q) => $q->settleable()->whereDate('booked_for', '<=', $cutoff)])
@@ -111,13 +104,27 @@ class TempleBalanceResource extends Resource
         $ahead = fn (Temple $t): int => (int) $t->ab_gross + (int) $t->at_gross + (int) $t->ad_gross;
         $sortBy = fn (string $cols) => fn (Builder $query, string $direction): Builder => $query->orderByRaw('('.collect(explode(',', $cols))->map(fn ($c) => "coalesce({$c}, 0)")->implode(' + ').') '.($direction === 'asc' ? 'asc' : 'desc'));
 
+        $live = [BookingStatus::Confirmed->value, BookingStatus::Verified->value];
+
         return $table
+            ->searchPlaceholder('Temple name or town')
+            // Temples that have taken money, have payout details or a
+            // settlement. A search looks at every temple, so a new one can
+            // be found to set up its payout details and fee.
+            ->modifyQueryUsing(fn (Builder $query, $livewire): Builder => filled($livewire->getTableSearch() ?? null) ? $query : $query->where(fn (Builder $q) => $q
+                ->whereHas('pujaBookings', fn (Builder $b) => $b->where('amount_paise', '>', 0)->whereIn('status', $live))
+                ->orWhereHas('eventRegistrations', fn (Builder $b) => $b->where('amount_paise', '>', 0)->whereIn('status', $live))
+                ->orWhereHas('donations', fn (Builder $b) => $b->paid())
+                ->orWhereHas('payoutAccount')
+                ->orWhereHas('settlements')))
             ->columns([
                 TextColumn::make('name')
                     ->label('Temple')
                     ->weight('medium')
                     ->description(fn (Temple $t): ?string => $t->city)
-                    ->searchable()
+                    // The temple's name or its town.
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->where(fn (Builder $w) => $w
+                        ->where('name', 'like', '%'.$search.'%')->orWhere('city', 'like', '%'.$search.'%')))
                     ->sortable(),
 
                 TextColumn::make('ready_gross')
@@ -180,7 +187,9 @@ class TempleBalanceResource extends Resource
             ->filters([
                 Filter::make('owed')
                     ->label('Unsettled money or being paid')
-                    ->query(fn (Builder $query): Builder => $query->where(fn (Builder $q) => $q
+                    // Searching for a temple finds it whether or not money is
+                    // waiting: its payout details may still need setting up.
+                    ->query(fn (Builder $query, $livewire): Builder => filled($livewire->getTableSearch() ?? null) ? $query : $query->where(fn (Builder $q) => $q
                         ->whereHas('pujaBookings', fn (Builder $b) => $b->settleable())
                         ->orWhereHas('eventRegistrations', fn (Builder $b) => $b->settleable())
                         ->orWhereHas('donations', fn (Builder $b) => $b->settleable())
