@@ -219,12 +219,18 @@ class TrustFinanceController extends Controller
         $record = $this->managedTemple($request, $temple);
         $now = DevotionalClock::now();
 
-        $validated = $request->validate(['date' => ['nullable', 'date_format:Y-m-d']]);
+        $validated = $request->validate([
+            'date' => ['nullable', 'date_format:Y-m-d'],
+            // Donor's name, their phone number (or part of it), or the receipt reference.
+            'q' => ['nullable', 'string', 'max:60'],
+        ]);
+        $search = trim((string) ($validated['q'] ?? ''));
 
         $rows = $record->donations()
             ->whereIn('status', [TempleDonation::PAID, TempleDonation::REFUNDED])
             ->with('devotee:id,name')
             ->when($validated['date'] ?? null, fn ($q, $d) => $q->whereDate('paid_on', $d))
+            ->when(mb_strlen($search) >= 2, fn ($q) => $q->where(self::donorMatching($search)))
             ->latest('paid_at')
             ->limit(200)
             ->get();
@@ -240,6 +246,34 @@ class TrustFinanceController extends Controller
             'total' => $sum($paid()),
             'items' => $rows->map(fn (TempleDonation $d): array => $d->toTempleArray())->values(),
         ]]);
+    }
+
+    /**
+     * Gifts a typed search means. A receipt reference finds any gift; a
+     * name or phone number finds only gifts made in the donor's name: one
+     * given anonymously never answers to who gave it.
+     */
+    protected static function donorMatching(string $search): \Closure
+    {
+        $digits = preg_replace('/\D/', '', $search);
+        $phone = strlen($digits) >= 4 && preg_match('/[A-Za-z]/', $search) !== 1 ? substr($digits, -10) : null;
+        $ref = strtoupper(preg_replace('/\s+/', '', $search));
+
+        return function ($q) use ($search, $phone, $ref): void {
+            // A reference is long enough not to be mistaken for a name.
+            $q->where(fn ($r) => strlen($ref) >= 6 ? $r->where('reference', 'like', $ref.'%') : $r->whereRaw('1 = 0'))
+                ->orWhere(function ($named) use ($search, $phone): void {
+                    $named->where('is_anonymous', false)->where(function ($w) use ($search, $phone): void {
+                        if ($phone !== null) {
+                            $digitsOf = "replace(replace(replace(replace(replace(phone, ' ', ''), '-', ''), '+', ''), '(', ''), ')', '')";
+                            $w->whereHas('devotee', fn ($d) => $d->whereRaw($digitsOf.' like ?', ['%'.$phone.'%']));
+                        } else {
+                            $w->where('donor_name', 'like', '%'.$search.'%')
+                                ->orWhereHas('devotee', fn ($d) => $d->where('name', 'like', '%'.$search.'%'));
+                        }
+                    });
+                });
+        };
     }
 
     /** The owner switches the online hundi on or off. */
