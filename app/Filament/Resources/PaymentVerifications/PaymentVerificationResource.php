@@ -108,7 +108,7 @@ class PaymentVerificationResource extends Resource
             ->modalDescription('Only after checking that the photo matches the Aadhaar, the name matches the bank account, and the proof names this temple. Devotees can then pay this temple in the app.')
             ->modalSubmitActionLabel('Approve')
             ->action(function (TemplePayoutAccount $record): void {
-                $record->forceFill(['verified_at' => now(), 'verified_by' => Auth::id(), 'rejection_reason' => null])->saveQuietly();
+                $record->forceFill(['verified_at' => now(), 'verified_by' => Auth::id(), 'rejection_reason' => null, 'rejected_at' => null])->saveQuietly();
                 Notification::make()->title('Approved. The temple can take money in the app.')->success()->send();
             });
     }
@@ -126,7 +126,7 @@ class PaymentVerificationResource extends Resource
                     ->placeholder('e.g. The Aadhaar photo is not readable; the proof does not name this temple; the selfie does not match the Aadhaar.'),
             ])
             ->action(function (TemplePayoutAccount $record, array $data): void {
-                $record->forceFill(['verified_at' => null, 'verified_by' => null, 'rejection_reason' => $data['reason']])->saveQuietly();
+                $record->forceFill(['verified_at' => null, 'verified_by' => null, 'rejection_reason' => $data['reason'], 'rejected_at' => now()])->saveQuietly();
                 Notification::make()->title('Rejected. The owner will see the reason.')->success()->send();
             });
     }

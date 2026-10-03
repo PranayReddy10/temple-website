@@ -163,7 +163,13 @@ class PaymentsVerificationTest extends TestCase
             ->assertSee('2345 6789 0123')
             ->callAction('reject', data: ['reason' => 'The Aadhaar photo is not readable.']);
         $this->assertSame('rejected', $account->fresh()->kycStatus());
-        $this->trust($owner)->getJson($base.'/finance')->assertJsonPath('data.payout_account.kyc.rejection_reason', 'The Aadhaar photo is not readable.');
+        $this->trust($owner)->getJson($base.'/finance')
+            ->assertJsonPath('data.payout_account.kyc.status', 'rejected')
+            ->assertJsonPath('data.payout_account.kyc.rejection_reason', 'The Aadhaar photo is not readable.')
+            ->assertJsonPath('data.payout_account.kyc.rejected_at', fn ($v) => $v !== null);
+        $this->trust($owner)->getJson($base)
+            ->assertJsonPath('data.stats.payments', 'rejected')
+            ->assertJsonPath('data.stats.payments_rejection_reason', 'The Aadhaar photo is not readable.');
 
         $this->actingAs($admin);
         Livewire::test(ViewPaymentVerification::class, ['record' => $account->getRouteKey()])

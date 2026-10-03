@@ -147,6 +147,8 @@ class TrustTempleController extends Controller
             'hundi_enabled' => (bool) $temple->accepts_donations,
             // missing · pending · approved · rejected: may devotees pay here?
             'payments' => $temple->payoutAccount?->kycStatus() ?? 'missing',
+            // Why staff refused it, shown on the home screen until fixed.
+            'payments_rejection_reason' => $temple->payoutAccount?->kycStatus() === 'rejected' ? $temple->payoutAccount->rejection_reason : null,
             // What the platform keeps, so the team sees its share up front.
             'fee_percent' => app(Settlements::class)->feePercentFor($temple),
             'donation_fee_percent' => app(Settlements::class)->donationFeePercent(),

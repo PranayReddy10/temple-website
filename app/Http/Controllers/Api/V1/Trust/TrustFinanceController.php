@@ -187,6 +187,7 @@ class TrustFinanceController extends Controller
             'temple_id' => $record->getKey(),
             'kyc_submitted_at' => now(),
             'rejection_reason' => null,
+            'rejected_at' => null,
             'updated_by' => $this->trustUser($request)->getKey(),
             // New documents are always checked again.
             'verified_at' => null,

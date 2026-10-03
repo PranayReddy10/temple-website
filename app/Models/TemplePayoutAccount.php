@@ -49,6 +49,7 @@ class TemplePayoutAccount extends Model
             'verified_at' => 'datetime',
             'aadhaar_number' => 'encrypted',
             'kyc_submitted_at' => 'datetime',
+            'rejected_at' => 'datetime',
         ];
     }
 
@@ -197,6 +198,7 @@ class TemplePayoutAccount extends Model
                 'documents' => collect(self::DOCUMENTS)->map(fn (array $d): bool => filled($this->{$d[0]}))->all(),
                 'submitted_at' => $this->kyc_submitted_at?->toIso8601String(),
                 'rejection_reason' => $this->rejection_reason,
+                'rejected_at' => $this->rejected_at?->toIso8601String(),
             ],
         ];
     }
