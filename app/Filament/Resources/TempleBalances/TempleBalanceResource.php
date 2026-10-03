@@ -328,11 +328,16 @@ class TempleBalanceResource extends Resource
                 if (filled($data['account_number'] ?? null)) {
                     $account->account_number = $data['account_number'];
                 }
+                $wasApproved = $account->exists && $account->isVerified();
                 $account->save();
 
                 $account->forceFill($data['verified'] && $account->isComplete() && $account->hasKyc()
                     ? ['verified_at' => $account->verified_at ?? now(), 'verified_by' => $account->verified_by ?? Auth::id()]
                     : ['verified_at' => null, 'verified_by' => null])->saveQuietly();
+
+                if ($wasApproved !== $account->isVerified()) {
+                    $account->recordEvent($account->isVerified() ? 'approved' : 'approval_removed', $account->isVerified() ? null : 'Changed in Temple balances → Payout details.', Auth::id());
+                }
 
                 $hundi = (bool) ($data['accepts_donations'] ?? false) && $account->refresh()->canReceiveMoney();
                 Temple::query()->whereKey($t->getKey())->first()?->forceFill(['accepts_donations' => $hundi])->save();

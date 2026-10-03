@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Support\MediaStorage;
+use App\Support\MoveMediaToSpaces;
 use App\Support\SpacesCors;
 use App\Support\StorageHealth;
 use App\Support\UploadRules;
@@ -214,14 +215,44 @@ class StorageSettings extends Page
 
     public function getSubheading(): ?string
     {
-        return StorageHealth::mediaIsServable()
+        $left = MoveMediaToSpaces::remainingTotal();
+
+        $where = StorageHealth::mediaIsServable()
             ? 'Uploads are going to '.$this->diskLabel().' and should be visible.'
             : 'Something is wrong: uploaded files will not be visible. See below.';
+
+        if (MediaStorage::selectedDisk() !== MediaStorage::SPACES_DISK) {
+            return $where.' New photos, videos and documents from the apps are being saved on this server — choose DigitalOcean Spaces below to keep them off it.';
+        }
+
+        return $left > 0
+            ? $where.' '.$left.' older '.($left === 1 ? 'item is' : 'items are').' still on this server: use "Move existing files to Spaces".'
+            : $where.' Nothing is left on this server.';
     }
 
     protected function getHeaderActions(): array
     {
         return [
+            // Switching only moves new uploads; this carries the older ones.
+            Action::make('move_to_spaces')
+                ->label(fn (): string => 'Move existing files to Spaces ('.MoveMediaToSpaces::remainingTotal().')')
+                ->icon('heroicon-o-cloud-arrow-up')
+                ->color('success')
+                ->visible(fn (): bool => MediaStorage::spacesIsFilledIn() && MediaStorage::selectedDisk() === MediaStorage::SPACES_DISK && MoveMediaToSpaces::remainingTotal() > 0)
+                ->requiresConfirmation()
+                ->modalDescription('Copies photos, videos, avatars and verification documents still on this server to the Space, checks each one arrived, then removes the server copy. Up to 300 at a time; press again until none are left. For very many files, run "php artisan media:move-to-spaces --all" on the server instead.')
+                ->action(function (): void {
+                    $result = MoveMediaToSpaces::run(300);
+
+                    Notification::make()
+                        ->title('Moved '.$result['moved'].' to Spaces')
+                        ->body(($result['remaining'] > 0 ? $result['remaining'].' still on this server; press again.' : 'Nothing is left on this server.')
+                            .($result['failed'] !== [] ? ' Could not move: '.implode('; ', array_slice($result['failed'], 0, 3)) : ''))
+                        ->status($result['failed'] === [] ? 'success' : 'warning')
+                        ->persistent($result['failed'] !== [])
+                        ->send();
+                }),
+
             Action::make('check')
                 ->label('Check it now')
                 ->icon('heroicon-o-play')
