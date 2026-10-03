@@ -58,6 +58,51 @@ final class Seo
         return filled($url) ? (string) $url : null;
     }
 
+    /**
+     * A verification code as pasted: just the code, or the whole
+     * <meta name="google-site-verification" content="…"> tag Search Console
+     * gives, from which the code is taken.
+     */
+    public static function verificationCode(?string $pasted): ?string
+    {
+        $pasted = trim((string) $pasted);
+        if ($pasted === '') {
+            return null;
+        }
+        if (preg_match('/content\s*=\s*["\']([^"\']+)["\']/i', $pasted, $m) === 1) {
+            return trim($m[1]);
+        }
+
+        return preg_match('/^[A-Za-z0-9_\-]+$/', $pasted) === 1 ? $pasted : null;
+    }
+
+    /**
+     * Everything that goes at the end of every website page's <head>: the
+     * search engines' verification tags and whatever was pasted under
+     * Analytics & SEO → Code for every page.
+     */
+    public static function headExtras(): string
+    {
+        $out = [];
+        if ($google = self::verificationCode(setting('google_site_verification'))) {
+            $out[] = '<meta name="google-site-verification" content="'.e($google).'">';
+        }
+        if ($bing = self::verificationCode(setting('bing_site_verification'))) {
+            $out[] = '<meta name="msvalidate.01" content="'.e($bing).'">';
+        }
+        if (filled($head = setting('custom_head_html'))) {
+            $out[] = (string) $head;
+        }
+
+        return implode("\n", $out);
+    }
+
+    /** Pasted code for the start of every website page's <body> (a tag manager's noscript, a chat widget). */
+    public static function bodyExtras(): string
+    {
+        return (string) setting('custom_body_html');
+    }
+
     /** Whether this request came in on the website rather than the admin host. */
     public static function onWebsite(Request $request): bool
     {

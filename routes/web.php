@@ -13,18 +13,30 @@ use App\Http\Controllers\PwaController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\TempleCheckinController;
 use App\Http\Controllers\TempleQrPrintController;
+use App\Http\Controllers\WebAppHomeController;
 use App\Models\Temple;
 use App\Support\AppLinks;
 use App\Support\IndexNow;
+use App\Support\Seo;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // temple.darshansaathi.com itself: what this server is, and the way in for
 // staff and temples. Devotees are pointed at the website and the app.
-Route::get('/', function () {
+Route::get('/', function (Request $request) {
+    // darshansaathi.com/: the web app, with the site's verification tags and
+    // pasted code (see WebAppHomeController).
+    if (Seo::onWebsite($request)) {
+        return app(WebAppHomeController::class)();
+    }
+
     return view('home', [
         'temples' => Temple::query()->where('status', TempleStatus::Published)->count(),
     ]);
 })->name('home');
+Route::get('/index.html', fn (Request $request) => Seo::onWebsite($request)
+    ? app(WebAppHomeController::class)()
+    : redirect('/'));
 
 /*
 |--------------------------------------------------------------------------

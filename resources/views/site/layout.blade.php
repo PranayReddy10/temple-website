@@ -31,12 +31,6 @@
     <meta name="twitter:image" content="{{ $shareImage }}">
     <link rel="icon" href="{{ \App\Support\Seo::url('favicon.png') }}">
     <link rel="apple-touch-icon" href="{{ \App\Support\Seo::url('icons/Icon-192.png') }}">
-    @if (filled(setting('google_site_verification')))
-        <meta name="google-site-verification" content="{{ setting('google_site_verification') }}">
-    @endif
-    @if (filled(setting('bing_site_verification')))
-        <meta name="msvalidate.01" content="{{ setting('bing_site_verification') }}">
-    @endif
     @php($ga = \App\Support\Seo::measurementId())
     @if ($ga && \App\Support\Seo::onWebsite(request()))
         {{-- The same stream as the web app, so a visit that starts here and goes on in the app is one visit. --}}
@@ -70,8 +64,11 @@
         form.find input { flex: 1; min-width: 0; font: inherit; padding: 10px 14px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--deep); }
         form.find button { font: inherit; font-weight: 600; background: var(--kumkum); color: #fff; border: 0; border-radius: 999px; padding: 10px 18px; cursor: pointer; }
     </style>
+    {{-- Verification tags and the code pasted under Analytics & SEO, on every page. --}}
+    {!! \App\Support\Seo::headExtras() !!}
 </head>
 <body>
+    {!! \App\Support\Seo::bodyExtras() !!}
 <header class="top">
     <div class="wrap">
         <a class="brand" href="{{ \App\Support\Seo::url('/') }}" style="display:inline-flex;align-items:center;gap:10px">
