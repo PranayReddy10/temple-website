@@ -282,6 +282,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
             // At the counter: scans are checked against every temple this
             // account manages, so the app need not ask which one first.
+            Route::get('bookings/search', [TrustBookingController::class, 'search'])->middleware('throttle:60,1')->name('bookings.search');
             Route::post('bookings/scan', [TrustBookingController::class, 'scan'])->middleware('throttle:60,1')->name('bookings.scan');
             Route::post('bookings/verify', [TrustBookingController::class, 'verify'])->middleware('throttle:60,1')->name('bookings.verify');
             Route::post('passports/lookup', [TrustBookingController::class, 'passport'])->middleware('throttle:60,1')->name('passports.lookup');

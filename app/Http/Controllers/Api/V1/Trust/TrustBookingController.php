@@ -13,6 +13,7 @@ use App\Models\EventRegistration;
 use App\Models\PujaBooking;
 use App\Support\BookingQr;
 use App\Support\Bookings\PujaBookings;
+use App\Support\DevotionalClock;
 use App\Support\Events\EventRegistrations;
 use App\Support\Finance\Settlements;
 use App\Support\PassportQr;
@@ -170,6 +171,63 @@ class TrustBookingController extends Controller
             },
             'temple' => ['id' => $temple->getKey(), 'name' => $temple->name],
         ]]);
+    }
+
+    /**
+     * A devotee at the counter without their phone: find the seva booking
+     * or event ticket by its reference, the mobile number given when
+     * booking (or on their account), or their name. Today's first, then the
+     * days ahead, then the rest; only at the temples this account manages.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $validated = $request->validate(['q' => ['required', 'string', 'min:3', 'max:60']]);
+        $q = trim($validated['q']);
+        $digits = preg_replace('/\D/', '', $q);
+        // A number with no letters is a phone; references always have letters.
+        $isPhone = strlen($digits) >= 6 && preg_match('/[A-Za-z]/', $q) !== 1;
+        $phone = $isPhone ? substr($digits, -10) : null;
+        $ref = strtoupper(preg_replace('/\s+/', '', $q));
+        $ids = $this->bookableTempleIds($request);
+        $today = DevotionalClock::now()->toDateString();
+
+        $match = function (Builder $query) use ($phone, $ref, $q): void {
+            $query->where(function (Builder $w) use ($phone, $ref, $q): void {
+                $w->where('reference', $ref)->orWhere('reference', 'like', $ref.'%');
+                if ($phone !== null) {
+                    // Numbers are stored as typed ("+91 98480 22338"); compare digits.
+                    $digitsOf = fn (string $column) => "replace(replace(replace(replace(replace({$column}, ' ', ''), '-', ''), '+', ''), '(', ''), ')', '')";
+                    $w->orWhereRaw($digitsOf('devotee_phone').' like ?', ['%'.$phone])
+                        ->orWhereHas('devotee', fn (Builder $d) => $d->whereRaw($digitsOf('phone').' like ?', ['%'.$phone]));
+                } elseif (mb_strlen($q) >= 3 && ! preg_match('/\d/', $q)) {
+                    $w->orWhere('devotee_name', 'like', '%'.$q.'%');
+                }
+            });
+        };
+
+        $order = fn (string $dateColumn) => fn (Builder $query) => $query
+            ->orderByRaw("case when {$dateColumn} = ? then 0 when {$dateColumn} > ? then 1 else 2 end", [$today, $today])
+            ->orderBy($dateColumn);
+
+        $bookings = PujaBooking::query()
+            ->with(['puja', 'temple', 'payment'])
+            ->when($ids !== null, fn ($query) => $query->whereIn('temple_id', $ids))
+            ->tap($match)->tap($order('booked_for'))
+            ->limit(30)->get();
+
+        $tickets = EventRegistration::query()
+            ->with(['event', 'temple', 'payment'])
+            ->when($ids !== null, fn ($query) => $query->whereIn('temple_id', $ids))
+            ->tap($match)->tap($order('occurs_on'))
+            ->limit(30)->get();
+
+        $rows = collect()
+            ->concat($bookings->map(fn (PujaBooking $b) => (new PujaBookingResource($b))->resolve($request)))
+            ->concat($tickets->map(fn (EventRegistration $t) => (new EventRegistrationResource($t))->resolve($request)))
+            ->sortBy(fn (array $r) => [($r['booked_for'] ?? '') === $today ? 0 : (($r['booked_for'] ?? '') > $today ? 1 : 2), $r['booked_for'] ?? ''])
+            ->values();
+
+        return response()->json(['data' => $rows, 'meta' => ['matched_by' => $phone !== null ? 'phone' : 'reference_or_name']]);
     }
 
     protected function findTicket(Request $request, string $code): ?EventRegistration
