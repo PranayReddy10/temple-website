@@ -6,9 +6,6 @@ use App\Models\District;
 use App\Models\Temple;
 use App\Models\TemplePuja;
 use App\Models\TempleTiming;
-use App\Services\Osm\OsmTempleImporter;
-use App\Services\Osm\OverpassClient;
-use App\Services\Osm\TempleWikipediaFinder;
 use App\Support\Geocoder;
 use App\Support\TempleImport\MapsLink;
 use Illuminate\Support\Facades\DB;
@@ -22,14 +19,8 @@ final class OfficialSiteImport
 {
     /**
      * Reads what the links say about a temple and keeps it for review:
-     *
-     * 1. the Google Maps link: the temple's name and pin;
-     * 2. OpenStreetMap at that pin: the temple's own map record (phone,
-     *    website, its Wikidata and Wikipedia references), and the address,
-     *    PIN code, district and state there;
-     * 3. the temple's website (the one given, else the one OpenStreetMap
-     *    lists): phone, email, timings and sevas;
-     * 4. Wikipedia: the temple's article and its opening paragraph.
+     * the Google Maps link's name and pin, the address the map has there,
+     * and the temple's own website (phone, email, timings, sevas).
      *
      * Returns the reading, or ['error' => …] when nothing could be read.
      *
@@ -52,30 +43,15 @@ final class OfficialSiteImport
             // link itself is not stored; it can run to a thousand characters.
             isset($maps['error']) ? $problems[] = $maps['error'] : $found['maps'] = array_diff_key($maps, ['url' => true]);
         }
-        $name = $found['maps']['name'] ?? $temple->name;
         $lat = $found['maps']['latitude'] ?? ($temple->hasCoordinates() ? (float) $temple->latitude : null);
         $lng = $found['maps']['longitude'] ?? ($temple->hasCoordinates() ? (float) $temple->longitude : null);
 
-        // The temple's own record on OpenStreetMap, at the pin.
-        if ($lat !== null && $lng !== null && ($osm = self::osmAt($lat, $lng, (string) $name)) !== null) {
-            $found['osm'] = $osm;
-        }
-
-        // Its website: the one given, else the one OpenStreetMap lists.
-        $url = filled($url) ? $url : ($found['osm']['website'] ?? null);
         if (filled($url)) {
             $site = OfficialSiteReader::read((string) $url, $temple->official_site_pages ?? []);
             isset($site['error']) ? $problems[] = $site['error'] : $found = $site + $found;
         }
         if ($found === []) {
             return ['error' => $problems !== [] ? implode(' ', $problems) : 'Give the temple\'s Google Maps link or its website.'];
-        }
-
-        // OpenStreetMap's phone and email where the website had none.
-        foreach (['phone' => 'phones', 'email' => 'emails'] as $tag => $list) {
-            if (empty($found[$list]) && filled($found['osm'][$tag] ?? null)) {
-                $found[$list] = [$found['osm'][$tag]];
-            }
         }
 
         // The Maps pin is where the temple is; the website's map comes next.
@@ -86,23 +62,6 @@ final class OfficialSiteImport
         }
         if ($lat !== null && $lng !== null && ($place = self::placeAt($lat, $lng))) {
             $found['place'] = $place;
-        }
-
-        // Wikipedia: the article OpenStreetMap or Wikidata names, else an
-        // article near the pin whose title names the temple.
-        try {
-            $finder = app(TempleWikipediaFinder::class);
-            $article = $finder->articleForPlace(
-                $found['osm']['wikipedia_url'] ?? $temple->wikipedia_url,
-                $found['osm']['wikidata'] ?? $temple->wikidata_id,
-                $lat, $lng, array_values(array_unique(array_filter([$name, $temple->name, $found['osm']['name'] ?? null]))),
-            );
-            if ($article !== null && ($summary = $finder->summary(...$article)) !== null) {
-                $found['wikipedia'] = $summary + ['opening' => $finder->opening($summary['extract'])]
-                    + $finder->sections($summary['lang'], $summary['title']);
-            }
-        } catch (Throwable) {
-            $problems[] = 'Wikipedia could not be reached this time.';
         }
 
         if ($problems !== []) {
@@ -122,44 +81,6 @@ final class OfficialSiteImport
         $temple->saveQuietly();
 
         return $found;
-    }
-
-    /**
-     * The temple's record on OpenStreetMap: the place of worship within
-     * 250 m whose name is this temple's, or the only Hindu one there.
-     *
-     * @return array<string, mixed>|null
-     */
-    public static function osmAt(float $lat, float $lng, string $name): ?array
-    {
-        try {
-            $elements = app(OverpassClient::class)->near($lat, $lng);
-        } catch (Throwable) {
-            return null;
-        }
-        $importer = app(OsmTempleImporter::class);
-        $named = collect($elements)->filter(fn ($e) => collect([$e['tags']['name'] ?? '', $e['tags']['name:en'] ?? ''])
-            ->filter()->contains(fn ($n) => $importer->sameName($name, $n)));
-        $hindu = collect($elements)->filter(fn ($e) => ($e['tags']['religion'] ?? '') === 'hindu');
-        $element = $named->first() ?? ($hindu->count() === 1 ? $hindu->first() : null);
-        if ($element === null) {
-            return null;
-        }
-        $tags = $element['tags'];
-        $website = $tags['website'] ?? $tags['contact:website'] ?? null;
-
-        return array_filter([
-            'ref' => $element['type'].'/'.$element['id'],
-            'url' => 'https://www.openstreetmap.org/'.$element['type'].'/'.$element['id'],
-            'name' => $importer->name($tags),
-            'phone' => isset($tags['phone']) || isset($tags['contact:phone']) ? trim(explode(';', $tags['phone'] ?? $tags['contact:phone'])[0]) : null,
-            'email' => $tags['email'] ?? $tags['contact:email'] ?? null,
-            'website' => $website !== null && preg_match('#^https?://#i', $website) ? $website : null,
-            'wikidata' => preg_match('/^Q\d+$/', $tags['wikidata'] ?? '') === 1 ? $tags['wikidata'] : null,
-            'wikipedia_url' => $importer->wikipediaUrl($tags),
-            'commons_image' => $importer->commonsFile($tags),
-            'opening_hours' => $tags['opening_hours'] ?? null,
-        ], fn ($v) => $v !== null && $v !== '');
     }
 
     /**
@@ -214,8 +135,6 @@ final class OfficialSiteImport
             isset($found['pincode']) ? 'PIN code' : null,
             isset($found['latitude']) ? 'map location' : null,
             isset($found['place']) ? 'address from the map' : null,
-            isset($found['osm']) ? 'OpenStreetMap record' : null,
-            isset($found['wikipedia']) ? 'Wikipedia article' : null,
         ])->filter()->implode(', ');
 
         return ($what !== '' ? $what : 'No details found').($pages > 1 ? ' on '.$pages.' pages' : ' on the site');
@@ -253,61 +172,11 @@ final class OfficialSiteImport
                 $temple->fill($fields);
                 $done[] = count($fields).' '.(count($fields) === 1 ? 'detail' : 'details');
             }
-            // References: the temple's OpenStreetMap record and Wikipedia
-            // article, each only where the slot is empty and no other
-            // temple already has it.
-            $refs = [];
-            $free = fn (string $column, ?string $value): bool => filled($value) && blank($temple->getAttribute($column))
-                && ! Temple::withTrashed()->where($column, $value)->whereKeyNot($temple->getKey())->exists();
-            $osm = $found['osm'] ?? [];
-            $wiki = $found['wikipedia'] ?? [];
-            if (! empty($data['use_osm']) && $osm !== []) {
-                foreach (['osm_ref' => $osm['ref'] ?? null, 'wikidata_id' => $osm['wikidata'] ?? null, 'commons_image' => $osm['commons_image'] ?? null] as $column => $value) {
-                    if ($free($column, $value)) {
-                        $refs[$column] = $value;
-                    }
-                }
-            }
-            if (! empty($data['use_wikipedia_link']) && $wiki !== []) {
-                if (blank($temple->wikipedia_url)) {
-                    $refs['wikipedia_url'] = mb_substr($wiki['url'], 0, 500);
-                }
-                if (! isset($refs['wikidata_id']) && $free('wikidata_id', $wiki['wikidata'] ?? null)) {
-                    $refs['wikidata_id'] = $wiki['wikidata'];
-                }
-            }
-            // The article's opening as the description, credited to
-            // Wikipedia wherever it is shown (CC BY-SA).
-            if (! empty($data['use_wikipedia_description']) && empty($data['use_short_description']) && filled($data['wikipedia_description'] ?? null) && $wiki !== []) {
-                $refs['short_description'] = trim($data['wikipedia_description']);
-                $refs['description_source'] = 'wikipedia';
-                $refs['wikipedia_url'] = $temple->wikipedia_url ?: mb_substr($wiki['url'], 0, 500);
-                $done[] = 'description from Wikipedia';
-            }
-            // History and significance from the article's sections.
-            $taken = $temple->wikipedia_fields ?? [];
-            foreach (['history', 'significance'] as $field) {
-                if (! empty($data['use_wikipedia_'.$field]) && filled($data['wikipedia_'.$field] ?? null) && $wiki !== []) {
-                    $refs[$field] = trim($data['wikipedia_'.$field]);
-                    $taken[] = $field;
-                    $refs['wikipedia_url'] ??= $temple->wikipedia_url ?: mb_substr($wiki['url'], 0, 500);
-                    $done[] = $field.' from Wikipedia';
-                }
-            }
-            if ($taken !== ($temple->wikipedia_fields ?? [])) {
-                $refs['wikipedia_fields'] = array_values(array_unique($taken));
-            }
-            if (array_intersect_key($refs, array_flip(['osm_ref', 'wikipedia_url', 'wikidata_id'])) !== []) {
-                $done[] = 'map and Wikipedia links';
-            }
-            $temple->forceFill($refs);
-
             // The source of what was taken, so the listing says where it is from.
             $fromSite = filled($found['source_url'] ?? null);
-            $fromOsm = ! $fromSite && ! empty($data['use_osm']) && isset($osm['url']);
             $temple->forceFill([
-                'source_name' => $temple->source_name ?: ($fromSite ? 'Official website' : ($fromOsm ? OsmTempleImporter::SOURCE_NAME : 'Map location')),
-                'source_url' => blank($temple->source_url) && ($fromSite || $fromOsm) ? mb_substr($fromSite ? $found['source_url'] : $osm['url'], 0, 255) : $temple->source_url,
+                'source_name' => $temple->source_name ?: ($fromSite ? 'Official website' : 'Map location'),
+                'source_url' => blank($temple->source_url) && $fromSite ? mb_substr($found['source_url'], 0, 255) : $temple->source_url,
                 'official_import_reviewed_at' => now(),
                 'last_verified_at' => $fields !== [] ? now() : $temple->last_verified_at,
             ])->save();

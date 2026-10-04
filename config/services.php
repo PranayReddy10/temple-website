@@ -35,10 +35,4 @@ return [
         ],
     ],
 
-    // OpenStreetMap's query service, used by temples:osm-scan. Any public
-    // Overpass instance works; switch if the main one is busy.
-    'overpass' => [
-        'url' => env('OVERPASS_URL', 'https://overpass-api.de/api/interpreter'),
-    ],
-
 ];
