@@ -45,11 +45,13 @@
     <p class="muted">{{ number_format($temples->total()) }} {{ \Illuminate\Support\Str::plural('temple', $temples->total()) }} with darshan timings, pujas and sevas, visiting rules and directions.</p>
     @if (! empty($intro))<p>{{ $intro }}</p>@endif
 
-    @if (! $state && ! $deity)
-        <form class="find" action="{{ \App\Support\Seo::url('temples') }}" method="get" role="search">
-            <input type="search" name="q" value="{{ $q ?? '' }}" placeholder="Search by temple name or town" aria-label="Search temples">
-            <button type="submit">Search</button>
-        </form>
+    {{-- On a state or deity page the search stays within it. --}}
+    <form class="find" action="{{ \App\Support\Seo::url($state ? 'states/'.$state->slug : ($deity ? 'deities/'.$deity->slug : 'temples')) }}" method="get" role="search">
+        <input type="search" name="q" value="{{ $q ?? '' }}" placeholder="{{ $state ? 'Search temples in '.$state->name : ($deity ? 'Search '.\App\Http\Controllers\PublicTempleController::deityPhrase($deity->name).' temples' : 'Search by temple name or town') }}" aria-label="Search temples">
+        <button type="submit">Search</button>
+    </form>
+    @if (($state || $deity) && filled($q ?? null))
+        <p class="muted">@if ($temples->total() === 0)No temples here match "{{ $q }}". @endif<a href="{{ \App\Support\Seo::url('temples?q='.urlencode($q)) }}">Search all temples</a></p>
     @endif
 
     @if ($states->isNotEmpty())

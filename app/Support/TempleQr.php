@@ -23,7 +23,9 @@ final class TempleQr
 {
     public static function url(Temple $temple): string
     {
-        return rtrim((string) config('brand.url'), '/').'/temples/'.$temple->slug.'/checkin?s='.self::signature($temple);
+        // On the website's own address: phones open darshansaathi.com/temples/…
+        // links in the app when it is installed, and in the browser when not.
+        return Seo::url('temples/'.$temple->slug.'/checkin').'?s='.self::signature($temple);
     }
 
     public static function signature(Temple $temple): string

@@ -35,6 +35,22 @@ final class AppLinks
         ]];
     }
 
+    /**
+     * A link Android opens in the app when it is installed, and otherwise
+     * on the Play Store (or the page itself when no store link is set):
+     * for a button on a page already open in the browser, where an
+     * ordinary link would only reload the page.
+     */
+    public static function androidIntent(string $httpsUrl, ?string $fallback = null): string
+    {
+        $parts = parse_url($httpsUrl);
+        $package = (string) (setting('app_android_package') ?: self::DEFAULT_ANDROID_PACKAGE);
+        $fallback ??= Seo::storeUrl() ?? $httpsUrl;
+
+        return 'intent://'.($parts['host'] ?? '').($parts['path'] ?? '/').(isset($parts['query']) ? '?'.$parts['query'] : '')
+            .'#Intent;scheme=https;package='.$package.';S.browser_fallback_url='.rawurlencode($fallback).';end';
+    }
+
     /** @return array<string, mixed> */
     public static function apple(): array
     {

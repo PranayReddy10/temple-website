@@ -49,17 +49,21 @@ class PublicTempleController extends Controller
         ]);
     }
 
-    public function state(string $slug): View
+    public function state(Request $request, string $slug): View
     {
         $state = State::query()->where('slug', $slug)->first() ?? throw new NotFoundHttpException;
+        // A search within the state: its temples matching a name or town.
+        $q = trim((string) $request->query('q'));
 
         $temples = Temple::query()->published()->where('state_id', $state->id)
+            ->when($q !== '', fn ($query) => $query->search($q))
             ->with(['deity:id,name', 'state:id,name', 'primaryPhoto'])
             ->tap(self::cardDetails(...))
             ->orderByDesc('is_featured')->orderBy('name')
-            ->paginate(48);
+            ->paginate(48)
+            ->withQueryString();
 
-        if ($temples->total() === 0) {
+        if ($temples->total() === 0 && $q === '') {
             throw new NotFoundHttpException;
         }
 
@@ -69,24 +73,29 @@ class PublicTempleController extends Controller
             'deities' => self::deitiesWithTemples(),
             'state' => $state,
             'deity' => null,
-            'heading' => 'Temples in '.$state->name,
+            'q' => $q,
+            'noindex' => $q !== '',
+            'heading' => $q !== '' ? 'Temples in '.$state->name.' matching "'.$q.'"' : 'Temples in '.$state->name,
             'title' => 'Temples in '.$state->name.': timings, pujas and how to reach',
             'description' => 'Darshan timings, pujas and sevas, dress code and directions for '.number_format($temples->total()).' temples in '.$state->name.'.',
             'canonical' => Seo::url('states/'.$state->slug.($temples->currentPage() > 1 ? '?page='.$temples->currentPage() : '')),
         ]);
     }
 
-    public function deity(string $slug): View
+    public function deity(Request $request, string $slug): View
     {
         $deity = Deity::query()->where('slug', $slug)->first() ?? throw new NotFoundHttpException;
+        $q = trim((string) $request->query('q'));
 
         $temples = Temple::query()->published()->where('deity_id', $deity->id)
+            ->when($q !== '', fn ($query) => $query->search($q))
             ->with(['deity:id,name', 'state:id,name', 'primaryPhoto'])
             ->tap(self::cardDetails(...))
             ->orderByDesc('is_featured')->orderBy('name')
-            ->paginate(48);
+            ->paginate(48)
+            ->withQueryString();
 
-        if ($temples->total() === 0) {
+        if ($temples->total() === 0 && $q === '') {
             throw new NotFoundHttpException;
         }
 
@@ -98,7 +107,9 @@ class PublicTempleController extends Controller
             'deities' => self::deitiesWithTemples(),
             'state' => null,
             'deity' => $deity,
-            'heading' => $name.' temples in India',
+            'q' => $q,
+            'noindex' => $q !== '',
+            'heading' => $q !== '' ? $name.' temples matching "'.$q.'"' : $name.' temples in India',
             'intro' => Str::limit(trim(strip_tags((string) $deity->description)), 400),
             'title' => $name.' temples in India: timings, pujas and how to reach',
             'description' => 'Darshan timings, pujas and sevas, dress code and directions for '.number_format($temples->total()).' '.$name.' '.Str::plural('temple', $temples->total()).' across India.',
@@ -154,6 +165,9 @@ class PublicTempleController extends Controller
             'faq' => self::faq($temple, $place, $dressCode, $bookable),
             'appLink' => Seo::appLink($temple->slug),
             'bookLink' => Seo::appLink($temple->slug, 'book'),
+            // Hundi offerings, where the temple takes them and its payout
+            // account is verified: the same rule as the app.
+            'donateLink' => $temple->accepts_donations && $temple->canCollectPayments() ? Seo::appLink($temple->slug, 'donate') : null,
             'storeUrl' => Seo::storeUrl(),
             'ogType' => 'place',
             'title' => $temple->name.($place !== '' ? ', '.$place : '').': timings, pujas, how to reach',

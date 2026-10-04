@@ -77,6 +77,9 @@
         @media (max-width: 760px) { .cols { grid-template-columns: 1fr; } }
         table { width: 100%; border-collapse: collapse; font-size: .92rem; }
         td { padding: 8px 4px; border-top: 1px solid #efe6d8; vertical-align: top; }
+        .scan { display: flex; gap: 14px; align-items: flex-start; background: #eef7ef; border: 1.5px solid #9cc9a3; border-radius: 16px; padding: 14px 16px; margin: 12px 0; }
+        .scan .tick { flex: none; width: 40px; height: 40px; border-radius: 999px; background: #2e7d55; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; }
+        .scan p { margin: 4px 0 0; color: var(--muted); font-size: .92rem; }
         .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
         .gallery button { padding: 0; border: 0; background: #efe3cf; border-radius: 12px; overflow: hidden; cursor: zoom-in; aspect-ratio: 4/3; }
         .gallery img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .2s; }
@@ -130,6 +133,24 @@
 @endpush
 
 @section('content')
+    @isset($scan)
+        {{-- Opened by scanning the temple's QR code with a phone camera. --}}
+        <div class="scan" role="status">
+            <div class="tick" aria-hidden="true">✓</div>
+            <div>
+                <b>Genuine {{ config('brand.name') }} code of {{ $temple->name }}</b>
+                <p>Check in with the app to collect a verified stamp in your Passport.</p>
+                <div class="actions" style="margin:8px 0 0">
+                    <a class="btn primary" id="scan-open" href="{{ $scan['storeUrl'] ?? $scan['appLink'] }}" data-intent="{{ $scan['intent'] }}">Open the app to check in</a>
+                    @if ($scan['storeUrl'])<a class="btn" href="{{ $scan['storeUrl'] }}" rel="noopener">Get it on Google Play</a>@endif
+                </div>
+            </div>
+        </div>
+        <script>
+            // Android opens the app when installed, the Play Store when not.
+            (function () { var a = document.getElementById('scan-open'); if (a && /Android/i.test(navigator.userAgent)) a.href = a.dataset.intent; })();
+        </script>
+    @endisset
     <p class="crumbs">
         <a href="{{ Seo::url('temples') }}">Temples</a>
         @if ($temple->state) › <a href="{{ Seo::url('states/'.$temple->state->slug) }}">{{ $temple->state->name }}</a>@endif
@@ -146,7 +167,8 @@
     {{-- Every button opens this same temple: in the app, on the map, or to share. --}}
     <div class="actions">
         @if ($bookable)<a class="btn primary" href="{{ $bookLink }}">Book a seva</a>@endif
-        <a class="btn {{ $bookable ? '' : 'primary' }}" href="{{ $appLink }}">Open in {{ config('brand.name') }}</a>
+        @if ($donateLink)<a class="btn {{ $bookable ? '' : 'primary' }}" href="{{ $donateLink }}">🪔 Donate</a>@endif
+        <a class="btn {{ $bookable || $donateLink ? '' : 'primary' }}" href="{{ $appLink }}">Open in {{ config('brand.name') }}</a>
         @if ($temple->hasCoordinates())
             <a class="btn" href="https://www.google.com/maps/dir/?api=1&destination={{ $temple->latitude }},{{ $temple->longitude }}" rel="nofollow noopener" target="_blank">Directions</a>
         @endif
@@ -314,6 +336,7 @@
                 <b>{{ $bookable ? 'Book a seva at '.$temple->name : 'Plan your visit to '.$temple->name }}</b>
                 <p class="muted" style="margin:6px 0 10px">Timings, sevas, festivals and directions in the {{ config('brand.name') }} app{{ $bookable ? ', with booking and payment' : '' }}.</p>
                 <a class="btn primary" href="{{ $bookable ? $bookLink : $appLink }}">{{ $bookable ? 'Book a seva' : 'Open in the app' }}</a>
+                @if ($donateLink)<a class="btn" href="{{ $donateLink }}" style="margin-top:8px">🪔 Donate to the hundi</a>@endif
                 @if ($storeUrl)<a class="btn" href="{{ $storeUrl }}" rel="noopener" style="margin-top:8px">Get the Android app</a>@endif
             </div>
         </aside>
