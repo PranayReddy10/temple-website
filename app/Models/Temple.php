@@ -66,7 +66,7 @@ class Temple extends Model
         'architecture_style', 'built_period',
         'dress_code', 'photography_policy', 'mobile_policy', 'footwear_policy',
         'entry_rules', 'queue_information',
-        'official_website', 'google_maps_url', 'contact_phone', 'contact_email',
+        'official_website', 'contact_phone', 'contact_email',
         'verification_status', 'source_name', 'source_url', 'last_verified_at',
         'status', 'is_featured', 'accepts_donations', 'published_at', 'created_by', 'updated_by',
     ];

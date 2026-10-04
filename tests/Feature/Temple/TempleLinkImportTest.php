@@ -106,7 +106,9 @@ class TempleLinkImportTest extends TestCase
         $this->assertArrayNotHasKey('commons_photos', $found);
         $this->assertArrayNotHasKey('images', $found);
         Http::assertNotSent(fn ($request) => str_contains($request->url(), 'wikimedia.org'));
-        $this->assertSame(self::SHORT, $temple->refresh()->google_maps_url);
+        // The link itself is not kept, only what it says.
+        $this->assertArrayNotHasKey('url', $found['maps']);
+        $this->assertStringNotContainsString('google.com', json_encode($temple->refresh()->official_import));
         $this->assertNull($temple->latitude, 'nothing on the listing changes before review');
     }
 
@@ -163,7 +165,30 @@ class TempleLinkImportTest extends TestCase
 
         $this->artisan('temples:import-links', ['file' => $file])->assertSuccessful();
 
-        $this->assertSame(1, Temple::where('google_maps_url', self::SHORT)->count());
+        $this->assertSame(1, Temple::where('name', 'Swarnagiri Sri Venkateswara Swamy Temple')->count());
         unlink($file);
+    }
+
+    /** A long shared link (here, one staff pasted) imports and saves: only the pin is kept. */
+    public function test_a_long_maps_link_alone_imports_and_saves(): void
+    {
+        $link = 'https://www.google.com/maps/place/Keesaragutta+Sri+Rama+Lingeshwara+Swamy+Temple/@17.5289418,78.6891572,17z/data=!3m1!4b1!4m6!3m5!1s0x3bcb7758f52cebb9:0x4d6b80dfa937c7b8!8m2!3d17.5289418!4d78.6891572!16s%2Fm%2F09gjv8z?entry=tts&g_ep=EgoyMDI2MDkzMC4wIPu8ASoASAFQAw%3D%3D&skid=51ad920c-96bc-4a34-a2e6-888746d4babc';
+        $this->fakeWeb();
+        $this->actingAs($this->staff());
+
+        $result = TempleLinkImport::create($link);
+        $temple = $result['temple']->refresh();
+        $this->assertSame('Keesaragutta Sri Rama Lingeshwara Swamy Temple', $temple->name);
+        $this->assertSame([17.5289418, 78.6891572], [(float) $temple->latitude, (float) $temple->longitude]);
+
+        Livewire::test(EditTemple::class, ['record' => $temple->getRouteKey()])
+            ->mountAction('reviewOfficialSite')
+            ->callMountedAction(['timings' => [], 'sevas' => []])
+            ->assertHasNoFormErrors();
+
+        $temple->refresh();
+        $this->assertSame('Map location', $temple->source_name);
+        $this->assertNull($temple->source_url, 'the Maps link is not the source address');
+        $this->assertNotNull($temple->official_import_reviewed_at);
     }
 }

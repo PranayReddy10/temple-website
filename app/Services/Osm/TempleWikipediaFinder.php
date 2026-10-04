@@ -41,51 +41,63 @@ class TempleWikipediaFinder
      */
     public function articleFor(Temple $temple): ?array
     {
-        if (filled($temple->wikipedia_url) && preg_match('~^https?://([a-z]{2,3})\.(?:m\.)?wikipedia\.org/wiki/(.+)$~i', $temple->wikipedia_url, $m) === 1) {
+        return $this->articleForPlace(
+            $temple->wikipedia_url,
+            $temple->wikidata_id,
+            $temple->hasCoordinates() ? (float) $temple->latitude : null,
+            $temple->hasCoordinates() ? (float) $temple->longitude : null,
+            [$temple->name, ...$temple->aliases()->pluck('name')],
+        );
+    }
+
+    /**
+     * The article for a place not yet saved (an import being reviewed): its
+     * article link, its Wikidata item, or an article near the pin.
+     *
+     * @param  list<string>  $names
+     * @return array{0: string, 1: string}|null
+     */
+    public function articleForPlace(?string $wikipediaUrl, ?string $wikidata, ?float $lat, ?float $lon, array $names): ?array
+    {
+        if (filled($wikipediaUrl) && preg_match('~^https?://([a-z]{2,3})\.(?:m\.)?wikipedia\.org/wiki/(.+)$~i', $wikipediaUrl, $m) === 1) {
             return [strtolower($m[1]), str_replace('_', ' ', rawurldecode($m[2]))];
         }
 
-        if (filled($temple->wikidata_id)) {
+        if (filled($wikidata)) {
             $links = $this->client()->get(self::WIKIDATA, [
-                'action' => 'wbgetentities', 'format' => 'json', 'ids' => $temple->wikidata_id,
+                'action' => 'wbgetentities', 'format' => 'json', 'ids' => $wikidata,
                 'props' => 'sitelinks', 'sitefilter' => 'enwiki|tewiki|hiwiki',
-            ])->throw()->json('entities.'.$temple->wikidata_id.'.sitelinks') ?? [];
+            ])->throw()->json('entities.'.$wikidata.'.sitelinks') ?? [];
 
             foreach (['en', 'te', 'hi'] as $lang) {
                 if (filled($links[$lang.'wiki']['title'] ?? null)) {
                     return [$lang, $links[$lang.'wiki']['title']];
                 }
             }
-
-            return null;
         }
 
-        return $this->nearby($temple);
+        return $lat !== null && $lon !== null ? $this->nearby($lat, $lon, $names) : null;
     }
 
     /**
-     * An English article about a place near the temple whose title names it.
+     * An English article about a place near the pin whose title names it.
      *
+     * @param  list<string>  $names
      * @return array{0: string, 1: string}|null
      */
-    protected function nearby(Temple $temple): ?array
+    protected function nearby(float $lat, float $lon, array $names): ?array
     {
-        if (! $temple->hasCoordinates()) {
-            return null;
-        }
-
         $places = $this->client()->get('https://en.wikipedia.org/w/api.php', [
             'action' => 'query', 'format' => 'json', 'list' => 'geosearch',
-            'gscoord' => $temple->latitude.'|'.$temple->longitude,
+            'gscoord' => $lat.'|'.$lon,
             'gsradius' => self::NEARBY_METRES, 'gslimit' => 20,
         ])->throw()->json('query.geosearch') ?? [];
 
-        $names = [$temple->name, ...$temple->aliases()->pluck('name')];
         foreach ($places as $place) {
             $title = (string) ($place['title'] ?? '');
             // "Hanuman Temple, Karimnagar": the part before the comma.
             $bare = trim(Str::before($title, ','));
-            foreach ($names as $name) {
+            foreach (array_filter($names) as $name) {
                 if ($this->importer->sameName((string) $name, $bare)) {
                     return ['en', $title];
                 }

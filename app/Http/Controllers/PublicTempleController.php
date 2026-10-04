@@ -111,7 +111,8 @@ class PublicTempleController extends Controller
         $temple = Temple::query()->published()->where('slug', $slug)
             ->with([
                 'deity', 'state', 'district', 'primaryPhoto', 'timings', 'aliases',
-                'photos' => fn ($q) => $q->published()->limit(12),
+                'photos' => fn ($q) => $q->published()->orderByDesc('is_primary')->orderBy('sort_order')->limit(30),
+                'media', 'deity.media',
                 'pujas' => fn ($q) => $q->published(),
                 'events' => fn ($q) => $q->published()->upcoming()->orderBy('starts_on')->limit(6),
                 'closures' => fn ($q) => $q->upcoming(),

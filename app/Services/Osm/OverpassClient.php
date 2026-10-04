@@ -110,6 +110,43 @@ class OverpassClient
             ->all();
     }
 
+    /**
+     * Places of worship within a few hundred metres of a pin, for importing
+     * one temple while staff wait: a short timeout and no retries.
+     *
+     * @return list<array{type: string, id: int, lat: float, lon: float, tags: array<string, string>}>
+     */
+    public function near(float $lat, float $lon, int $metres = 250): array
+    {
+        $query = <<<OQL
+            [out:json][timeout:20];
+            nwr(around:{$metres},{$lat},{$lon})["amenity"="place_of_worship"];
+            out center tags;
+            OQL;
+
+        $elements = Http::withHeaders([
+            'User-Agent' => config('brand.name').'/1.0 ('.config('brand.url').'; '.config('brand.support_email').')',
+        ])->timeout(25)->asForm()
+            ->post((string) config('services.overpass.url'), ['data' => $query])
+            ->throw()
+            ->json('elements') ?? [];
+
+        return collect($elements)
+            ->map(function (array $e): ?array {
+                $elat = $e['lat'] ?? $e['center']['lat'] ?? null;
+                $elon = $e['lon'] ?? $e['center']['lon'] ?? null;
+
+                return $elat === null || $elon === null ? null : [
+                    'type' => (string) $e['type'], 'id' => (int) $e['id'],
+                    'lat' => (float) $elat, 'lon' => (float) $elon,
+                    'tags' => array_map('strval', $e['tags'] ?? []),
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
     /** @return list<array<string, mixed>> */
     protected function run(string $query): array
     {

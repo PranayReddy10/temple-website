@@ -17,9 +17,7 @@ class ReadOfficialSitesCommand extends Command
 
     public function handle(): int
     {
-        $query = Temple::query()->where(fn ($q) => $q
-            ->where(fn ($w) => $w->whereNotNull('official_website')->where('official_website', '!=', ''))
-            ->orWhere(fn ($w) => $w->whereNotNull('google_maps_url')->where('google_maps_url', '!=', '')));
+        $query = Temple::query()->whereNotNull('official_website')->where('official_website', '!=', '');
 
         if ($one = $this->option('temple')) {
             $query->where(fn ($q) => $q->where('id', $one)->orWhere('slug', $one));
