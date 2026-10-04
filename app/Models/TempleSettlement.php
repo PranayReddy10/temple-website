@@ -201,7 +201,7 @@ class TempleSettlement extends Model
             'cancel_reason' => $this->cancel_reason,
             'created_at' => $this->created_at?->toIso8601String(),
             'temple' => $this->relationLoaded('temple') && $this->temple !== null
-                ? ['id' => $this->temple->getKey(), 'name' => $this->temple->name, 'city' => $this->temple->city]
+                ? ['id' => $this->temple->getKey(), 'name' => $this->temple->localName(), 'city' => $this->temple->city]
                 : null,
             'bookings' => $withBookings
                 ? $this->bookings->map(fn (PujaBooking $b): array => [

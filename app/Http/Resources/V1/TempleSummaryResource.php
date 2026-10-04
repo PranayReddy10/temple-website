@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Models\Temple;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -10,7 +11,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * second request, and nothing more. Keeping this lean matters because the app
  * is used on patchy mobile networks at temple sites.
  *
- * @mixin \App\Models\Temple
+ * @mixin Temple
  */
 class TempleSummaryResource extends JsonResource
 {
@@ -27,7 +28,7 @@ class TempleSummaryResource extends JsonResource
 
             'deity' => $this->whenLoaded('deity', fn () => [
                 'slug' => $this->deity->slug,
-                'name' => $this->deity->name,
+                'name' => $this->deity->translate('name', app()->getLocale(), reviewedOnly: true),
                 'image_url' => $this->deity->imageUrl(),
             ]),
 

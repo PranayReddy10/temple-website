@@ -204,7 +204,7 @@ class TrustAdminController extends Controller
             'requested_at' => $c->requested_at?->toIso8601String(),
             'temple' => $c->temple === null ? null : [
                 'id' => $c->temple->getKey(),
-                'name' => $c->temple->name,
+                'name' => $c->temple->localName(),
                 'city' => $c->temple->city,
                 'status' => $c->temple->status?->value,
             ],
@@ -245,7 +245,7 @@ class TrustAdminController extends Controller
                 'note' => $s->submitter_note,
             ],
             'photos' => $s->relationLoaded('photos') ? $s->photos->map->url()->filter()->values() : [],
-            'temple' => $s->temple === null ? null : ['id' => $s->temple->getKey(), 'name' => $s->temple->name],
+            'temple' => $s->temple === null ? null : ['id' => $s->temple->getKey(), 'name' => $s->temple->localName()],
             'created_at' => $s->created_at?->toIso8601String(),
         ];
     }

@@ -4,6 +4,8 @@ namespace App\Http\Resources\V1;
 
 use App\Enums\SevaDriveStatus;
 use App\Models\Devotee;
+use App\Models\SevaDrive;
+use App\Models\SevaDriveDonation;
 use App\Models\SevaDriveMedia;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -16,7 +18,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * organiser's phone number; the organiser also sees what staff said. The UPI
  * ID appears for nobody until staff have verified the result.
  *
- * @mixin \App\Models\SevaDrive
+ * @mixin SevaDrive
  */
 class SevaDriveResource extends JsonResource
 {
@@ -88,7 +90,7 @@ class SevaDriveResource extends JsonResource
             'temple' => $this->whenLoaded('temple', fn () => $this->temple ? [
                 'id' => $this->temple->id,
                 'slug' => $this->temple->slug,
-                'name' => $this->temple->name,
+                'name' => $this->temple->localName(),
             ] : null),
 
             'problem' => $this->problem,
@@ -145,7 +147,7 @@ class SevaDriveResource extends JsonResource
                 ->where('devotee_id', $viewer->getKey())
                 ->latest('id')
                 ->get()
-                ->map(fn (\App\Models\SevaDriveDonation $d): array => [
+                ->map(fn (SevaDriveDonation $d): array => [
                     'id' => $d->id,
                     'amount' => $d->amount,
                     'payment_app_label' => $d->paymentAppLabel(),
@@ -163,7 +165,7 @@ class SevaDriveResource extends JsonResource
                 ->latest('confirmed_at')
                 ->limit(10)
                 ->get()
-                ->map(fn (\App\Models\SevaDriveDonation $d): array => [
+                ->map(fn (SevaDriveDonation $d): array => [
                     'name' => $d->donorName(),
                     'amount' => $d->amount,
                     'paid_on' => ($d->paid_on ?? $d->confirmed_at)?->toDateString(),

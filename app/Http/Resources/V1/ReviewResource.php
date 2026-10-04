@@ -23,7 +23,7 @@ class ReviewResource extends JsonResource
             'id' => $this->id,
             'temple' => $this->whenLoaded('temple', fn () => [
                 'slug' => $this->temple->slug,
-                'name' => $this->temple->name,
+                'name' => $this->temple->localName(),
                 'city' => $this->temple->city,
                 'cover' => $this->temple->coverUrls(),
                 'deity_slug' => $this->temple->relationLoaded('deity') ? $this->temple->deity?->slug : null,

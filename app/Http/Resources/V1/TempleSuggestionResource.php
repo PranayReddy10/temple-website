@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Models\TempleSuggestion;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -9,7 +10,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * A temple the devotee suggested, as they see it back: what they sent and
  * what the editors did with it.
  *
- * @mixin \App\Models\TempleSuggestion
+ * @mixin TempleSuggestion
  */
 class TempleSuggestionResource extends JsonResource
 {
@@ -30,7 +31,7 @@ class TempleSuggestionResource extends JsonResource
             // Where to go once it is listed, or which listing it already was.
             'temple' => $this->whenLoaded('temple', fn () => $this->temple && $this->temple->status?->isPublic() ? [
                 'slug' => $this->temple->slug,
-                'name' => $this->temple->name,
+                'name' => $this->temple->localName(),
             ] : null),
             'photos' => $this->whenLoaded('photos', fn () => $this->photos->map->url()->filter()->values()),
             'created_at' => $this->created_at?->toIso8601String(),

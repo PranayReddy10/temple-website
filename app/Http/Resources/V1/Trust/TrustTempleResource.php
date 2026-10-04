@@ -35,8 +35,11 @@ class TrustTempleResource extends JsonResource
         return [
             'id' => $this->id,
             'slug' => $this->slug,
-            'name' => $this->name,
-            'deity' => $this->deity?->name,
+            // In the reader's language, as devotees see it; the English
+            // alongside for the places that need the listing's own name.
+            'name' => $this->localName(),
+            'name_en' => $this->name,
+            'deity' => $this->deity?->translate('name', app()->getLocale(), reviewedOnly: true),
             'state' => $this->state?->name,
             'city' => $this->city,
             'status' => [

@@ -92,6 +92,15 @@ class Temple extends Model
 
     // --- Relationships ---
 
+    /**
+     * The name in the language this request is answered in, as devotees
+     * see it: a reviewed translation, else the English name.
+     */
+    public function localName(?string $locale = null): string
+    {
+        return (string) $this->translate('name', $locale ?? app()->getLocale(), reviewedOnly: true);
+    }
+
     public function deity(): BelongsTo
     {
         return $this->belongsTo(Deity::class);

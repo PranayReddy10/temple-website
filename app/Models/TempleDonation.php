@@ -163,7 +163,7 @@ class TempleDonation extends Model
             'temple' => $this->temple === null ? null : [
                 'id' => $this->temple->getKey(),
                 'slug' => $this->temple->slug,
-                'name' => $this->temple->name,
+                'name' => $this->temple->localName(),
                 'city' => $this->temple->city,
             ],
             'paid_at' => $this->paid_at?->toIso8601String(),
