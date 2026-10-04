@@ -82,7 +82,8 @@ final class TempleLinkImport
             'latitude' => $maps['latitude'] ?? null,
             'longitude' => $maps['longitude'] ?? null,
             'official_website' => $website ? mb_substr((string) OfficialSiteReader::normaliseUrl($website), 0, 255) ?: null : null,
-            'source_name' => $website ? 'Official website' : 'Map location',
+            // Settled on review: the website, OpenStreetMap or the map pin.
+            'source_name' => $website ? 'Official website' : null,
         ]);
 
         $found = OfficialSiteImport::read($temple, $website, null, $mapsUrl);

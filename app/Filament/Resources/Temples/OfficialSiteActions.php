@@ -25,6 +25,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 
 /**
  * "Read official website" and "Review official details" on a temple:
@@ -40,7 +41,7 @@ final class OfficialSiteActions
             ->icon('heroicon-o-globe-alt')
             ->color('gray')
             ->modalHeading('Import details')
-            ->modalDescription('From the Google Maps link: the exact pin, and the address, PIN code, district and state the map has there. From the website: phone, email, timings and sevas. Nothing on the listing changes until you review it.')
+            ->modalDescription('From the Google Maps link: the name and exact pin. From OpenStreetMap at that pin: the temple\'s map record (phone, website) and the address, PIN code, district and state. From the website (yours, or the one OpenStreetMap lists): phone, email, timings and sevas. From Wikipedia: the temple\'s article and its opening. Nothing on the listing changes until you review it.')
             ->fillForm(fn (Temple $record): array => [
                 'url' => $record->official_website,
                 'pages' => implode("\n", $record->official_site_pages ?? []),
@@ -132,6 +133,10 @@ final class OfficialSiteActions
             'use_region' => isset($f['place']['state_id']) && $empty($t->state_id),
             'latitude' => $f['latitude'] ?? null, 'longitude' => $f['longitude'] ?? null, 'use_location' => isset($f['latitude']) && ! $t->hasCoordinates(),
             'short_description' => $f['description'] ?? null, 'use_short_description' => false,
+            'use_osm' => isset($f['osm']),
+            'use_wikipedia_link' => isset($f['wikipedia']),
+            'wikipedia_description' => $f['wikipedia']['opening'] ?? null,
+            'use_wikipedia_description' => filled($f['wikipedia']['opening'] ?? null) && ($f['wikipedia']['lang'] ?? '') === 'en' && $empty($t->short_description),
             // Timings and sevas: all ticked when the listing has none.
             'timings' => array_map(fn (array $x): array => [
                 'take' => ! $hasTimings,
@@ -269,6 +274,38 @@ final class OfficialSiteActions
                 ]);
         }
 
+        if (! empty($f['osm'])) {
+            $o = $f['osm'];
+            $sections[] = Section::make('OpenStreetMap')
+                ->description('The temple\'s own record on OpenStreetMap at this pin. Its phone, email and website are used above where the website had none; the record is shown on the temple page as "© OpenStreetMap contributors".')
+                ->schema([
+                    Placeholder::make('osm_found')->hiddenLabel()->content(new HtmlString(
+                        '<a href="'.e($o['url']).'" target="_blank" rel="noopener" class="underline">'.e($o['name'] ?? $o['ref']).'</a>'
+                        .e(collect([
+                            isset($o['phone']) ? 'phone '.$o['phone'] : null,
+                            isset($o['website']) ? 'website '.parse_url($o['website'], PHP_URL_HOST) : null,
+                            isset($o['opening_hours']) ? 'hours "'.$o['opening_hours'].'"' : null,
+                            isset($o['wikidata']) ? 'Wikidata '.$o['wikidata'] : null,
+                        ])->filter()->map(fn ($x) => ' · '.$x)->implode('')))),
+                    Toggle::make('use_osm')->label('Link this temple to its OpenStreetMap record (and its Wikidata item and Commons photo, if any)'),
+                ]);
+        }
+
+        if (! empty($f['wikipedia'])) {
+            $w = $f['wikipedia'];
+            $sections[] = Section::make('Wikipedia')
+                ->description(new HtmlString('Article: <a href="'.e($w['url']).'" target="_blank" rel="noopener" class="underline">'.e($w['title']).'</a>'
+                    .(($w['lang'] ?? 'en') !== 'en' ? ' (not in English, so only the link is offered)' : '')))
+                ->schema(array_filter([
+                    Toggle::make('use_wikipedia_link')->label('Link the temple to this article (shown as "Read about … on Wikipedia")'),
+                    filled($w['opening'] ?? null) && ($w['lang'] ?? 'en') === 'en' ? Grid::make(['default' => 1, 'md' => 4])->schema([
+                        Toggle::make('use_wikipedia_description')->label('Take as description')->inline(false),
+                        Textarea::make('wikipedia_description')->label('The article\'s opening')->rows(5)->columnSpan(['md' => 3])
+                            ->helperText('Shown with "From Wikipedia, CC BY-SA 4.0" and a link to the article. On file now: '.(filled($t->short_description) ? Str::limit($t->short_description, 120) : '— (empty)')),
+                    ]) : null,
+                ]));
+        }
+
         if (! empty($f['description'])) {
             $sections[] = Section::make('The site\'s own description')
                 ->description('These are the temple\'s own words. Take them only with the temple\'s permission, or rewrite them in your own words first.')
@@ -282,7 +319,7 @@ final class OfficialSiteActions
             ->collapsed(empty($f['failed_pages']) && empty($f['documents']))
             ->schema([Placeholder::make('pages')->hiddenLabel()->content(new HtmlString(self::pagesHtml($f)))]);
 
-        if (empty($f['timings']) && empty($f['sevas']) && $contact === []) {
+        if (empty($f['timings']) && empty($f['sevas']) && $contact === [] && empty($f['osm']) && empty($f['wikipedia'])) {
             array_unshift($sections, Placeholder::make('none')->hiddenLabel()->content('Nothing useful was found on these pages. Many temple sites put timings and seva lists in images or PDFs, which cannot be read; enter them by hand, or add the right page links and read again.'));
         }
 
