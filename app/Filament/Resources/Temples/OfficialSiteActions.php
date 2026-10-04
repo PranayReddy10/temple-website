@@ -137,6 +137,10 @@ final class OfficialSiteActions
             'use_wikipedia_link' => isset($f['wikipedia']),
             'wikipedia_description' => $f['wikipedia']['opening'] ?? null,
             'use_wikipedia_description' => filled($f['wikipedia']['opening'] ?? null) && ($f['wikipedia']['lang'] ?? '') === 'en' && $empty($t->short_description),
+            'wikipedia_history' => $f['wikipedia']['history'] ?? null,
+            'use_wikipedia_history' => filled($f['wikipedia']['history'] ?? null) && $empty($t->history),
+            'wikipedia_significance' => $f['wikipedia']['significance'] ?? null,
+            'use_wikipedia_significance' => filled($f['wikipedia']['significance'] ?? null) && $empty($t->significance),
             // Timings and sevas: all ticked when the listing has none.
             'timings' => array_map(fn (array $x): array => [
                 'take' => ! $hasTimings,
@@ -300,9 +304,14 @@ final class OfficialSiteActions
                     Toggle::make('use_wikipedia_link')->label('Link the temple to this article (shown as "Read about … on Wikipedia")'),
                     filled($w['opening'] ?? null) && ($w['lang'] ?? 'en') === 'en' ? Grid::make(['default' => 1, 'md' => 4])->schema([
                         Toggle::make('use_wikipedia_description')->label('Take as description')->inline(false),
-                        Textarea::make('wikipedia_description')->label('The article\'s opening')->rows(5)->columnSpan(['md' => 3])
+                        Textarea::make('wikipedia_description')->label('Description: the article\'s opening')->rows(5)->columnSpan(['md' => 3])
                             ->helperText('Shown with "From Wikipedia, CC BY-SA 4.0" and a link to the article. On file now: '.(filled($t->short_description) ? Str::limit($t->short_description, 120) : '— (empty)')),
                     ]) : null,
+                    ...array_map(fn (string $field, string $label) => filled($w[$field] ?? null) ? Grid::make(['default' => 1, 'md' => 4])->schema([
+                        Toggle::make('use_wikipedia_'.$field)->label('Take as '.strtolower($label))->inline(false),
+                        Textarea::make('wikipedia_'.$field)->label($label.': from the article')->rows(6)->columnSpan(['md' => 3])
+                            ->helperText('Shown with "From Wikipedia, CC BY-SA 4.0". On file now: '.(filled($t->getAttribute($field)) ? Str::limit($t->getAttribute($field), 120) : '— (empty)')),
+                    ]) : null, ['history', 'significance'], ['History', 'Significance']),
                 ]));
         }
 

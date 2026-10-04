@@ -67,6 +67,10 @@ class TempleDetailResource extends JsonResource
                     ? ['text' => 'From Wikipedia, CC BY-SA 4.0', 'url' => $this->wikipedia_url, 'license_url' => 'https://creativecommons.org/licenses/by-sa/4.0/']
                     : null,
                 'wikipedia_url' => $this->wikipedia_url,
+                // The same credit for each other text taken from Wikipedia.
+                'credits' => collect($this->wikipedia_fields ?? [])
+                    ->mapWithKeys(fn (string $field): array => [$field => ['text' => 'From Wikipedia, CC BY-SA 4.0', 'url' => $this->wikipedia_url, 'license_url' => 'https://creativecommons.org/licenses/by-sa/4.0/']])
+                    ->all() ?: null,
             ],
 
             /*

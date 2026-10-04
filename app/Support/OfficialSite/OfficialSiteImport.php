@@ -98,7 +98,8 @@ final class OfficialSiteImport
                 $lat, $lng, array_values(array_unique(array_filter([$name, $temple->name, $found['osm']['name'] ?? null]))),
             );
             if ($article !== null && ($summary = $finder->summary(...$article)) !== null) {
-                $found['wikipedia'] = $summary + ['opening' => $finder->opening($summary['extract'])];
+                $found['wikipedia'] = $summary + ['opening' => $finder->opening($summary['extract'])]
+                    + $finder->sections($summary['lang'], $summary['title']);
             }
         } catch (Throwable) {
             $problems[] = 'Wikipedia could not be reached this time.';
@@ -282,6 +283,19 @@ final class OfficialSiteImport
                 $refs['description_source'] = 'wikipedia';
                 $refs['wikipedia_url'] = $temple->wikipedia_url ?: mb_substr($wiki['url'], 0, 500);
                 $done[] = 'description from Wikipedia';
+            }
+            // History and significance from the article's sections.
+            $taken = $temple->wikipedia_fields ?? [];
+            foreach (['history', 'significance'] as $field) {
+                if (! empty($data['use_wikipedia_'.$field]) && filled($data['wikipedia_'.$field] ?? null) && $wiki !== []) {
+                    $refs[$field] = trim($data['wikipedia_'.$field]);
+                    $taken[] = $field;
+                    $refs['wikipedia_url'] ??= $temple->wikipedia_url ?: mb_substr($wiki['url'], 0, 500);
+                    $done[] = $field.' from Wikipedia';
+                }
+            }
+            if ($taken !== ($temple->wikipedia_fields ?? [])) {
+                $refs['wikipedia_fields'] = array_values(array_unique($taken));
             }
             if (array_intersect_key($refs, array_flip(['osm_ref', 'wikipedia_url', 'wikidata_id'])) !== []) {
                 $done[] = 'map and Wikipedia links';
