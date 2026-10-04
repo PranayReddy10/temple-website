@@ -211,11 +211,12 @@ class PassportApiTest extends TestCase
         $temple = $this->temple();
         $url = \App\Support\TempleQr::url($temple);
 
-        $this->get(parse_url($url, PHP_URL_PATH).'?'.parse_url($url, PHP_URL_QUERY))
-            ->assertOk()
-            ->assertSee('Genuine check-in code');
+        // The code is on the website, where a genuine one opens the temple
+        // (its page when published, a confirmation when not yet).
+        $this->get($url)->assertOk()->assertSee('Genuine');
 
-        $this->get("/temples/{$temple->slug}/checkin?s=nope")
+        $site = rtrim((string) config('brand.website'), '/');
+        $this->get("{$site}/temples/{$temple->slug}/checkin?s=nope")
             ->assertOk()
             ->assertSee('Not a genuine code');
     }

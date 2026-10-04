@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Concerns;
 
 use App\Models\Payment;
+use App\Support\Payments\Gateways\PhonePe;
 use App\Support\Payments\Payments;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
@@ -26,6 +27,12 @@ trait BuildsCheckout
      */
     protected function checkoutPayload(Payment $payment, bool $sdkMode): array
     {
+        // Paid from the website (the web app): its result page sends the
+        // devotee back there, where the result is shown.
+        if (request()->header('X-Platform') === 'web' && ($payment->meta['client'] ?? null) !== 'web') {
+            $payment->forceFill(['meta' => ['client' => 'web'] + ($payment->meta ?? [])])->save();
+        }
+
         $sdk = null;
         $sdkError = null;
 
@@ -99,7 +106,7 @@ trait BuildsCheckout
     /** @return array<string, mixed> */
     protected function phonePeSdk(Payment $payment): array
     {
-        /** @var \App\Support\Payments\Gateways\PhonePe $phonepe */
+        /** @var PhonePe $phonepe */
         $phonepe = $this->paymentsService()->gateway('phonepe');
 
         $merchantId = $phonepe->merchantId() ?? throw new \RuntimeException('PhonePe merchant id is not set in the admin (Settings → Payments).');
