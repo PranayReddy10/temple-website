@@ -32,7 +32,7 @@ class TempleQrController extends Controller
                 'temple' => $published ? [
                     'id' => $temple->getKey(),
                     'slug' => $temple->slug,
-                    'name' => $temple->name,
+                    'name' => $temple->localName(),
                     'city' => $temple->city,
                 ] : null,
             ],

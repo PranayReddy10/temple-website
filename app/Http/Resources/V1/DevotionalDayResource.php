@@ -2,10 +2,11 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Models\DevotionalDay;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\DevotionalDay */
+/** @mixin DevotionalDay */
 class DevotionalDayResource extends JsonResource
 {
     public function toArray(Request $request): array
@@ -35,7 +36,7 @@ class DevotionalDayResource extends JsonResource
 
             'deity' => $this->whenLoaded('deity', fn () => $this->deity === null ? null : [
                 'slug' => $this->deity->slug,
-                'name' => $this->deity->name,
+                'name' => $this->deity->translate('name', app()->getLocale(), reviewedOnly: true),
                 'alternate_names' => $this->deity->alternate_names,
                 'image_url' => $this->deity->imageUrl(),
                 'mantra' => $this->deity->mantra,

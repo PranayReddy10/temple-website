@@ -57,7 +57,7 @@ class TrustAccountResource extends JsonResource
             'temple' => $claim->temple === null ? null : [
                 'id' => $claim->temple->getKey(),
                 'slug' => $claim->temple->slug,
-                'name' => $claim->temple->name,
+                'name' => $claim->temple->localName(),
                 'city' => $claim->temple->city,
             ],
             'role' => $claim->role,

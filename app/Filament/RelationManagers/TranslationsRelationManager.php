@@ -4,6 +4,8 @@ namespace App\Filament\RelationManagers;
 
 use App\Models\Translation;
 use App\Support\Locales;
+use App\Support\Translation\AutoTranslateFailed;
+use App\Support\Translation\AutoTranslator;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -12,8 +14,10 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\ViewField;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -79,7 +83,32 @@ class TranslationsRelationManager extends RelationManager
                     ->label('Translation')
                     ->rows(4)
                     ->required()
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
+                    // A machine's draft from the English, to read and correct;
+                    // it un-ticks Reviewed so it cannot be served unread.
+                    ->hintAction(
+                        Action::make('autoTranslate')
+                            ->label('Auto-translate')
+                            ->icon('heroicon-o-sparkles')
+                            ->visible(fn (): bool => AutoTranslator::enabled())
+                            ->action(function (Get $get, Set $set): void {
+                                $english = $this->baseValue($get('field'));
+                                $locale = $get('locale');
+
+                                if (blank($english) || ! is_string($locale)) {
+                                    Notification::make()->title('Pick a language and a field that has English text first.')->warning()->send();
+
+                                    return;
+                                }
+
+                                try {
+                                    $set('value', AutoTranslator::translate($english, $locale));
+                                    $set('is_reviewed', false);
+                                } catch (AutoTranslateFailed $e) {
+                                    Notification::make()->title($e->getMessage())->danger()->send();
+                                }
+                            }),
+                    ),
 
                 Toggle::make('is_reviewed')
                     ->label('Reviewed')
@@ -129,6 +158,21 @@ class TranslationsRelationManager extends RelationManager
                     ->toggle(),
             ])
             ->headerActions([
+                Action::make('translateMissing')
+                    ->label('Auto-translate missing')
+                    ->icon('heroicon-o-sparkles')
+                    ->color('gray')
+                    ->visible(fn (): bool => AutoTranslator::enabled())
+                    ->modalDescription('Fills every field that has English text but no translation yet, as drafts waiting for review. Existing translations are left alone.')
+                    ->schema([
+                        Select::make('locales')
+                            ->label('Languages')
+                            ->options(fn (): array => collect(Locales::options())->except(Locales::fallback())->all())
+                            ->default(fn (): array => Locales::appTranslations())
+                            ->multiple()
+                            ->required(),
+                    ])
+                    ->action(fn (array $data) => $this->translateMissing((array) $data['locales'])),
                 CreateAction::make()->label('Add a translation'),
             ])
             ->recordActions([
@@ -176,6 +220,53 @@ class TranslationsRelationManager extends RelationManager
                     .(blank($record->getAttribute($field)) ? ' — empty in English' : ''),
             ])
             ->all();
+    }
+
+    /**
+     * Drafts for every filled field still missing in each language, saved
+     * unreviewed. Stops at the first failure (usually the day's free quota),
+     * keeping what was done.
+     *
+     * @param  array<int, string>  $locales
+     */
+    public function translateMissing(array $locales): void
+    {
+        $record = $this->getOwnerRecord();
+        $done = 0;
+
+        try {
+            foreach ($locales as $locale) {
+                if (! Locales::isSupported($locale) || $locale === Locales::fallback()) {
+                    continue;
+                }
+
+                foreach ($record->translatableFields() as $field) {
+                    $english = $record->getAttribute($field);
+                    $exists = $record->translations()->where(['locale' => $locale, 'field' => $field])->exists();
+
+                    if (! is_string($english) || blank($english) || $exists) {
+                        continue;
+                    }
+
+                    $record->setTranslation($field, $locale, AutoTranslator::translate($english, $locale), isReviewed: false);
+                    $done++;
+                }
+            }
+        } catch (AutoTranslateFailed $e) {
+            Notification::make()
+                ->title($done > 0 ? "{$done} drafted, then stopped" : 'Nothing was translated')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        Notification::make()
+            ->title($done > 0 ? "{$done} translations drafted" : 'Nothing was missing')
+            ->body($done > 0 ? 'They wait under "Waiting for review" until someone reads them.' : null)
+            ->success()
+            ->send();
     }
 
     protected function baseValue(mixed $field): ?string

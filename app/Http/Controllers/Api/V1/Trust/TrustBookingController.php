@@ -179,7 +179,7 @@ class TrustBookingController extends Controller
                 StaffCheckIn::VERIFIED => 'Their visit today is now verified.',
                 default => $devotee->name.' already has today\'s stamp for '.$temple->name.'.',
             },
-            'temple' => ['id' => $temple->getKey(), 'name' => $temple->name],
+            'temple' => ['id' => $temple->getKey(), 'name' => $temple->localName()],
         ]]);
     }
 

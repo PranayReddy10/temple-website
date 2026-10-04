@@ -72,6 +72,19 @@ final class Locales
         return $options;
     }
 
+    /**
+     * The languages the mobile apps are translated into, but English.
+     *
+     * @return array<int, string>
+     */
+    public static function appTranslations(): array
+    {
+        return array_values(array_filter(
+            (array) config('locales.apps', []),
+            fn (string $code): bool => self::isSupported($code) && $code !== self::fallback(),
+        ));
+    }
+
     /** Languages the app ships with today, as opposed to what the schema holds. */
     public static function launch(): array
     {

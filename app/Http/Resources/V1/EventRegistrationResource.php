@@ -36,7 +36,7 @@ class EventRegistrationResource extends JsonResource
             'temple' => $this->temple === null ? null : [
                 'id' => $this->temple->getKey(),
                 'slug' => $this->temple->slug,
-                'name' => $this->temple->name,
+                'name' => $this->temple->localName(),
                 'city' => $this->temple->city,
                 // For "Directions" on the ticket.
                 'latitude' => $this->temple->latitude !== null ? (float) $this->temple->latitude : null,

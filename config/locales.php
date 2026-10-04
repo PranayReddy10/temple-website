@@ -42,4 +42,11 @@ return [
      * as neglect rather than as progress.
      */
     'launch' => ['en', 'te', 'hi'],
+
+    /*
+     * The languages the mobile apps (devotee and trust) are translated into:
+     * what a temple's team is asked to fill in, and what auto-translate
+     * drafts by default.
+     */
+    'apps' => ['en', 'te', 'hi', 'ta', 'kn'],
 ];

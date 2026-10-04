@@ -58,7 +58,7 @@ class EventResource extends JsonResource
             'temple' => $this->whenLoaded('temple', fn () => [
                 'id' => $this->temple->getKey(),
                 'slug' => $this->temple->slug,
-                'name' => $this->temple->name,
+                'name' => $this->temple->localName(),
                 'city' => $this->temple->city,
             ]),
         ];

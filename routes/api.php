@@ -46,6 +46,7 @@ use App\Http\Controllers\Api\V1\Trust\TrustScheduleController;
 use App\Http\Controllers\Api\V1\Trust\TrustSupportController;
 use App\Http\Controllers\Api\V1\Trust\TrustTempleController;
 use App\Http\Controllers\Api\V1\Trust\TrustTempleRegistrationController;
+use App\Http\Controllers\Api\V1\Trust\TrustTranslationController;
 use App\Http\Controllers\Api\V1\VisitPhotoController;
 use App\Http\Controllers\Api\V1\YatraController;
 use Illuminate\Support\Facades\Route;
@@ -320,6 +321,11 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 Route::get('/', [TrustTempleController::class, 'show'])->name('show');
                 Route::patch('/', [TrustTempleController::class, 'update'])->name('update');
                 Route::get('qr', [TrustTempleController::class, 'qr'])->name('qr');
+
+                // The listing in other languages, and auto-translate drafts.
+                Route::get('translations', [TrustTranslationController::class, 'index'])->name('translations.index');
+                Route::put('translations', [TrustTranslationController::class, 'update'])->middleware('throttle:60,1')->name('translations.update');
+                Route::post('translations/suggest', [TrustTranslationController::class, 'suggest'])->middleware('throttle:20,1')->name('translations.suggest');
 
                 Route::get('timings', [TrustScheduleController::class, 'timings'])->name('timings.index');
                 Route::post('timings', [TrustScheduleController::class, 'storeTiming'])->name('timings.store');
