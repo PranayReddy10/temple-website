@@ -9,9 +9,12 @@ use App\Models\Payment;
 use App\Models\PujaBooking;
 use App\Models\TemplePuja;
 use App\Models\User;
+use App\Support\AppConfig;
 use App\Support\DevotionalClock;
 use App\Support\Payments\Payments;
+use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -35,7 +38,7 @@ final class PujaBookings
     /**
      * Places a booking. Returns it with its payment (if one is due) attached.
      *
-     * @param  array{booked_for: string, people: int, devotee_name?: ?string, devotee_phone?: ?string, gotram?: ?string, nakshatram?: ?string, note?: ?string}  $data
+     * @param  array{booked_for: string, people: int, slot_id?: ?int, devotee_name?: ?string, devotee_phone?: ?string, gotram?: ?string, nakshatram?: ?string, note?: ?string}  $data
      *
      * @throws ValidationException
      */
@@ -48,7 +51,7 @@ final class PujaBookings
         }
 
         $today = DevotionalClock::now()->startOfDay();
-        $for = \Carbon\CarbonImmutable::parse($data['booked_for'], DevotionalClock::timezone())->startOfDay();
+        $for = CarbonImmutable::parse($data['booked_for'], DevotionalClock::timezone())->startOfDay();
 
         if ($for->lt($today)) {
             throw ValidationException::withMessages(['booked_for' => 'That day has passed.']);
@@ -66,10 +69,15 @@ final class PujaBookings
 
         $amount = $puja->amountPaiseFor($people);
 
-        if ($amount > 0) {
-            $gateway ??= \App\Support\AppConfig::payments('android')['default_gateway'] ?? null;
+        // Money only reaches a temple whose owner and bank are approved.
+        if ($amount > 0 && ! $puja->temple->canCollectPayments()) {
+            throw ValidationException::withMessages(['puja' => 'This temple does not take payments in the app yet. Book at the temple counter for now.']);
+        }
 
-            if ($gateway === null || ! in_array($gateway, \App\Support\AppConfig::enabledGateways(), true)) {
+        if ($amount > 0) {
+            $gateway ??= AppConfig::payments('android')['default_gateway'] ?? null;
+
+            if ($gateway === null || ! in_array($gateway, AppConfig::enabledGateways(), true)) {
                 throw ValidationException::withMessages(['gateway' => 'Payments are not open yet. Book at the temple counter for now.']);
             }
         }
@@ -84,11 +92,34 @@ final class PujaBookings
                 throw ValidationException::withMessages(['booked_for' => 'This seva is fully booked on that day. Choose another day.']);
             }
 
+            // A seva with time slots is booked into one, like a show time.
+            $slot = null;
+            $slots = collect($locked->slotAvailability($for));
+            if ($slots->isNotEmpty()) {
+                $chosen = $slots->first(fn ($s) => $s['slot']->getKey() === (int) ($data['slot_id'] ?? 0));
+                if ($chosen === null) {
+                    throw ValidationException::withMessages(['slot_id' => 'Choose a time slot for this seva.']);
+                }
+                if ($chosen['started']) {
+                    throw ValidationException::withMessages(['slot_id' => 'That time slot has already started today. Choose a later one or another day.']);
+                }
+                if ($chosen['available'] !== null && $chosen['available'] < $people) {
+                    throw ValidationException::withMessages(['slot_id' => $chosen['available'] === 0
+                        ? 'That time slot is full. Choose another.'
+                        : 'Only '.$chosen['available'].' '.($chosen['available'] === 1 ? 'place is' : 'places are').' left in that time slot.']);
+                }
+                $slot = $chosen['slot'];
+            }
+
             $booking = new PujaBooking([
                 'temple_id' => $locked->temple_id,
                 'temple_puja_id' => $locked->getKey(),
                 'devotee_id' => $devotee->getKey(),
                 'booked_for' => $for->toDateString(),
+                'temple_puja_slot_id' => $slot?->getKey(),
+                // Copied, so the ticket keeps its time if the slot changes.
+                'slot_starts_at' => $slot?->startTime(),
+                'slot_ends_at' => $slot?->endTime(),
                 'people' => $people,
                 'devotee_name' => filled($data['devotee_name'] ?? null) ? $data['devotee_name'] : $devotee->name,
                 'devotee_phone' => filled($data['devotee_phone'] ?? null) ? $data['devotee_phone'] : $devotee->phone,
@@ -116,6 +147,51 @@ final class PujaBookings
 
             return $booking->load(['puja', 'temple', 'payment']);
         });
+    }
+
+    /**
+     * Another try at paying for a booking still awaiting its money: the
+     * first checkout was closed, failed on the phone, or never opened.
+     *
+     * The last attempt is asked first, since it may have gone through after
+     * all; only an unpaid booking gets a fresh payment. The booking then
+     * points at the new one, so a late "failed" for the old attempt cannot
+     * cancel it, and a late "paid" for it still confirms the booking (see
+     * Payments::apply).
+     */
+    public function retryPayment(PujaBooking $booking, ?string $gateway = null): PujaBooking
+    {
+        $booking->loadMissing('payment');
+
+        if ($booking->payment !== null && ! $booking->payment->isSettled()) {
+            try {
+                $this->payments->reconcile($booking->payment);
+            } catch (\Throwable) {
+                // The gateway could not be asked; a new attempt is still fair.
+            }
+            $booking->refresh();
+        }
+
+        if (! $booking->canBePaidFor()) {
+            throw ValidationException::withMessages(['status' => $booking->isLive()
+                ? 'This booking is already paid.'
+                : 'This booking can no longer be paid for. Book again.']);
+        }
+
+        $gateway ??= $booking->payment?->gateway ?? AppConfig::payments('android')['default_gateway'] ?? null;
+
+        if ($gateway === null || ! in_array($gateway, AppConfig::enabledGateways(), true)) {
+            throw ValidationException::withMessages(['gateway' => 'Payments are not open yet. Book at the temple counter for now.']);
+        }
+
+        $payment = $this->payments->beginFor($booking->devotee, $booking->amount_paise, Payment::PUJA_BOOKING, $gateway, [
+            'booking' => $booking->reference,
+        ], $booking->currency ?: 'INR');
+
+        $booking->payment()->associate($payment);
+        $booking->save();
+
+        return $booking->load(['puja', 'temple', 'payment']);
     }
 
     /** The payment for this booking went through: the temple should expect them. */
@@ -167,6 +243,11 @@ final class PujaBookings
             throw ValidationException::withMessages(['status' => 'This booking can no longer be cancelled.']);
         }
 
+        // Its money has already gone to the temple in a settlement.
+        if ($booking->settlement_id !== null) {
+            throw ValidationException::withMessages(['status' => 'This booking is part of a settlement to the temple and can no longer be cancelled.']);
+        }
+
         $booking->forceFill([
             'status' => BookingStatus::Cancelled,
             'cancelled_at' => now(),
@@ -181,6 +262,35 @@ final class PujaBookings
         }
 
         return $booking;
+    }
+
+    /**
+     * Bookings whose day has passed, like tickets for yesterday's show: a
+     * confirmed one that was not received at the temple becomes Expired
+     * (booked for 2 October, it expires as 3 October begins); one never
+     * paid for is cancelled. Run hourly by the scheduler, and for the
+     * bookings being looked at, so it holds without the cron too.
+     *
+     * @param  Builder<PujaBooking>|null  $scope
+     */
+    public function expireOverdue(?Builder $scope = null): int
+    {
+        $today = DevotionalClock::now()->toDateString();
+        $base = fn () => ($scope ? clone $scope : PujaBooking::query())->whereDate('booked_for', '<', $today);
+
+        $expired = $base()->where('status', BookingStatus::Confirmed->value)
+            ->update(['status' => BookingStatus::Expired->value, 'expired_at' => now(), 'updated_at' => now()]);
+
+        $unpaid = $base()->where('status', BookingStatus::PendingPayment->value)
+            ->update([
+                'status' => BookingStatus::Cancelled->value,
+                'cancelled_at' => now(),
+                'cancelled_by' => 'system',
+                'cancel_reason' => 'Not paid for before the day.',
+                'updated_at' => now(),
+            ]);
+
+        return $expired + $unpaid;
     }
 
     /**
@@ -209,11 +319,23 @@ final class PujaBookings
                 return ['outcome' => self::ALREADY_VERIFIED, 'booking' => $locked];
             }
 
+            // A ticket for another day is not taken at the counter: early,
+            // it is not yet valid; late, it has expired.
+            $today = DevotionalClock::now()->toDateString();
+            if ($locked->status === BookingStatus::Confirmed && $locked->booked_for->toDateString() < $today) {
+                $this->expireOverdue(PujaBooking::query()->whereKey($locked->getKey()));
+                $locked->refresh();
+            }
+            if ($locked->status === BookingStatus::Confirmed && $locked->booked_for->toDateString() > $today) {
+                throw ValidationException::withMessages(['status' => 'This booking is for '.$locked->booked_for->format('j M Y').($locked->slotLabel() ? ', '.$locked->slotLabel() : '').'. It is valid on that day only.']);
+            }
+
             if ($locked->status !== BookingStatus::Confirmed) {
                 throw ValidationException::withMessages(['status' => match ($locked->status) {
                     BookingStatus::PendingPayment => 'This booking has not been paid for.',
                     BookingStatus::Cancelled => 'This booking was cancelled.',
                     BookingStatus::Refunded => 'This booking was refunded.',
+                    BookingStatus::Expired => 'This booking expired: it was for '.$locked->booked_for->format('j M Y').'.',
                     default => 'This booking cannot be verified.',
                 }]);
             }

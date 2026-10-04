@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Temples\Tables;
 
 use App\Enums\TempleStatus;
 use App\Enums\VerificationStatus;
+use App\Filament\Support\MediaColumn;
 use App\Models\Temple;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -23,7 +24,22 @@ class TemplesTable
     public static function configure(Table $table): Table
     {
         return $table
+            // The cover's row, once for the page rather than once per temple.
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('primaryPhoto'))
             ->columns([
+                // What devotees see first, at a glance, before opening the
+                // temple: its thumbnail, or "No cover" (Filter: Without a cover).
+                MediaColumn::make(
+                    'cover',
+                    fn (Temple $record): ?string => $record->primaryPhoto?->thumbnail_path ?? $record->primaryPhoto?->path,
+                    fn (Temple $record): string => $record->primaryPhoto?->disk ?? config('filesystems.media'),
+                )
+                    ->label('Cover')
+                    ->imageSize(44)
+                    ->square()
+                    ->extraImgAttributes(['loading' => 'lazy', 'class' => 'rounded-md'])
+                    ->placeholder('No cover'),
+
                 TextColumn::make('name')
                     ->label('Temple')
                     ->searchable()
@@ -140,6 +156,11 @@ class TemplesTable
                     ))
                     ->toggle(),
 
+                Filter::make('without_cover')
+                    ->label('Without a cover')
+                    ->query(fn (Builder $query): Builder => $query->whereDoesntHave('primaryPhoto'))
+                    ->toggle(),
+
                 // Section 20 of the plan: stale timings must be flagged for review.
                 Filter::make('stale')
                     ->label('Needs re-verification')
@@ -147,6 +168,13 @@ class TemplesTable
                         fn (Builder $q) => $q->whereNull('last_verified_at')
                             ->orWhere('last_verified_at', '<', now()->subYear())
                     ))
+                    ->toggle(),
+
+                // Read from the temple's own website, not yet looked at by staff
+                // (temples:read-official-sites, or "Read official website").
+                Filter::make('official_to_review')
+                    ->label('Imported details to review')
+                    ->query(fn (Builder $query): Builder => $query->whereNotNull('official_import')->whereNull('official_import_reviewed_at'))
                     ->toggle(),
 
                 TrashedFilter::make(),

@@ -795,3 +795,94 @@ Status is one of `pending_payment`, `confirmed`, `verified`, `cancelled`,
 received; cancelling a paid booking does not refund it. Refunds are made by
 the temple in its gateway and recorded from the admin, which moves the
 booking to `refunded`.
+
+## Temple trust app (`/api/v1/trust`)
+
+The mobile companion to the temple portal, for a temple's own team (trust,
+committee, temple office). The Flutter client is
+[`temple-trust`](https://github.com/PranayReddy10/temple-trust).
+
+Accounts are rows in `users` with the `temple_admin` role — the same
+accounts that sign in to `/temple` on the web — and authenticate with Sanctum
+tokens on the `trust` guard. **Super admins** sign in too and manage every
+temple, plus the approval queues below. Editors cannot sign in (use
+`/admin`), and a devotee token is refused (401).
+
+**Signing up grants nothing.** A new account sees a temple only after staff
+approve a claim on it under Admin → Temple access. Every temple URL below is
+looked up through the account's approved temples, so another temple reads as
+404, the same as one that does not exist.
+
+| Method | Path | |
+| --- | --- | --- |
+| `POST` | `auth/register` | `name`, `email`, `phone`, `password` → `{account, token}` |
+| `POST` | `auth/login` | `email`, `password` → `{account, token}` |
+| `POST` | `auth/logout` | Revokes this token only |
+| `GET` / `PATCH` | `me` | `{user, temples, claims, registrations}`; PATCH takes `name`, `phone`, `current_password` + `password` |
+| `GET` | `options` | Every choice list the forms need: timing kinds, event types, puja kinds, photo categories, days, claim levels, registration roles, deities, states |
+
+### Getting a temple
+
+| Method | Path | |
+| --- | --- | --- |
+| `GET` | `claimable-temples?q=` | Published temples by name, alias or town, with this account's `claim_status` |
+| `GET` / `POST` | `claims` | POST `temple_id`, `role` (`owner` \| `manager`), `note` — pending until staff approve. A rejected claim may be asked again |
+| `DELETE` | `claims/{id}` | Withdraw a pending claim |
+| `GET` / `POST` | `registrations` | "Our temple is not listed": the fields of a temple suggestion plus `photos[]`, multipart. `submitter_role` is `trustee`, `priest`, `committee` or `staff`; the account's phone stands in for `submitter_phone` |
+
+A registration joins the same queue as a devotee's suggestion (Admin →
+Temple suggestions). When staff approve it — or match it to a temple already
+listed — the account gets a **pending** claim on that temple. Approving a
+suggestion says the temple exists; the claim is how staff confirm this person
+runs it.
+
+### Managing a temple (`temples/{id}/…`)
+
+| Method | Path | |
+| --- | --- | --- |
+| `GET` | `temples` | Temples this account manages |
+| `GET` / `PATCH` | `temples/{id}` | Detail with `profile` (the editable fields) and `stats`; PATCH takes only the portal's fields (`Temple::TEAM_EDITABLE`) |
+| `GET` `POST` / `PUT` `DELETE` | `timings`, `timings/{id}` | `kind`, `label`, `day_of_week` (null = every day), `opens_at`, `closes_at`, `notes` |
+| `GET` `POST` / `PUT` `DELETE` | `closures`, `closures/{id}` | `reason`, `starts_on`, `ends_on`, `is_full_day`, `opens_at`, `closes_at`, `notes` |
+| `GET` `POST` / `POST` `DELETE` | `events`, `events/{id}` | Multipart. `status` is `draft` or `published`; unless the temple is verified and self-publishing is on, `published` is stored as `pending_review` (TempleEventObserver) |
+| `GET` `POST` / `POST` `DELETE` | `sevas`, `sevas/{id}` | Multipart. The puja fields; the fee and booking invariants are TemplePujaObserver's. A seva with bookings cannot be deleted — unpublish it |
+| `GET` `POST` / `PATCH` `DELETE` | `photos`, `photos/{id}` | Upload `photo`, `category`, `caption`; PATCH `is_primary`, `is_published`, `caption`. Devotees' photos are listed but read-only |
+| `GET` | `bookings?date=&status=` | Paginated seva bookings |
+| `GET` | `reviews?unanswered=1` | Published reviews |
+| `POST` | `reviews/{id}/reply` | `reply` — shown under the review as the temple |
+
+### At the counter
+
+| Method | Path | |
+| --- | --- | --- |
+| `POST` | `bookings/scan` | `code` (scanned or the typed reference) → `{booking, outcome}` |
+| `POST` | `bookings/verify` | Receives the devotee; `outcome` is `verified`, or `already_verified` on a second scan |
+| `POST` | `passports/lookup` | A devotee's passport from the code they show |
+
+Codes are matched only among this account's temples, so another temple's
+booking reads as not found.
+
+### Super admin queues (`admin/…`, super admins only)
+
+| Method | Path | |
+| --- | --- | --- |
+| `GET` | `admin/overview` | Pending claims, pending registrations, events in review, temples by status |
+| `GET` | `admin/claims?status=pending` | With the account's name, email and phone |
+| `POST` | `admin/claims/{id}/approve` · `reject` | `reason` on reject |
+| `GET` | `admin/registrations?status=pending` | Temple registrations and devotee suggestions, with photos |
+| `POST` | `admin/registrations/{id}/approve` · `duplicate` · `reject` | Approve lists a draft temple (`created_temple_id`); `temple_id` on duplicate; `note` on reject |
+| `GET` | `admin/events` | Events waiting for review |
+| `POST` | `admin/events/{id}/approve` · `reject` | `note` on reject |
+| `PATCH` | `admin/temples/{id}/status` | `draft`, `in_review`, `published`, `archived` |
+
+For a super admin, `GET temples` lists every temple (`?q=`, `?status=`,
+paginated) and every `temples/{id}/…` route reaches any temple. The same
+decisions as the admin panel, so either can finish what the other started.
+
+### Who is acting
+
+`ActAsTempleTeam` places the signed-in team member on the staff guard for the
+request, so the observers that read `ActingStaff` see a temple admin — not
+"nobody signed in", which they trust like a seeder. That is what keeps an
+event from the app in the review queue, and records `created_by` and
+`uploaded_by` against the right account.

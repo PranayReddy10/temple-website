@@ -2,13 +2,14 @@
 
 namespace App\Filament\Resources\DevotionalDays;
 
+use App\Filament\RelationManagers\DevotionalMediaRelationManager;
 use App\Filament\Resources\DevotionalDays\Pages\CreateDevotionalDay;
 use App\Filament\Resources\DevotionalDays\Pages\EditDevotionalDay;
 use App\Filament\Resources\DevotionalDays\Pages\ListDevotionalDays;
-use App\Filament\RelationManagers\DevotionalMediaRelationManager;
 use App\Filament\Resources\DevotionalDays\Schemas\DevotionalDayForm;
 use App\Filament\Resources\DevotionalDays\Tables\DevotionalDaysTable;
 use App\Models\DevotionalDay;
+use App\Support\DevotionalClock;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -44,7 +45,7 @@ class DevotionalDayResource extends Resource
     public static function getNavigationBadge(): ?string
     {
         return static::getModel()::query()
-            ->where('weekday', \App\Support\DevotionalClock::now()->dayOfWeek)
+            ->where('weekday', DevotionalClock::now()->dayOfWeek)
             ->where('is_active', true)
             ->with('deity')
             ->orderBy('sort_order')
@@ -53,7 +54,7 @@ class DevotionalDayResource extends Resource
 
     public static function getNavigationBadgeTooltip(): ?string
     {
-        return 'Today is '.\App\Support\DevotionalClock::now()->format('l');
+        return 'Today is '.DevotionalClock::now()->format('l');
     }
 
     public static function getRelations(): array

@@ -5,7 +5,9 @@ namespace App\Filament\Support;
 use App\Enums\BookingStatus;
 use App\Models\PujaBooking;
 use App\Support\Bookings\PujaBookings;
+use App\Support\Clock;
 use App\Support\DevotionalClock;
+use App\Support\Payments\Payments;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Textarea;
@@ -39,12 +41,14 @@ class PujaBookingTable
     public static function configure(Table $table, bool $showTemple = true, bool $staff = false): Table
     {
         return $table
+            ->searchPlaceholder('Seva, temple, name, phone or reference')
             ->modifyQueryUsing(fn (Builder $query) => $query->with(['puja:id,name,kind,starts_at', 'temple:id,name,city', 'devotee:id,name,email,phone', 'payment:id,uuid,status,gateway,gateway_payment_id', 'verifier:id,name']))
             ->columns([
                 TextColumn::make('booked_for')
                     ->label('Day')
                     ->date('D, d M Y')
-                    ->description(fn (PujaBooking $record): ?string => $record->puja?->starts_at ? substr((string) $record->puja->starts_at, 0, 5) : null)
+                    // The booked slot, like a show time; else the seva's own start.
+                    ->description(fn (PujaBooking $record): ?string => $record->slotLabel() ?? ($record->puja?->starts_at ? Clock::twelve((string) $record->puja->starts_at) : null))
                     ->sortable(),
 
                 TextColumn::make('puja.name')
@@ -52,11 +56,15 @@ class PujaBookingTable
                     ->weight('medium')
                     ->wrap()
                     ->description(fn (PujaBooking $record): ?string => $showTemple ? $record->temple?->name : $record->puja?->kind?->getLabel())
-                    ->searchable(),
+                    // The seva's name, or its temple's name or town.
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->where(fn (Builder $w) => $w
+                        ->whereHas('puja', fn (Builder $p) => $p->where('name', 'like', "%{$search}%"))
+                        ->orWhereHas('temple', fn (Builder $t) => $t->where('name', 'like', "%{$search}%")->orWhere('city', 'like', "%{$search}%")))),
 
                 TextColumn::make('devotee_name')
                     ->label('Booked by')
-                    ->searchable()
+                    // Name or phone number, on the booking or the devotee's account.
+                    ->searchable(query: DevoteeSearch::query())
                     ->description(fn (PujaBooking $record): string => collect([
                         $record->devotee_phone,
                         $record->gotram ? 'Gotram '.$record->gotram : null,
@@ -83,7 +91,7 @@ class PujaBookingTable
                     ->badge()
                     ->sortable()
                     ->description(fn (PujaBooking $record): ?string => $record->isVerified()
-                        ? 'by '.($record->verifier?->name ?? 'the temple').' · '.$record->verified_at?->timezone(DevotionalClock::timezone())->format('d M, H:i')
+                        ? 'by '.($record->verifier?->name ?? 'the temple').' · '.$record->verified_at?->timezone(DevotionalClock::timezone())->format('d M, g:i A')
                         : $record->cancel_reason),
 
                 TextColumn::make('created_at')->label('Booked')->since()->sortable()->toggleable(isToggledHiddenByDefault: true),
@@ -203,7 +211,7 @@ class PujaBookingTable
             ->requiresConfirmation()
             ->modalDescription('Only after the refund has been made in the payment gateway. This records it: the payment reads refunded and the booking is void.')
             ->action(function (PujaBooking $record): void {
-                app(\App\Support\Payments\Payments::class)->refunded($record->payment);
+                app(Payments::class)->refunded($record->payment);
                 Notification::make()->title('Marked refunded.')->success()->send();
             });
     }

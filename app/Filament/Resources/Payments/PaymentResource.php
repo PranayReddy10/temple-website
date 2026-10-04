@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Payments;
 
 use App\Filament\Resources\Payments\Pages\ListPayments;
+use App\Filament\Support\DevoteeSearch;
 use App\Models\Payment;
 use App\Support\Payments\Payments;
 use BackedEnum;
@@ -26,7 +27,7 @@ class PaymentResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-banknotes';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Monetisation';
+    protected static string|\UnitEnum|null $navigationGroup = 'Finance';
 
     protected static ?int $navigationSort = 4;
 
@@ -47,10 +48,43 @@ class PaymentResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->searchPlaceholder('Name, phone, reference or gateway id')
             ->modifyQueryUsing(fn (Builder $query) => $query->with(['devotee:id,name,email,phone', 'plan:id,name', 'booking.puja:id,name', 'booking.temple:id,name']))
             ->columns([
-                TextColumn::make('created_at')->label('When')->dateTime('d M Y, H:i')->sortable(),
-                TextColumn::make('devotee.name')->label('Devotee')->searchable()->description(fn (Payment $r) => $r->devotee?->email ?? $r->devotee?->phone),
+                TextColumn::make('created_at')->label('When')->dateTime('d M Y, g:i A')->sortable(),
+                TextColumn::make('devotee.name')->label('Devotee')
+                    // The devotee's name, email or phone (however saved), the
+                    // name and phone on the booking, ticket or gift it paid
+                    // for, its reference, or the gateway's payment id.
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        $search = trim($search);
+                        $digits = preg_replace('/\D/', '', $search);
+                        $phone = strlen($digits) >= 4 && preg_match('/[A-Za-z]/', $search) !== 1 ? substr($digits, -10) : null;
+                        $ref = strtoupper(preg_replace('/\s+/', '', $search));
+                        $digitsOf = fn (string $column) => DevoteeSearch::digitsOf($column);
+                        $like = "%{$search}%";
+
+                        $onRow = fn (string $name, ?string $phoneColumn) => function ($q) use ($name, $phoneColumn, $like, $phone, $ref, $digitsOf) {
+                            $q->where($name, 'like', $like)->orWhere('reference', $ref);
+                            if ($phone !== null && $phoneColumn !== null) {
+                                $q->orWhereRaw($digitsOf($phoneColumn).' like ?', ["%{$phone}%"]);
+                            }
+                        };
+
+                        return $query->where(fn (Builder $w) => $w
+                            ->where('gateway_payment_id', 'like', $like)
+                            ->orWhere('gateway_order_id', 'like', $like)
+                            ->orWhereHas('devotee', function ($d) use ($like, $phone, $digitsOf) {
+                                $d->where('name', 'like', $like)->orWhere('email', 'like', $like);
+                                if ($phone !== null) {
+                                    $d->orWhereRaw($digitsOf('phone').' like ?', ["%{$phone}%"]);
+                                }
+                            })
+                            ->orWhereHas('booking', $onRow('devotee_name', 'devotee_phone'))
+                            ->orWhereHas('registration', $onRow('devotee_name', 'devotee_phone'))
+                            ->orWhereHas('donation', $onRow('donor_name', null)));
+                    })
+                    ->description(fn (Payment $r) => collect([$r->devotee?->email, $r->devotee?->phone])->filter()->implode(' · ') ?: null),
                 TextColumn::make('description')
                     ->label('For')
                     ->state(fn (Payment $r): string => $r->description())

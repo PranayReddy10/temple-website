@@ -5,6 +5,7 @@ namespace Tests\Feature\Api\V1;
 use App\Enums\BookingStatus;
 use App\Enums\TempleStatus;
 use App\Enums\UserRole;
+use App\Filament\Pages\ScanBooking;
 use App\Filament\Temple\Resources\Bookings\BookingResource;
 use App\Models\Devotee;
 use App\Models\Payment;
@@ -16,9 +17,11 @@ use App\Models\TempleUser;
 use App\Models\User;
 use App\Support\Bookings\PujaBookings;
 use App\Support\DevotionalClock;
+use App\Support\Payments\Payments;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\Sanctum;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -38,6 +41,7 @@ class PujaBookingTest extends TestCase
         parent::setUp();
 
         $this->temple = Temple::create(['name' => 'Booking Temple', 'slug' => 'booking-temple', 'status' => TempleStatus::Published, 'published_at' => now()]);
+        $this->approvePayments($this->temple);
 
         Setting::set('payments_enabled', '1', 'boolean');
         Setting::set('payments_razorpay_enabled', '1', 'boolean');
@@ -109,6 +113,7 @@ class PujaBookingTest extends TestCase
     public function test_a_free_seva_is_confirmed_at_once_with_a_code_to_show(): void
     {
         $this->devotee();
+        $this->temple->updateQuietly(['latitude' => 17.6688, 'longitude' => 80.8936]);
         $puja = $this->puja(['is_free' => true, 'booking_instructions' => 'Report at the seva counter.']);
 
         $response = $this->postJson("/api/v1/temples/booking-temple/pujas/{$puja->id}/bookings", [
@@ -120,11 +125,16 @@ class PujaBookingTest extends TestCase
             ->assertJsonPath('data.gotram', 'Bharadwaja')
             ->assertJsonPath('data.devotee_name', 'Anu')
             ->assertJsonPath('data.puja.instructions', 'Report at the seva counter.')
+            // Where to go, for the Directions button.
+            ->assertJsonPath('data.temple.latitude', 17.6688)
+            ->assertJsonPath('data.temple.longitude', 80.8936)
             ->assertJsonPath('checkout', null);
 
         $this->assertMatchesRegularExpression('/^SV[2-9A-HJ-NP-Z]{8}$/', $response->json('data.reference'));
         $this->assertStringContainsString('/bookings/'.$response->json('data.code'), $response->json('data.qr_url'));
-        $this->assertStringNotContainsString('/bookings/1', $response->json('data.qr_url'));
+        // The link carries the random code, never the row id. (A code may
+        // itself start with "1", so the id is matched as the whole segment.)
+        $this->assertDoesNotMatchRegularExpression('#/bookings/1(?:$|[/?])#', $response->json('data.qr_url'));
     }
 
     public function test_a_priced_seva_waits_for_its_payment_and_is_confirmed_by_the_gateway(): void
@@ -163,6 +173,82 @@ class PujaBookingTest extends TestCase
         $this->getJson('/api/v1/me/bookings')->assertOk()->assertJsonCount(1, 'data');
     }
 
+    /** The plans switch is about subscriptions; a temple's seva is paid on the web whatever it says. */
+    public function test_a_priced_seva_is_booked_on_the_web_while_the_subscriptions_switch_is_off(): void
+    {
+        Setting::set('payments_enabled', '0', 'boolean');
+        $this->devotee();
+        $puja = $this->puja(['fee_amount' => 100]);
+        Http::fake(['api.razorpay.com/v1/orders' => Http::response(['id' => 'order_WEB1'])]);
+
+        $this->postJson("/api/v1/temples/booking-temple/pujas/{$puja->id}/bookings", ['booked_for' => $this->today(), 'platform' => 'web'])
+            ->assertCreated()
+            ->assertJsonPath('data.status.value', 'pending_payment');
+
+        // The admin's own switch for temple payments still pauses them.
+        Setting::set('temple_payments_enabled', '0', 'boolean');
+        $this->postJson("/api/v1/temples/booking-temple/pujas/{$puja->id}/bookings", ['booked_for' => $this->today(), 'platform' => 'web'])
+            ->assertForbidden();
+    }
+
+    public function test_an_unpaid_booking_shows_no_code_and_can_be_paid_again(): void
+    {
+        $this->devotee();
+        $puja = $this->puja();
+        Http::fake(['api.razorpay.com/v1/orders' => Http::sequence()
+            ->push(['id' => 'order_A1'])->push(['id' => 'order_A2']),
+            'api.razorpay.com/v1/orders/*/payments' => Http::response(['items' => []]),
+            'api.razorpay.com/v1/orders/*' => Http::response(['id' => 'order_A1', 'status' => 'created'])]);
+
+        $first = $this->postJson("/api/v1/temples/booking-temple/pujas/{$puja->id}/bookings", ['booked_for' => $this->today(), 'platform' => 'android', 'mode' => 'sdk'])
+            ->assertCreated()
+            // Not a ticket until it is paid.
+            ->assertJsonPath('data.code', null)
+            ->assertJsonPath('data.qr_url', null)
+            ->assertJsonPath('data.can_pay', true);
+        $reference = $first->json('data.reference');
+        $firstPayment = $first->json('checkout.payment.id');
+
+        // The devotee closed the checkout; "Pay now" gives a fresh one.
+        $retry = $this->postJson("/api/v1/me/bookings/{$reference}/pay", ['platform' => 'android', 'mode' => 'sdk'])
+            ->assertOk()
+            ->assertJsonPath('data.status.value', 'pending_payment')
+            ->assertJsonPath('checkout.sdk.gateway', 'razorpay');
+        $secondPayment = $retry->json('checkout.payment.id');
+        $this->assertNotSame($firstPayment, $secondPayment);
+
+        // A late "failed" for the first attempt does not cancel the booking.
+        app(Payments::class)->apply(Payment::query()->where('uuid', $firstPayment)->firstOrFail(), Payment::FAILED, reason: 'Abandoned.');
+        $this->getJson("/api/v1/me/bookings/{$reference}")->assertJsonPath('data.status.value', 'pending_payment');
+
+        // Paying the second confirms it, and now it has its code.
+        app(Payments::class)->apply(Payment::query()->where('uuid', $secondPayment)->firstOrFail(), Payment::PAID, 'pay_A2');
+        $this->getJson("/api/v1/me/bookings/{$reference}")
+            ->assertJsonPath('data.status.value', 'confirmed')
+            ->assertJsonPath('data.can_pay', false);
+        $this->assertNotNull($this->getJson("/api/v1/me/bookings/{$reference}")->json('data.code'));
+
+        // Nothing left to pay.
+        $this->postJson("/api/v1/me/bookings/{$reference}/pay", ['platform' => 'android'])->assertUnprocessable();
+    }
+
+    public function test_a_late_payment_on_an_earlier_attempt_still_confirms_the_booking(): void
+    {
+        $this->devotee();
+        $puja = $this->puja();
+        Http::fake(['api.razorpay.com/v1/orders' => Http::sequence()->push(['id' => 'order_L1'])->push(['id' => 'order_L2']),
+            'api.razorpay.com/v1/orders/*/payments' => Http::response(['items' => []]),
+            'api.razorpay.com/v1/orders/*' => Http::response(['id' => 'order_L1', 'status' => 'created'])]);
+
+        $first = $this->postJson("/api/v1/temples/booking-temple/pujas/{$puja->id}/bookings", ['booked_for' => $this->today(), 'platform' => 'android', 'mode' => 'sdk'])->assertCreated();
+        $reference = $first->json('data.reference');
+        $this->postJson("/api/v1/me/bookings/{$reference}/pay", ['platform' => 'android', 'mode' => 'sdk'])->assertOk();
+
+        app(Payments::class)->apply(Payment::query()->where('uuid', $first->json('checkout.payment.id'))->firstOrFail(), Payment::PAID, 'pay_L1');
+
+        $this->getJson("/api/v1/me/bookings/{$reference}")->assertJsonPath('data.status.value', 'confirmed');
+    }
+
     public function test_a_failed_payment_cancels_the_booking_and_frees_the_slot(): void
     {
         $this->devotee();
@@ -177,7 +263,7 @@ class PujaBookingTest extends TestCase
             ->assertUnprocessable()->assertJsonValidationErrors('booked_for');
 
         $payment = PujaBooking::query()->where('reference', $reference)->firstOrFail()->payment;
-        app(\App\Support\Payments\Payments::class)->apply($payment, Payment::FAILED, reason: 'Declined.');
+        app(Payments::class)->apply($payment, Payment::FAILED, reason: 'Declined.');
 
         $this->getJson("/api/v1/me/bookings/{$reference}")->assertJsonPath('data.status.value', 'cancelled');
         $this->postJson("/api/v1/temples/booking-temple/pujas/{$puja->id}/bookings", ['booked_for' => $this->today()])->assertCreated();
@@ -273,7 +359,7 @@ class PujaBookingTest extends TestCase
         Http::fake(['api.razorpay.com/v1/orders' => Http::response(['id' => 'order_U'])]);
         $reference = $this->postJson("/api/v1/temples/booking-temple/pujas/{$puja->id}/bookings", ['booked_for' => $this->today()])->json('data.reference');
 
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->expectException(ValidationException::class);
         app(PujaBookings::class)->verify(PujaBooking::query()->where('reference', $reference)->firstOrFail(), $this->templeAdmin($this->temple));
     }
 
@@ -331,7 +417,7 @@ class PujaBookingTest extends TestCase
         $reference = $this->postJson("/api/v1/temples/booking-temple/pujas/{$puja->id}/bookings", ['booked_for' => $this->today()])->json('data.reference');
         $booking = PujaBooking::query()->where('reference', $reference)->firstOrFail();
 
-        $payments = app(\App\Support\Payments\Payments::class);
+        $payments = app(Payments::class);
         $payments->apply($booking->payment, Payment::PAID, 'pay_R');
         $this->assertSame(BookingStatus::Confirmed, $booking->fresh()->status);
 
@@ -377,7 +463,7 @@ class PujaBookingTest extends TestCase
         Livewire::test(\App\Filament\Temple\Pages\ScanBooking::class)
             ->call('scan', 'https://example.com/passport/ABCDEFGHIJKLMNOPQRST')
             ->assertSet('scannedCode', null)
-            ->assertSee('not a seva booking code');
+            ->assertSee('not a seva booking or event ticket code');
     }
 
     public function test_another_temples_scanner_does_not_know_the_code(): void
@@ -392,11 +478,11 @@ class PujaBookingTest extends TestCase
         Livewire::test(\App\Filament\Temple\Pages\ScanBooking::class)
             ->call('scan', $code)
             ->assertSet('scannedCode', null)
-            ->assertSee('No booking of yours matches this code');
+            ->assertSee('No booking or ticket of yours matches this code');
 
         // Staff, in the admin, see every temple's.
         $this->actingAs(User::factory()->create(['role' => UserRole::SuperAdmin, 'is_active' => true]), 'web');
-        Livewire::test(\App\Filament\Pages\ScanBooking::class)
+        Livewire::test(ScanBooking::class)
             ->call('scan', $code)
             ->assertSee('Archana')
             ->assertSee('Mark received and verified');

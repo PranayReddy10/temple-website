@@ -17,9 +17,9 @@ class ScanBooking extends Page
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-qr-code';
 
-    protected static ?string $title = 'Scan a seva booking';
+    protected static ?string $title = 'Scan a seva booking or event ticket';
 
-    protected static ?string $navigationLabel = 'Scan booking';
+    protected static ?string $navigationLabel = 'Scan booking / ticket';
 
     protected static ?int $navigationSort = 4;
 

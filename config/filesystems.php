@@ -118,6 +118,10 @@ return [
             'visibility' => 'public',
             'throw' => false,
             'report' => false,
+            // The SDK waits with no time limit by default, so one stalled
+            // connection to the Space held an admin page open for good.
+            'http' => ['connect_timeout' => 5, 'timeout' => 30],
+            'retries' => 1,
         ],
 
         's3' => [

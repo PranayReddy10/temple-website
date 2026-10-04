@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Database\Seeders\DeitySeeder;
 use Database\Seeders\DevotionalDaySeeder;
 use Database\Seeders\FacilitySeeder;
+use Database\Seeders\FestivalSeeder;
 use Database\Seeders\StateSeeder;
 use Database\Seeders\TempleCategorySeeder;
 use Illuminate\Console\Command;
@@ -56,6 +57,7 @@ class DeployCommand extends Command
         'temple_categories' => [TempleCategorySeeder::class, 'pilgrimage circuits and temple types'],
         'facilities' => [FacilitySeeder::class, 'facilities'],
         'devotional_days' => [DevotionalDaySeeder::class, 'weekday-to-deity mapping'],
+        'festivals' => [FestivalSeeder::class, 'festival calendar'],
     ];
 
     public function handle(Migrator $migrator): int

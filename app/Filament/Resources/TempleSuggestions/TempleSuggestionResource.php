@@ -31,7 +31,7 @@ class TempleSuggestionResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Temples';
 
-    protected static ?int $navigationSort = 9;
+    protected static ?int $navigationSort = 5;
 
     protected static ?string $navigationLabel = 'Suggested temples';
 

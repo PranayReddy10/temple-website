@@ -261,4 +261,33 @@ class TempleAccessTest extends TestCase
         $this->assertFalse($claim->fresh()->isApproved());
         $this->assertFalse($account->fresh()->administersTemple($temple));
     }
+
+    public function test_a_pending_request_can_be_rejected_with_a_reason_and_shows_where_it_came_from(): void
+    {
+        $this->actingAs($this->superAdmin());
+        $temple = $this->temple();
+        $account = $this->templeAdmin();
+
+        $claim = TempleUser::create([
+            'temple_id' => $temple->id,
+            'user_id' => $account->id,
+            'requested_at' => now(),
+            'claim_note' => 'Secretary of the trust, call the office on 040 1234.',
+            'claim_latitude' => 17.68, 'claim_longitude' => 80.89, 'claim_accuracy_m' => 9, 'claim_distance_m' => 40,
+        ]);
+
+        Livewire::test(ListTempleAccess::class)
+            ->assertSee('Secretary of the trust')
+            ->assertSee('At the temple (40 m away)')
+            ->assertTableActionVisible('reject', $claim)
+            ->assertTableActionHidden('revoke', $claim)
+            ->mountTableAction('details', $claim)
+            ->assertMountedActionModalSee('80.89')
+            ->unmountTableAction()
+            ->callTableAction('reject', $claim, data: ['rejection_reason' => 'Could not confirm with the office.']);
+
+        $this->assertTrue($claim->fresh()->isRejected());
+        $this->assertSame('Could not confirm with the office.', $claim->fresh()->rejection_reason);
+        $this->assertFalse($account->fresh()->administersTemple($temple));
+    }
 }

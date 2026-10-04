@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Temples\RelationManagers;
 
 use App\Enums\EventStatus;
 use App\Enums\EventType;
+use App\Filament\Schemas\EventGatheringFields;
 use App\Filament\Support\MediaColumn;
 use App\Models\TempleEvent;
 use App\Support\UploadRules;
@@ -88,15 +89,10 @@ class EventsRelationManager extends RelationManager
                         TimePicker::make('ends_at')->label('Ends')->seconds(false)
                             ->visible(fn (Get $get): bool => ! $get('is_all_day')),
 
-                        Select::make('recurrence')
-                            ->options([
-                                'none' => 'One-off',
-                                'yearly' => 'Every year on these dates',
-                            ])
-                            ->default('none')
-                            ->native(false)
-                            ->helperText('Festivals that follow the lunar calendar shift each year, so add those as separate entries rather than marking them yearly.'),
+                        EventGatheringFields::recurrence(),
                     ]),
+
+                EventGatheringFields::section(),
 
                 Section::make('Publishing')
                     ->columns(2)

@@ -154,6 +154,65 @@ class PasswordResetTest extends TestCase
         $this->assertSame('no-reply@example.com', config('mail.from.address'));
     }
 
+    public function test_a_provider_fills_in_its_server_and_ses_goes_through_the_api(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => UserRole::SuperAdmin, 'is_active' => true]));
+
+        Livewire::test(ManageEmail::class)
+            ->set('data.mail_provider', 'sendgrid')
+            ->assertSet('data.mail_host', 'smtp.sendgrid.net')
+            ->assertSet('data.mail_port', 587)
+            ->assertSet('data.mail_encryption', 'tls')
+            ->assertSee('apikey')
+            ->set('data.mail_username', 'apikey')
+            ->set('data.mail_password', 'SG.key')
+            ->call('save')
+            ->assertHasNoErrors();
+        $this->assertSame('smtp.sendgrid.net', config('mail.mailers.smtp.host'));
+        $this->assertSame('smtp', config('mail.mailers.smtp.scheme'));
+
+        Livewire::test(ManageEmail::class)
+            ->set('data.mail_provider', 'ses')
+            ->set('data.mail_ses_key', 'AKIAEXAMPLE')
+            ->set('data.mail_ses_secret', 'ses-secret')
+            ->set('data.mail_ses_region', 'ap-south-1')
+            ->call('save')
+            ->assertHasNoErrors();
+        $this->assertSame('ses', config('mail.default'));
+        $this->assertSame('AKIAEXAMPLE', config('services.ses.key'));
+        $this->assertSame('ses-secret', config('services.ses.secret'));
+        $this->assertSame('ap-south-1', config('services.ses.region'));
+        $this->assertTrue(\App\Support\MailSettings::configured());
+
+        Livewire::test(ManageEmail::class)->set('data.mail_provider', 'log')->call('save');
+        $this->assertFalse(\App\Support\MailSettings::configured());
+    }
+
+    public function test_staff_can_reset_a_forgotten_password_by_email(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+        $user = User::factory()->create(['role' => UserRole::Editor, 'is_active' => true, 'email' => 'editor@example.com']);
+
+        $this->get('/admin/login')->assertOk()->assertSee('/admin/password-reset/request', false);
+        $this->get('/temple/login')->assertOk()->assertSee('/temple/password-reset/request', false);
+
+        // Asked from the temple panel, an admin editor gets nothing: a link
+        // only ever opens the panel its account belongs to.
+        \Filament\Facades\Filament::setCurrentPanel('temple');
+        Livewire::test(\Filament\Auth\Pages\PasswordReset\RequestPasswordReset::class)
+            ->fillForm(['email' => 'editor@example.com'])
+            ->call('request');
+        \Illuminate\Support\Facades\Notification::assertNothingSent();
+
+        \Illuminate\Support\Facades\DB::table('password_reset_tokens')->delete();
+        \Filament\Facades\Filament::setCurrentPanel('admin');
+        Livewire::test(\Filament\Auth\Pages\PasswordReset\RequestPasswordReset::class)
+            ->fillForm(['email' => 'editor@example.com'])
+            ->call('request');
+
+        \Illuminate\Support\Facades\Notification::assertSentTo($user, \Filament\Auth\Notifications\ResetPassword::class);
+    }
+
     public function test_google_needs_its_client_id_before_it_can_be_turned_on(): void
     {
         $this->actingAs(User::factory()->create(['role' => UserRole::SuperAdmin, 'is_active' => true]));

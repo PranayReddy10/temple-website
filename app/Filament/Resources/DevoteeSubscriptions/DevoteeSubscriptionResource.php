@@ -27,7 +27,7 @@ class DevoteeSubscriptionResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Monetisation';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $navigationLabel = 'Subscribers';
 
@@ -63,7 +63,9 @@ class DevoteeSubscriptionResource extends Resource
                 TextColumn::make('starts_at')->label('From')->date('d M Y')->sortable(),
                 TextColumn::make('ends_at')->label('Until')->date('d M Y')->sortable(),
                 TextColumn::make('state')->state(fn (DevoteeSubscription $r) => $r->cancelled_at ? 'Cancelled' : ($r->isCurrent() ? 'Active' : ($r->starts_at->isFuture() ? 'Queued' : 'Ended')))
-                    ->badge()->color(fn (string $state) => match ($state) { 'Active' => 'success', 'Queued' => 'info', 'Cancelled' => 'danger', default => 'gray' }),
+                    ->badge()->color(fn (string $state) => match ($state) {
+                        'Active' => 'success', 'Queued' => 'info', 'Cancelled' => 'danger', default => 'gray'
+                    }),
                 TextColumn::make('source')->state(fn (DevoteeSubscription $r) => $r->payment ? 'Paid · '.ucfirst($r->payment->gateway) : 'Granted by '.($r->grantedBy?->name ?? 'staff'))->description(fn (DevoteeSubscription $r) => $r->note),
             ])
             ->filters([

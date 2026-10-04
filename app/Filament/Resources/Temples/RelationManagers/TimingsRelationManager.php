@@ -4,20 +4,26 @@ namespace App\Filament\Resources\Temples\RelationManagers;
 
 use App\Enums\TimingKind;
 use App\Models\TempleTiming;
+use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Collection;
 
 class TimingsRelationManager extends RelationManager
 {
@@ -44,12 +50,18 @@ class TimingsRelationManager extends RelationManager
                     ->placeholder('e.g. Suprabhatam, Mangala Aarti')
                     ->helperText('Leave blank for plain opening hours.'),
 
-                Select::make('day_of_week')
-                    ->label('Day')
-                    ->options(TempleTiming::dayNames())
-                    ->placeholder('Every day')
-                    ->native(false)
-                    ->helperText('Leave blank if this applies every day.'),
+                CheckboxList::make('days')
+                    ->label('Days')
+                    ->options(self::dayOptions())
+                    ->columns(['default' => 4, 'md' => 7])
+                    ->gridDirection('row')
+                    ->columnSpanFull()
+                    ->helperText('Leave all unticked for every day. A timing for some days (say Sat & Sun) replaces the every-day timing of the same type on those days.')
+                    ->hintActions([
+                        Action::make('everyDay')->label('Every day')->link()->action(fn (Set $set) => $set('days', [])),
+                        Action::make('weekdays')->label('Mon–Fri')->link()->action(fn (Set $set) => $set('days', array_map('strval', TempleTiming::WEEKDAYS))),
+                        Action::make('weekend')->label('Sat & Sun')->link()->action(fn (Set $set) => $set('days', array_map('strval', TempleTiming::WEEKEND))),
+                    ]),
 
                 TextInput::make('sort_order')
                     ->numeric()
@@ -84,7 +96,9 @@ class TimingsRelationManager extends RelationManager
                     ->placeholder('—'),
 
                 TextColumn::make('day')
-                    ->label('Day')
+                    ->label('Days')
+                    ->badge()
+                    ->color(fn (TempleTiming $record): string => $record->isEveryDay() ? 'gray' : 'info')
                     ->state(fn (TempleTiming $record): string => $record->dayLabel()),
 
                 TextColumn::make('window')
@@ -101,17 +115,49 @@ class TimingsRelationManager extends RelationManager
             ])
             ->headerActions([
                 CreateAction::make()->label('Add timing'),
+                // Most temples keep other hours at the weekend.
+                Action::make('splitWeekend')
+                    ->label('Different timings on Sat & Sun')
+                    ->icon('heroicon-o-calendar-days')
+                    ->color('gray')
+                    ->visible(fn (): bool => $this->getOwnerRecord()->timings()->whereNull('days')->exists())
+                    ->requiresConfirmation()
+                    ->modalDescription('Every-day timings become Mon–Fri, and a Sat & Sun copy of each is added with the same hours. Then edit the Sat & Sun ones to the weekend hours.')
+                    ->action(function (): void {
+                        $copies = TempleTiming::splitWeekend($this->getOwnerRecord()->timings()->get());
+                        Notification::make()->title($copies->count().' Sat & Sun timings added')->body('Edit them to the weekend hours.')->success()->send();
+                    }),
             ])
             ->recordActions([
                 EditAction::make(),
                 DeleteAction::make(),
             ])
             ->toolbarActions([
-                BulkActionGroup::make([DeleteBulkAction::make()]),
+                BulkActionGroup::make([
+                    BulkAction::make('splitWeekendSelected')
+                        ->label('Different timings on Sat & Sun')
+                        ->icon('heroicon-o-calendar-days')
+                        ->requiresConfirmation()
+                        ->modalDescription('The ticked every-day timings become Mon–Fri, each with a Sat & Sun copy to edit.')
+                        ->deselectRecordsAfterCompletion()
+                        ->action(function (Collection $records): void {
+                            $copies = TempleTiming::splitWeekend($records);
+                            Notification::make()->title($copies->count().' Sat & Sun timings added')->success()->send();
+                        }),
+                    DeleteBulkAction::make(),
+                ]),
             ])
             ->defaultSort('sort_order')
             ->reorderable('sort_order')
             ->emptyStateHeading('No timings recorded')
             ->emptyStateDescription('Add opening hours, darshan and aarti times.');
+    }
+
+    /** @return array<int, string> Monday first */
+    public static function dayOptions(): array
+    {
+        $names = TempleTiming::dayNames();
+
+        return collect(TempleTiming::WEEK)->mapWithKeys(fn (int $d) => [$d => $names[$d]])->all();
     }
 }

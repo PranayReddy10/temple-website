@@ -17,14 +17,14 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * App users, read-only.
+ * App users.
  *
- * Deliberately no create or edit form. A devotee's account is theirs: they
- * set their own name, language and password through the app, and a staff
- * screen that can rewrite those is a screen that will eventually be used to.
- * What staff legitimately need is to see who is using the product, look into
- * a support request, and suspend an account that is abusing it — so the only
- * writes here are deactivate and reactivate, each one deliberate.
+ * No create form and no free edit page: a devotee's account is theirs. What
+ * staff legitimately need is to see who is using the product, answer a
+ * support request, and suspend an account that is abusing it. So the writes
+ * here are each a deliberate action, super admins only: edit details at the
+ * devotee's request, mark an email or phone verified once staff have
+ * checked it (or remove that), reset a password, suspend or restore.
  *
  * Memories are the sharp edge. A devotee's private writing about what they
  * prayed for is not staff's to read, so the list shows that a memory exists
@@ -38,7 +38,7 @@ class DevoteeResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Devotees';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $navigationLabel = 'Devotee Accounts';
 

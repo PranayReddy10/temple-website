@@ -1,9 +1,11 @@
 {{--
-    Scan a seva booking's code: the camera when the device has one, a text
+    Scan a seva booking's or an event ticket's code: the camera when the device has one, a text
     box for the reference when it does not. Shared by the temple portal and
     the admin panel. html5-qrcode is loaded only on this page.
 --}}
 @php($tz = \App\Support\DevotionalClock::timezone())
+@php($isTicket = $booking instanceof \App\Models\EventRegistration)
+@php($what = $isTicket ? 'ticket' : 'booking')
 <x-filament-panels::page>
     <div
         x-data="{
@@ -44,7 +46,7 @@
         @unless ($booking)
             <x-filament::section>
                 <x-slot name="heading">Scan with the camera</x-slot>
-                <x-slot name="description">Ask the devotee to open <strong>Profile → My seva bookings</strong> in the app and show the booking's code.</x-slot>
+                <x-slot name="description">Ask the devotee to open <strong>Profile → My bookings &amp; tickets</strong> in the app and show the code. Seva bookings and event tickets both scan here.</x-slot>
                 <div id="booking-qr-reader" wire:ignore style="width:100%;max-width:360px;border-radius:12px;overflow:hidden"></div>
                 <div style="margin-top:.75rem;display:flex;gap:.5rem">
                     <x-filament::button icon="heroicon-o-camera" x-show="! scanning" x-on:click="start()">Start camera</x-filament::button>
@@ -55,12 +57,12 @@
 
             <x-filament::section>
                 <x-slot name="heading">Or type the reference</x-slot>
-                <x-slot name="description">The short code under the QR, like SV7K3M9Q2X.</x-slot>
+                <x-slot name="description">The short code under the QR, like SV7K3M9Q2X for a seva or EV7K3M9Q2X for an event ticket.</x-slot>
                 <form wire:submit="scan" style="display:flex;gap:.5rem;flex-wrap:wrap">
                     <x-filament::input.wrapper style="flex:1;min-width:220px">
-                        <x-filament::input type="text" wire:model="code" placeholder="SV…" autocapitalize="characters" />
+                        <x-filament::input type="text" wire:model="code" placeholder="SV… or EV…" autocapitalize="characters" />
                     </x-filament::input.wrapper>
-                    <x-filament::button type="submit">Find booking</x-filament::button>
+                    <x-filament::button type="submit">Find</x-filament::button>
                 </form>
                 @if ($error)
                     <p style="margin-top:.75rem;color:rgb(220 38 38);font-size:.875rem">{{ $error }}</p>
@@ -73,8 +75,8 @@
                     <div>
                         <p style="font-weight:700;font-size:1.05rem;color:rgb(185 28 28)">Already verified — this code does not work again</p>
                         <p style="font-size:.9rem;margin-top:.25rem">
-                            Received by {{ $booking->verifier?->name ?? 'the temple' }} on {{ $booking->verified_at?->timezone($tz)->format('d M Y') }} at {{ $booking->verified_at?->timezone($tz)->format('H:i') }}.
-                            The same booking is being shown a second time.
+                            Received by {{ $booking->verifier?->name ?? 'the temple' }} on {{ $booking->verified_at?->timezone($tz)->format('d M Y') }} at {{ $booking->verified_at?->timezone($tz)->format('g:i A') }}.
+                            The same {{ $what }} is being shown a second time.
                         </p>
                     </div>
                 </div>
@@ -83,7 +85,7 @@
                     <x-filament::icon icon="heroicon-o-check-badge" style="width:28px;height:28px;color:rgb(5 150 105);flex-shrink:0" />
                     <div>
                         <p style="font-weight:700;font-size:1.05rem;color:rgb(4 120 87)">Verified — receive {{ $booking->devotee_name }}</p>
-                        <p style="font-size:.9rem;margin-top:.25rem">{{ $booking->people }} {{ $booking->people === 1 ? 'person' : 'people' }} for {{ $booking->puja?->name }}. The code is now used and will be refused if shown again.</p>
+                        <p style="font-size:.9rem;margin-top:.25rem">{{ $booking->people }} {{ $booking->people === 1 ? 'person' : 'people' }} for {{ $isTicket ? $booking->event?->title : $booking->puja?->name }}. The code is now used and will be refused if shown again.</p>
                     </div>
                 </div>
             @elseif (! $booking->isConfirmed())
@@ -91,9 +93,9 @@
                     <p style="font-weight:700;color:rgb(180 83 9)">{{ $booking->status->getLabel() }}</p>
                     <p style="font-size:.9rem;margin-top:.25rem">
                         @if ($booking->status === \App\Enums\BookingStatus::PendingPayment)
-                            The payment for this booking has not come through. Do not receive it on this code; ask the devotee to check the booking in the app.
+                            The payment for this {{ $what }} has not come through. Do not receive it on this code; ask the devotee to check it in the app.
                         @else
-                            This booking is not live{{ $booking->cancel_reason ? ': '.$booking->cancel_reason : '.' }}
+                            This {{ $what }} is not live{{ $booking->cancel_reason ? ': '.$booking->cancel_reason : '.' }}
                         @endif
                     </p>
                 </div>
@@ -105,7 +107,11 @@
                 <x-slot name="headerEnd">
                     <x-filament::button color="gray" icon="heroicon-o-qr-code" wire:click="clearScan">Scan another</x-filament::button>
                 </x-slot>
-                @include('filament.bookings.details', ['booking' => $booking])
+                @if ($isTicket)
+                    @include('filament.bookings.ticket-details', ['ticket' => $booking])
+                @else
+                    @include('filament.bookings.details', ['booking' => $booking])
+                @endif
                 @if ($error)
                     <p style="margin-top:.75rem;color:rgb(220 38 38);font-size:.875rem">{{ $error }}</p>
                 @endif
@@ -113,8 +119,8 @@
 
             @if ($booking->isConfirmed() && $outcome === null)
                 <x-filament::section>
-                    <x-slot name="heading">Receive this booking</x-slot>
-                    <x-slot name="description">Only while the devotee is here with you. The booking is marked verified with your name, and its code stops working.</x-slot>
+                    <x-slot name="heading">Receive this {{ $what }}</x-slot>
+                    <x-slot name="description">Only while the devotee is here with you. The {{ $what }} is marked verified with your name, and its code stops working.</x-slot>
                     <x-filament::button icon="heroicon-o-check-badge" color="success" size="lg" wire:click="verify" wire:loading.attr="disabled">Mark received and verified</x-filament::button>
                 </x-filament::section>
             @endif

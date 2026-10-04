@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\VisitPhotos;
 
-use App\Enums\PhotoModerationStatus;
 use App\Filament\Resources\VisitPhotos\Pages\ListVisitPhotos;
 use App\Filament\Support\PhotoModeration;
 use App\Models\VisitPhoto;
@@ -28,7 +27,7 @@ class VisitPhotoResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Devotees';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $navigationLabel = 'Photo Stamps';
 

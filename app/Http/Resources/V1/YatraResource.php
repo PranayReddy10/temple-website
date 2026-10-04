@@ -44,6 +44,7 @@ class YatraResource extends JsonResource
                         'slug' => $stop->temple->slug,
                         'name' => $stop->temple->translate('name', app()->getLocale(), reviewedOnly: true),
                         'city' => $stop->temple->city,
+                        'cover' => $stop->temple->coverUrls(),
                     ],
                 ])
                 ->values()),

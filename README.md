@@ -1,7 +1,10 @@
 # Temple Website — Backend API + Admin Panel
 
 Laravel backend, Filament admin panel and public web for the temple pilgrimage
-platform (working name: **Temple Passport** — not finalised).
+platform (**Darshan Saathi**). This server runs at
+**temple.darshansaathi.com** (admin panel at `/admin`, temple portal at
+`/temple`, API at `/api/v1`); **darshansaathi.com** is the devotees' website,
+the Flutter app's web build.
 
 The companion Flutter app lives in [`temple-app`](https://github.com/PranayReddy10/temple-app).
 
@@ -61,7 +64,7 @@ Three audiences, three entry points. Only the first exists today.
 | Audience | Entry point | Auth | Stored in | Status |
 | --- | --- | --- | --- | --- |
 | Staff — super admin, editors | `/admin` | Session | `users` | ✅ Built |
-| Temple authority — trust, temple office | `/temple` | Session | `users`, scoped by `temple_user` | ✅ Built |
+| Temple authority — trust, temple office | `/temple` and the Temple Trust app | Session / Sanctum token (`trust` guard) | `users`, scoped by `temple_user` | ✅ Built |
 | Devotees — app and web | Flutter app | Sanctum token | `devotees` (separate table) | ✅ Built |
 
 Devotees get their own table on purpose: they are expected in the millions
@@ -96,6 +99,63 @@ settings, temple events and daily devotional content.
   Light / Dark / System switcher in the user menu.
 - 22 starter temples, seeded honestly as *community* level with no source — they
   are there to be verified, not to pad a count.
+
+## Finance — settling seva bookings with temples
+
+Devotees pay the platform's gateway for sevas booked in the app; the platform
+then pays each temple. **Admin → Finance** (super admins only):
+
+- **Temple balances** — per temple: *ready to settle* (paid, still live, seva
+  day passed, in no settlement), what the temple gets after the platform fee,
+  paid for days still ahead, being paid out, paid to date, and whether its
+  payout details are verified. **Settle** gathers the ready bookings up to a
+  day into a settlement; **Payout details & fee** edits the bank account / UPI
+  and a per-temple fee.
+- **Settlements** — each payout with its bookings and the account to pay.
+  Transfer from the bank, then **Mark paid** with the UTR; **Cancel** a
+  settlement not yet paid to return its bookings to the balance.
+- The default fee is under **Settings → Payment gateways → Temple
+  settlements**.
+
+A booking belongs to at most one settlement, so nothing is paid twice, and a
+settled booking can no longer be cancelled. When a temple's owner changes the
+payout account, its verification is cleared until staff confirm it again.
+Account numbers are encrypted at rest; the temple's team only ever sees the
+last four digits.
+
+The temple's team sees the same figures in the Temple Trust app (today's
+bookings and amount, by seva; month; balance; every settlement with its UTR)
+and read-only under **Settlements** in the temple portal. Super admins can
+also settle from the Trust app. API: `GET /api/v1/trust/temples/{id}/finance`,
+`/settlements`, `PUT /payout-account`, and under `/api/v1/trust/admin/`:
+`finance`, `settlements`, `temples/{id}/settlements`,
+`settlements/{id}/paid|cancel`, `temples/{id}/payout-account/verify`.
+
+## Bhajan gatherings, event tickets and online hundi
+
+- **Events** take a new type, *Bhajan gathering*, and weekly repetition
+  (every week on the first date's weekday, "To" = last week, blank = ongoing).
+  An event can name who leads it, say whether it is open to all, list its
+  songs, and switch on **"Devotees can join in the app"**: free → *I'll join*;
+  priced → paid tickets per person, with a limit per date. Tickets work like
+  seva bookings: a QR code, received once at the gate (trust app **Scan at
+  counter**), expiring after their day. An event that sold tickets cannot be
+  deleted, and its price cannot change once sold.
+- **Online hundi**: a temple's owner switches it on in the trust app (or
+  staff under Temple balances → Payout details). Devotees give ₹10 to
+  ₹5,00,000 with a purpose (general, annadanam, maintenance, gau seva,
+  festival), optionally anonymously: the temple then sees "A devotee".
+- **Money**: tickets and gifts are paid through the same gateways and
+  settled in the same settlements as seva bookings. Settings → Payment
+  gateways has the fee on sevas and tickets and a separate fee on hundi gifts
+  (usually 0). Admin → Finance lists **Event tickets** and **Hundi donations**
+  with *Mark refunded*. Paid seva bookings that expired unused are now
+  settled too (the money is the temple's unless refunded).
+- API: `GET events?type=bhajan&lat=&lng=`, `GET events/{id}`,
+  `POST events/{id}/join`, `me/event-tickets[/{ref}[/pay|/cancel]]`,
+  `POST temples/{slug}/donations`, `me/donations[/{ref}]`; trust:
+  `temples/{id}/events/{e}/registrations`, `temples/{id}/donations`,
+  `PUT temples/{id}/donation-settings`; `bookings/scan|verify` accept tickets.
 
 ## Telangana temples
 
@@ -441,12 +501,10 @@ that expired three days ago, and being unable to clear it by refreshing. So:
   deployed assets, so an old one is deleted on activate rather than left to
   serve last week's stylesheet.
 
-The icons are drawn by `php artisan app:icons` rather than exported from a
-design tool, so a change of brand colour is a config change and one command. The
-mark is a gopuram — the one silhouette that still reads as "temple" at 32
-pixels. `favicon.ico` is generated too: the one in the repository was zero
-bytes, and the admin panel pointed its favicon at it through `asset()`, so it
-was broken twice over.
+The logo (concept A, "Gopuram & Diya": the temple tower with a lamp's flame
+over its finial and a lit doorway) is drawn from one SVG source in the app
+repository, `tool/brand/`, whose `render.js` writes every icon for both repos:
+`public/icons`, `favicon.ico` and the SVG masters in `public/brand`.
 
 ## Support and reports
 

@@ -58,6 +58,12 @@ class TempleSuggestion extends Model
         return $this->belongsTo(Devotee::class);
     }
 
+    /** The temple team account that registered it from the trust app. */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function deity(): BelongsTo
     {
         return $this->belongsTo(Deity::class);
@@ -124,7 +130,7 @@ class TempleSuggestion extends Model
                 'official_website' => $this->official_website,
                 'contact_phone' => $this->contact_phone,
                 'verification_status' => VerificationStatus::Community,
-                'source_name' => 'Suggested in the app by '.($this->submitter_name ?: $this->devotee?->name ?: 'a devotee').' ('.$this->roleLabel().')',
+                'source_name' => ($this->user_id !== null ? 'Registered in the trust app by ' : 'Suggested in the app by ').($this->submitter_name ?: $this->devotee?->name ?: 'a devotee').' ('.$this->roleLabel().')',
                 'status' => TempleStatus::Draft,
                 'created_by' => $by,
             ]);
@@ -157,6 +163,8 @@ class TempleSuggestion extends Model
                 'reviewed_at' => now(),
             ])->save();
 
+            $this->claimForRegistrant($temple->getKey());
+
             return $temple;
         });
     }
@@ -170,5 +178,37 @@ class TempleSuggestion extends Model
             'reviewed_by' => $by,
             'reviewed_at' => now(),
         ])->save();
+
+        // Matched to a temple already listed: the team who registered it is
+        // still the team who runs it.
+        if ($templeId !== null && $status !== TempleSuggestionStatus::Rejected) {
+            $this->claimForRegistrant($templeId);
+        }
+    }
+
+    /**
+     * Hands the temple back to the trust app account that registered it —
+     * as a pending claim, not as access.
+     *
+     * Approving a suggestion says the temple exists; it does not say this
+     * person runs it. Staff approve the claim under Temple access as they do
+     * any other, usually by calling the number given here.
+     */
+    protected function claimForRegistrant(int $templeId): void
+    {
+        if ($this->user_id === null) {
+            return;
+        }
+
+        TempleUser::query()->firstOrCreate(
+            ['temple_id' => $templeId, 'user_id' => $this->user_id],
+            [
+                'role' => 'owner',
+                'requested_at' => now(),
+                'claim_note' => trim('Registered this temple from the trust app as '.$this->roleLabel()
+                    .($this->submitter_phone ? '. Phone: '.$this->submitter_phone : '')
+                    .($this->submitter_note ? '. '.$this->submitter_note : '')),
+            ],
+        );
     }
 }

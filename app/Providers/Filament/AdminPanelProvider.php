@@ -33,6 +33,9 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            // "Forgot password?" on the sign-in page: a reset link by email,
+            // through the mail set up under App → Email.
+            ->passwordReset()
             // A real account page, reached from the user menu. isSimple:
             // false keeps the panel's navigation around it, so it reads as
             // part of the admin rather than a sign-in screen.
@@ -45,6 +48,14 @@ class AdminPanelProvider extends PanelProvider
             // change through the settings screen, config or .env without
             // touching this provider or requiring a deploy.
             ->brandName(fn (): string => setting('brand_name', 'brand.name'))
+            // The mark beside the name (public/brand, drawn by the app repo's
+            // tool/brand/render.js). Root-relative, like the favicon below.
+            ->brandLogo(fn () => new \Illuminate\Support\HtmlString(
+                '<span style="display:inline-flex;align-items:center;gap:.55rem;font-weight:700">'
+                .'<img src="/brand/logo-mark.svg" alt="" style="height:2.1rem;width:2.1rem">'
+                .'<span>'.e(setting('brand_name', 'brand.name')).'</span></span>'
+            ))
+            ->brandLogoHeight('2.4rem')
             // Root-relative, and a real file. asset() builds this from
             // APP_URL — http://localhost until somebody changes it — and the
             // favicon.ico it pointed at was zero bytes, so the panel had no
@@ -63,14 +74,23 @@ class AdminPanelProvider extends PanelProvider
             // Groups are deliberately icon-free: Filament allows an icon on the
             // group or on its items, not both, and the per-resource icons are
             // the more useful of the two.
+            // Every group named, in the order work happens: the temples, who
+            // is coming and the counter, the money, devotees and content,
+            // then configuration, with the app's own settings last. A group
+            // left out of this list would land wherever Filament puts it.
             ->navigationGroups([
                 NavigationGroup::make('Temples'),
-                NavigationGroup::make('Daily Devotion'),
+                NavigationGroup::make('Bookings & Counter'),
+                NavigationGroup::make('Finance'),
                 NavigationGroup::make('Devotees'),
+                NavigationGroup::make('Daily Devotion'),
                 NavigationGroup::make('Community'),
-                NavigationGroup::make('Master Data'),
                 NavigationGroup::make('Support'),
+                NavigationGroup::make('Monetisation'),
+                NavigationGroup::make('Website'),
+                NavigationGroup::make('Master Data'),
                 NavigationGroup::make('Administration'),
+                NavigationGroup::make('App'),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')

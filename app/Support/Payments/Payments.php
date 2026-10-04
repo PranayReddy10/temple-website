@@ -96,6 +96,12 @@ class Payments
                     if ($locked->booking !== null) {
                         app(\App\Support\Bookings\PujaBookings::class)->paymentFailed($locked->booking, $locked->failure_reason);
                     }
+                    if ($locked->registration !== null) {
+                        app(\App\Support\Events\EventRegistrations::class)->paymentFailed($locked->registration, $locked->failure_reason);
+                    }
+                    if ($locked->donation !== null) {
+                        app(\App\Support\Donations\Donations::class)->failed($locked->donation);
+                    }
                 }
 
                 return $locked;
@@ -116,6 +122,34 @@ class Payments
             // the money arrived, not the app.
             if ($locked->booking !== null) {
                 app(\App\Support\Bookings\PujaBookings::class)->confirm($locked->booking);
+            } elseif ($locked->purpose === Payment::PUJA_BOOKING && filled($locked->meta['booking'] ?? null)) {
+                // An earlier attempt for a booking that has since been given
+                // a new payment ("Pay now" again) went through after all:
+                // the money is in, so the booking holds, on this payment.
+                $booking = \App\Models\PujaBooking::query()->where('reference', $locked->meta['booking'])
+                    ->where('devotee_id', $locked->devotee_id)->first();
+                if ($booking !== null && $booking->status === \App\Enums\BookingStatus::PendingPayment) {
+                    $booking->payment()->associate($locked);
+                    $booking->save();
+                    app(\App\Support\Bookings\PujaBookings::class)->confirm($booking);
+                }
+            }
+
+            // Event tickets and hundi gifts, the same way: the money is in.
+            if ($locked->registration !== null) {
+                app(\App\Support\Events\EventRegistrations::class)->confirm($locked->registration);
+            } elseif ($locked->purpose === Payment::EVENT_TICKET && filled($locked->meta['registration'] ?? null)) {
+                $registration = \App\Models\EventRegistration::query()->where('reference', $locked->meta['registration'])
+                    ->where('devotee_id', $locked->devotee_id)->first();
+                if ($registration !== null && $registration->status === \App\Enums\BookingStatus::PendingPayment) {
+                    $registration->payment()->associate($locked);
+                    $registration->save();
+                    app(\App\Support\Events\EventRegistrations::class)->confirm($registration);
+                }
+            }
+
+            if ($locked->donation !== null) {
+                app(\App\Support\Donations\Donations::class)->paid($locked->donation);
             }
 
             return $locked;
@@ -151,6 +185,12 @@ class Payments
 
             if ($payment->booking !== null) {
                 app(\App\Support\Bookings\PujaBookings::class)->refunded($payment->booking);
+            }
+            if ($payment->registration !== null) {
+                app(\App\Support\Events\EventRegistrations::class)->refunded($payment->registration);
+            }
+            if ($payment->donation !== null) {
+                app(\App\Support\Donations\Donations::class)->refunded($payment->donation);
             }
         });
     }

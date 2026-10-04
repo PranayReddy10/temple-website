@@ -21,8 +21,8 @@ use Illuminate\Support\Str;
 class PujaBooking extends Model
 {
     protected $fillable = [
-        'temple_id', 'temple_puja_id', 'devotee_id', 'payment_id',
-        'booked_for', 'people',
+        'temple_id', 'temple_puja_id', 'temple_puja_slot_id', 'devotee_id', 'payment_id',
+        'booked_for', 'slot_starts_at', 'slot_ends_at', 'people',
         'devotee_name', 'devotee_phone', 'gotram', 'nakshatram', 'note',
         'amount_paise', 'currency', 'status',
     ];
@@ -44,6 +44,7 @@ class PujaBooking extends Model
             'confirmed_at' => 'datetime',
             'verified_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'expired_at' => 'datetime',
         ];
     }
 
@@ -118,12 +119,38 @@ class PujaBooking extends Model
         return $this->belongsTo(User::class, 'verified_by');
     }
 
+    /** The payout to the temple that covered this booking, once there is one. */
+    public function settlement(): BelongsTo
+    {
+        return $this->belongsTo(TempleSettlement::class, 'settlement_id');
+    }
+
     // --- Scopes ---
 
     /** Bookings the temple should expect somebody for. */
     public function scopeLive(Builder $query): Builder
     {
         return $query->whereIn('status', [BookingStatus::Confirmed->value, BookingStatus::Verified->value]);
+    }
+
+    /**
+     * Money the platform holds for the temple: paid, still live, and in no
+     * settlement yet. A refunded or cancelled booking drops out by itself.
+     */
+    public function scopeSettleable(Builder $query): Builder
+    {
+        // Expired counts: a paid seva the devotee did not come for is still
+        // the temple's money; only a refund takes it back.
+        return $query->whereIn('status', [\App\Enums\BookingStatus::Confirmed->value, \App\Enums\BookingStatus::Verified->value, \App\Enums\BookingStatus::Expired->value])
+            ->where('amount_paise', '>', 0)
+            ->whereNull('settlement_id')
+            ->whereHas('payment', fn (Builder $q) => $q->where('status', Payment::PAID));
+    }
+
+    /** Live bookings that carry a fee: a paid booking is the only kind confirmed. */
+    public function scopePaidFor(Builder $query): Builder
+    {
+        return $query->live()->where('amount_paise', '>', 0);
     }
 
     public function scopeForDay(Builder $query, \Carbon\CarbonInterface|string $date): Builder
@@ -163,10 +190,17 @@ class PujaBooking extends Model
      * paid booking are the temple's to make, in the gateway's dashboard, and
      * recorded afterwards; the app never promises money back on its own.
      */
+    /**
+     * Before the day, and only while no money has changed hands: a booking
+     * still waiting for its payment, or a free one. A paid seva is the
+     * temple's once booked; it is not refunded, whether the devotee comes
+     * or not.
+     */
     public function canBeCancelledByDevotee(): bool
     {
-        return in_array($this->status, [BookingStatus::PendingPayment, BookingStatus::Confirmed], true)
-            && $this->booked_for->toDateString() >= DevotionalClock::now()->toDateString();
+        $unpaid = $this->status === BookingStatus::PendingPayment || ($this->status === BookingStatus::Confirmed && $this->isFree());
+
+        return $unpaid && $this->booked_for->toDateString() >= DevotionalClock::now()->toDateString();
     }
 
     public function isFree(): bool
@@ -177,6 +211,15 @@ class PujaBooking extends Model
     public function amountLabel(): string
     {
         return $this->isFree() ? 'Free' : '₹'.number_format($this->amount_paise / 100, 2);
+    }
+
+    /** Still waiting on its money, for a day that has not passed. */
+    public function canBePaidFor(): bool
+    {
+        return $this->status === \App\Enums\BookingStatus::PendingPayment
+            && $this->amount_paise > 0
+            && $this->booked_for !== null
+            && ! $this->booked_for->lt(\App\Support\DevotionalClock::now()->startOfDay());
     }
 
     public function qrUrl(): string
@@ -195,5 +238,30 @@ class PujaBooking extends Model
             $this->temple?->name,
             $this->booked_for?->format('d M Y'),
         ])->filter()->implode(' · ');
+    }
+
+    public function slot(): BelongsTo
+    {
+        return $this->belongsTo(TemplePujaSlot::class, 'temple_puja_slot_id');
+    }
+
+    /** The time slot booked, as on the ticket: "9:00 – 10:00 AM", or null. */
+    public function slotLabel(): ?string
+    {
+        return $this->slot_starts_at ? TemplePujaSlot::window((string) $this->slot_starts_at, $this->slot_ends_at ? (string) $this->slot_ends_at : null) : null;
+    }
+
+    /**
+     * Bookings that hold seats: paid or free and confirmed, and ones still
+     * at the payment step for up to half an hour, so two devotees cannot
+     * both pay for the last seat. An abandoned checkout frees its seats.
+     *
+     * @param  Builder<PujaBooking>  $query
+     */
+    public function scopeHoldingSeats(Builder $query): void
+    {
+        $query->where(fn ($q) => $q
+            ->whereIn('status', [BookingStatus::Confirmed->value, BookingStatus::Verified->value])
+            ->orWhere(fn ($p) => $p->where('status', BookingStatus::PendingPayment->value)->where('created_at', '>=', now()->subMinutes(30))));
     }
 }

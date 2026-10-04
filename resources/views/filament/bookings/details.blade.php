@@ -8,7 +8,7 @@
         <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
             <x-filament::badge :color="$booking->status->getColor()" :icon="$booking->status->getIcon()">{{ $booking->status->getLabel() }}</x-filament::badge>
             @if ($booking->isVerified())
-                <span style="font-size:.85rem;opacity:.8">by {{ $booking->verifier?->name ?? 'the temple' }} · {{ $booking->verified_at?->timezone($tz)->format('d M Y, H:i') }}</span>
+                <span style="font-size:.85rem;opacity:.8">by {{ $booking->verifier?->name ?? 'the temple' }} · {{ $booking->verified_at?->timezone($tz)->format('d M Y, g:i A') }}</span>
             @elseif ($booking->cancel_reason)
                 <span style="font-size:.85rem;opacity:.8">{{ $booking->cancel_reason }}</span>
             @endif
@@ -17,7 +17,7 @@
         <dl style="display:grid;grid-template-columns:auto 1fr;gap:.35rem .9rem;font-size:.9rem;margin:0">
             <dt style="opacity:.65">Seva</dt><dd style="margin:0;font-weight:600">{{ $booking->puja?->name ?? '—' }} <span style="opacity:.65;font-weight:400">· {{ $booking->puja?->kind?->getLabel() }}</span></dd>
             <dt style="opacity:.65">Temple</dt><dd style="margin:0">{{ $booking->temple?->name }}{{ $booking->temple?->city ? ', '.$booking->temple->city : '' }}</dd>
-            <dt style="opacity:.65">Day</dt><dd style="margin:0;font-weight:600">{{ $booking->booked_for?->format('l, d M Y') }}@if ($booking->puja?->starts_at) · {{ substr((string) $booking->puja->starts_at, 0, 5) }}@endif</dd>
+            <dt style="opacity:.65">Day</dt><dd style="margin:0;font-weight:600">{{ $booking->booked_for?->format('l, d M Y') }}@if ($booking->slotLabel()) · {{ $booking->slotLabel() }}@elseif ($booking->puja?->starts_at) · {{ \App\Support\Clock::twelve((string) $booking->puja->starts_at) }}@endif</dd>
             <dt style="opacity:.65">People</dt><dd style="margin:0">{{ $booking->people }}</dd>
             <dt style="opacity:.65">In the name of</dt><dd style="margin:0">{{ $booking->devotee_name }}@if ($booking->devotee_phone) · {{ $booking->devotee_phone }}@endif</dd>
             @if ($booking->gotram || $booking->nakshatram)
@@ -35,7 +35,7 @@
                 @endif
             </dd>
             <dt style="opacity:.65">Account</dt><dd style="margin:0">{{ $booking->devotee?->name }} <span style="opacity:.65">{{ $booking->devotee?->email ?? $booking->devotee?->phone }}</span></dd>
-            <dt style="opacity:.65">Booked</dt><dd style="margin:0">{{ $booking->created_at?->timezone($tz)->format('d M Y, H:i') }}</dd>
+            <dt style="opacity:.65">Booked</dt><dd style="margin:0">{{ $booking->created_at?->timezone($tz)->format('d M Y, g:i A') }}</dd>
         </dl>
 
         @if ($booking->puja?->booking_instructions)

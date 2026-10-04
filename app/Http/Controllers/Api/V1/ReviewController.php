@@ -54,7 +54,7 @@ class ReviewController extends Controller
     public function mine(Request $request): AnonymousResourceCollection
     {
         return ReviewResource::collection(
-            $request->user()->reviews()->with(['temple:id,slug,name,city,deity_id', 'temple.deity:id,slug', 'devotee:id,name,avatar_path,avatar_disk,home_state_id'])->paginate(50)
+            $request->user()->reviews()->with(['temple:id,slug,name,city,deity_id', 'temple.deity:id,slug', 'temple.primaryPhoto', 'devotee:id,name,avatar_path,avatar_disk,home_state_id'])->paginate(50)
         );
     }
 
@@ -118,7 +118,7 @@ class ReviewController extends Controller
         $review->moderation_note = null;
         $review->save();
 
-        return (new ReviewResource($review->load(['temple:id,slug,name,city', 'devotee:id,name,avatar_path,avatar_disk,home_state_id'])))
+        return (new ReviewResource($review->load(['temple:id,slug,name,city', 'temple.primaryPhoto', 'devotee:id,name,avatar_path,avatar_disk,home_state_id'])))
             ->response()
             ->setStatusCode($created ? 201 : 200);
     }

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex">
-    <title>{{ $booking?->reference ?? 'Booking' }} · {{ config('brand.name') }}</title>
+    <title>{{ $booking?->reference ?? $ticket?->reference ?? 'Booking' }} · {{ config('brand.name') }}</title>
     <style>
         :root { --saffron: {{ config('brand.colors.saffron.hex') }}; --kumkum: {{ config('brand.colors.kumkum.hex') }}; --sandal: {{ config('brand.colors.sandal.hex') }}; --deep: {{ config('brand.colors.deep.hex') }}; }
         * { box-sizing: border-box; }
@@ -25,7 +25,22 @@
     </style>
 </head>
 <body>
-@if ($booking === null)
+@if ($booking === null && $ticket !== null)
+    <main class="card">
+        <p class="muted">{{ $ticket->isFree() ? 'Event registration' : 'Event ticket' }} · {{ config('brand.name') }}</p>
+        <h1>{{ $ticket->event?->title ?? 'Event' }}</h1>
+        <p class="muted">{{ $ticket->temple?->name }}{{ $ticket->temple?->city ? ', '.$ticket->temple->city : '' }}</p>
+        <div class="ref">{{ $ticket->reference }}</div>
+        <span @class(['status', 'ok' => $ticket->isVerified(), 'live' => $ticket->status === \App\Enums\BookingStatus::Confirmed, 'off' => ! $ticket->isLive()])>{{ $ticket->status->getLabel() }}</span>
+        <dl>
+            <dt>Day</dt><dd>{{ $ticket->occurs_on?->format('l, d M Y') }}</dd>
+            <dt>People</dt><dd>{{ $ticket->people }}</dd>
+            <dt>In the name of</dt><dd>{{ $ticket->devotee_name }}</dd>
+            <dt>Amount</dt><dd>{{ $ticket->amountLabel() }}</dd>
+        </dl>
+        <p class="note">The temple verifies this code with its own scanner. A verified code is not accepted a second time.</p>
+    </main>
+@elseif ($booking === null)
     <main class="card bad">
         <h1>Booking not found</h1>
         <p>This code is not recognised. It may have been cancelled and booked again; ask the devotee to open the booking in the app.</p>
@@ -40,11 +55,12 @@
         <span @class(['status', 'ok' => $booking->isVerified(), 'live' => $booking->isConfirmed(), 'off' => ! $booking->isLive()])>{{ $booking->status->getLabel() }}</span>
         <dl>
             <dt>Day</dt><dd>{{ $booking->booked_for?->format('l, d M Y') }}</dd>
+            @if ($booking->slotLabel())<dt>Time</dt><dd>{{ $booking->slotLabel() }}</dd>@endif
             <dt>People</dt><dd>{{ $booking->people }}</dd>
             <dt>In the name of</dt><dd>{{ $booking->devotee_name }}</dd>
             <dt>Amount</dt><dd>{{ $booking->amountLabel() }}</dd>
             @if ($booking->isVerified())
-                <dt>Received</dt><dd>{{ $booking->verified_at?->timezone(\App\Support\DevotionalClock::timezone())->format('d M Y, H:i') }}</dd>
+                <dt>Received</dt><dd>{{ $booking->verified_at?->timezone(\App\Support\DevotionalClock::timezone())->format('d M Y, g:i A') }}</dd>
             @endif
         </dl>
         <p class="note">The temple's counter verifies this code with its own scanner in the temple portal. A verified code is not accepted a second time.</p>

@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources\Devotees\Pages;
 
+use App\Filament\Resources\Devotees\DevoteeAdminActions;
 use App\Filament\Resources\Devotees\DevoteeResource;
 use App\Models\Devotee;
+use App\Support\DevoteeAccount;
 use App\Support\DevoteePasswordReset;
 use App\Support\InitialsAvatarProvider;
 use App\Support\Locales;
@@ -47,6 +49,26 @@ class ViewDevotee extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            DevoteeAdminActions::edit(),
+            DevoteeAdminActions::verifyEmail(),
+            DevoteeAdminActions::verifyPhone(),
+            DevoteeAdminActions::unverify(),
+            // A deletion request from the website form (a support ticket),
+            // once support has confirmed it is the owner asking.
+            Action::make('delete_account')
+                ->label('Delete account')
+                ->icon('heroicon-o-trash')
+                ->color('danger')
+                ->visible(fn (): bool => ! $this->record->trashed() && (Auth::user()?->canManageUsers() ?? false))
+                ->requiresConfirmation()
+                ->modalHeading('Delete this account?')
+                ->modalDescription('Deletes their profile, check-ins, photos, memories, reviews, yatras, saved and followed temples, and signs them out everywhere. Bookings and payments are kept for the accounts. This cannot be undone.')
+                ->modalSubmitActionLabel('Delete account')
+                ->action(function (): void {
+                    DevoteeAccount::delete($this->record);
+                    Notification::make()->title('Account deleted')->success()->send();
+                    $this->redirect(DevoteeResource::getUrl('index'));
+                }),
             // "I forgot my password", arriving as a support message.
             Action::make('send_reset_code')
                 ->label('Send reset code')
@@ -149,7 +171,11 @@ class ViewDevotee extends ViewRecord
                         ->boolean()
                         ->tooltip('Email or phone has been confirmed'),
 
-                    TextEntry::make('home_state.name')->label('Home state')->placeholder('Not given'),
+                    TextEntry::make('email_verified_at')->label('Email verified')->since()->placeholder('No'),
+                    TextEntry::make('phone_verified_at')->label('Phone verified')->since()->placeholder('No'),
+                    TextEntry::make('date_of_birth')->label('Date of birth')->date('d M Y')->placeholder('Not given'),
+
+                    TextEntry::make('homeState.name')->label('Home state')->placeholder('Not given'),
                     TextEntry::make('gender')->label('Gender')->placeholder('Not given'),
                 ]),
 
@@ -235,7 +261,7 @@ class ViewDevotee extends ViewRecord
         }
 
         $rows = $events->map(function ($event): string {
-            $when = $event->occurred_at?->format('d M Y, H:i') ?? '—';
+            $when = $event->occurred_at?->format('d M Y, g:i A') ?? '—';
             $outcome = $event->succeeded
                 ? 'Signed in'
                 : 'Failed ('.str($event->failure_reason ?? 'unknown')->replace('_', ' ').')';

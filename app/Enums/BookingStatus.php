@@ -13,6 +13,9 @@ use Filament\Support\Contracts\HasLabel;
  * has been paid (or the seva is free) and the devotee should be received.
  * Verified means the counter scanned the code, and a code is verified once:
  * a second scan is refused, so a screenshot cannot be used twice.
+ * Expired is a confirmed booking whose day passed without the devotee
+ * being received: like a ticket for yesterday's show, it is kept but no
+ * longer valid.
  */
 enum BookingStatus: string implements HasColor, HasIcon, HasLabel
 {
@@ -21,6 +24,7 @@ enum BookingStatus: string implements HasColor, HasIcon, HasLabel
     case Verified = 'verified';
     case Cancelled = 'cancelled';
     case Refunded = 'refunded';
+    case Expired = 'expired';
 
     public function getLabel(): string
     {
@@ -30,6 +34,7 @@ enum BookingStatus: string implements HasColor, HasIcon, HasLabel
             self::Verified => 'Verified at the temple',
             self::Cancelled => 'Cancelled',
             self::Refunded => 'Refunded',
+            self::Expired => 'Expired',
         };
     }
 
@@ -41,6 +46,7 @@ enum BookingStatus: string implements HasColor, HasIcon, HasLabel
             self::Verified => 'success',
             self::Cancelled => 'gray',
             self::Refunded => 'danger',
+            self::Expired => 'gray',
         };
     }
 
@@ -52,6 +58,7 @@ enum BookingStatus: string implements HasColor, HasIcon, HasLabel
             self::Verified => 'heroicon-o-check-badge',
             self::Cancelled => 'heroicon-o-x-circle',
             self::Refunded => 'heroicon-o-receipt-refund',
+            self::Expired => 'heroicon-o-calendar',
         };
     }
 

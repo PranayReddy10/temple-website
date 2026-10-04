@@ -4,12 +4,16 @@ use App\Http\Controllers\Api\V1\AppConfigController;
 use App\Http\Controllers\Api\V1\Auth\DevoteeAuthController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\SocialAuthController;
+use App\Http\Controllers\Api\V1\BhajanController;
 use App\Http\Controllers\Api\V1\DeityController;
 use App\Http\Controllers\Api\V1\DevoteeProfileController;
 use App\Http\Controllers\Api\V1\DevotionalDayController;
+use App\Http\Controllers\Api\V1\DonationController;
 use App\Http\Controllers\Api\V1\EngagementController;
 use App\Http\Controllers\Api\V1\EventController;
+use App\Http\Controllers\Api\V1\EventRegistrationController;
 use App\Http\Controllers\Api\V1\FacilityController;
+use App\Http\Controllers\Api\V1\FestivalController;
 use App\Http\Controllers\Api\V1\GeocodeController;
 use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\MemoryController;
@@ -27,6 +31,21 @@ use App\Http\Controllers\Api\V1\TempleCategoryController;
 use App\Http\Controllers\Api\V1\TempleController;
 use App\Http\Controllers\Api\V1\TempleQrController;
 use App\Http\Controllers\Api\V1\TempleSuggestionController;
+use App\Http\Controllers\Api\V1\Trust\TrustAdminController;
+use App\Http\Controllers\Api\V1\Trust\TrustAdminFinanceController;
+use App\Http\Controllers\Api\V1\Trust\TrustAuthController;
+use App\Http\Controllers\Api\V1\Trust\TrustBookingController;
+use App\Http\Controllers\Api\V1\Trust\TrustClaimController;
+use App\Http\Controllers\Api\V1\Trust\TrustEventController;
+use App\Http\Controllers\Api\V1\Trust\TrustFinanceController;
+use App\Http\Controllers\Api\V1\Trust\TrustOptionsController;
+use App\Http\Controllers\Api\V1\Trust\TrustPhotoController;
+use App\Http\Controllers\Api\V1\Trust\TrustPujaController;
+use App\Http\Controllers\Api\V1\Trust\TrustReviewController;
+use App\Http\Controllers\Api\V1\Trust\TrustScheduleController;
+use App\Http\Controllers\Api\V1\Trust\TrustSupportController;
+use App\Http\Controllers\Api\V1\Trust\TrustTempleController;
+use App\Http\Controllers\Api\V1\Trust\TrustTempleRegistrationController;
 use App\Http\Controllers\Api\V1\VisitPhotoController;
 use App\Http\Controllers\Api\V1\YatraController;
 use Illuminate\Support\Facades\Route;
@@ -94,10 +113,18 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         ->name('passports.show');
 
     Route::get('events', [EventController::class, 'index'])->name('events.index');
+    Route::get('events/{event}', [EventController::class, 'show'])->whereNumber('event')->name('events.show');
+    // India's festival and vrat calendar.
+    Route::get('festivals', [FestivalController::class, 'index'])->name('festivals.index');
 
     // What devotees said about visiting: published accounts, with the
     // per-dimension summary. There is no overall score, on purpose.
     Route::get('temples/{temple:slug}/reviews', [ReviewController::class, 'index'])->name('temples.reviews.index');
+    // A seva's time slots on one day, with places left.
+    Route::get('temples/{temple:slug}/pujas/{puja}/slots', [PujaBookingController::class, 'slots'])
+        ->withoutScopedBindings()
+        ->whereNumber('puja')
+        ->name('temples.pujas.slots');
 
     /*
     |--------------------------------------------------------------------------
@@ -205,9 +232,143 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->name('logout');
     });
 
+    /*
+    |--------------------------------------------------------------------------
+    | Temple trust app
+    |--------------------------------------------------------------------------
+    |
+    | The mobile companion to the temple portal, for a temple's own team.
+    | Accounts live on the users table as temple admins and authenticate with
+    | Sanctum tokens on the 'trust' guard, which cannot accept a devotee's
+    | token. Signing up grants nothing: access to a temple comes only from a
+    | claim staff have approved, and every temple below is looked up through
+    | that (ScopesToTrustTemples).
+    |
+    */
+    Route::prefix('trust')->name('trust.')->group(function (): void {
+        Route::post('auth/register', [TrustAuthController::class, 'register'])
+            ->middleware('throttle:6,1')
+            ->name('auth.register');
+        Route::post('auth/login', [TrustAuthController::class, 'login'])
+            ->middleware('throttle:10,1')
+            ->name('auth.login');
+
+        Route::middleware(['auth:trust', 'temple.team'])->group(function (): void {
+            Route::post('auth/logout', [TrustAuthController::class, 'logout'])->name('auth.logout');
+            Route::get('me', [TrustAuthController::class, 'me'])->name('me');
+            Route::patch('me', [TrustAuthController::class, 'update'])->name('me.update');
+
+            Route::get('options', TrustOptionsController::class)->name('options');
+
+            // Help from the team: the admin panel's Support & Reports queue.
+            Route::get('support/options', [TrustSupportController::class, 'options'])->name('support.options');
+            Route::get('support', [TrustSupportController::class, 'index'])->name('support.index');
+            Route::post('support', [TrustSupportController::class, 'store'])->middleware('throttle:10,1')->name('support.store');
+            Route::get('support/{reference}', [TrustSupportController::class, 'show'])->name('support.show');
+            Route::post('support/{reference}/replies', [TrustSupportController::class, 'reply'])->middleware('throttle:20,1')->name('support.reply');
+
+            // Asking to manage a temple already listed.
+            Route::get('claimable-temples', [TrustClaimController::class, 'search'])->name('claims.search');
+            Route::get('claims', [TrustClaimController::class, 'index'])->name('claims.index');
+            Route::post('claims', [TrustClaimController::class, 'store'])
+                ->middleware('throttle:10,1')
+                ->name('claims.store');
+            Route::delete('claims/{claim}', [TrustClaimController::class, 'destroy'])->whereNumber('claim')->name('claims.destroy');
+
+            // Registering a temple that is not listed at all.
+            Route::get('registrations', [TrustTempleRegistrationController::class, 'index'])->name('registrations.index');
+            Route::post('registrations', [TrustTempleRegistrationController::class, 'store'])
+                ->middleware('throttle:6,1')
+                ->name('registrations.store');
+
+            // At the counter: scans are checked against every temple this
+            // account manages, so the app need not ask which one first.
+            Route::get('bookings/search', [TrustBookingController::class, 'search'])->middleware('throttle:60,1')->name('bookings.search');
+            Route::post('bookings/scan', [TrustBookingController::class, 'scan'])->middleware('throttle:60,1')->name('bookings.scan');
+            Route::post('bookings/verify', [TrustBookingController::class, 'verify'])->middleware('throttle:60,1')->name('bookings.verify');
+            Route::post('passports/lookup', [TrustBookingController::class, 'passport'])->middleware('throttle:60,1')->name('passports.lookup');
+            Route::post('passports/visit', [TrustBookingController::class, 'markVisited'])->middleware('throttle:60,1')->name('passports.visit');
+
+            Route::get('temples', [TrustTempleController::class, 'index'])->name('temples.index');
+
+            // A super admin's queues: the same decisions as the admin panel.
+            Route::prefix('admin')->name('admin.')->middleware('super.admin')->group(function (): void {
+                Route::get('overview', [TrustAdminController::class, 'overview'])->name('overview');
+                Route::get('claims', [TrustAdminController::class, 'claims'])->name('claims.index');
+                Route::post('claims/{claim}/approve', [TrustAdminController::class, 'approveClaim'])->whereNumber('claim')->name('claims.approve');
+                Route::post('claims/{claim}/reject', [TrustAdminController::class, 'rejectClaim'])->whereNumber('claim')->name('claims.reject');
+                Route::get('registrations', [TrustAdminController::class, 'registrations'])->name('registrations.index');
+                Route::post('registrations/{registration}/approve', [TrustAdminController::class, 'approveRegistration'])->whereNumber('registration')->name('registrations.approve');
+                Route::post('registrations/{registration}/duplicate', [TrustAdminController::class, 'duplicateRegistration'])->whereNumber('registration')->name('registrations.duplicate');
+                Route::post('registrations/{registration}/reject', [TrustAdminController::class, 'rejectRegistration'])->whereNumber('registration')->name('registrations.reject');
+                Route::get('events', [TrustAdminController::class, 'events'])->name('events.index');
+                Route::post('events/{event}/approve', [TrustAdminController::class, 'approveEvent'])->whereNumber('event')->name('events.approve');
+                Route::post('events/{event}/reject', [TrustAdminController::class, 'rejectEvent'])->whereNumber('event')->name('events.reject');
+                Route::patch('temples/{temple}/status', [TrustAdminController::class, 'templeStatus'])->whereNumber('temple')->name('temples.status');
+
+                // Settling with temples: the same service as Admin → Finance.
+                Route::get('finance', [TrustAdminFinanceController::class, 'overview'])->name('finance');
+                Route::get('settlements', [TrustAdminFinanceController::class, 'settlements'])->name('settlements.index');
+                Route::post('temples/{temple}/settlements', [TrustAdminFinanceController::class, 'store'])->whereNumber('temple')->middleware('throttle:30,1')->name('settlements.store');
+                Route::post('settlements/{settlement}/paid', [TrustAdminFinanceController::class, 'paid'])->whereNumber('settlement')->name('settlements.paid');
+                Route::post('settlements/{settlement}/cancel', [TrustAdminFinanceController::class, 'cancel'])->whereNumber('settlement')->name('settlements.cancel');
+                Route::post('temples/{temple}/payout-account/verify', [TrustAdminFinanceController::class, 'verifyPayoutAccount'])->whereNumber('temple')->name('payout-account.verify');
+            });
+
+            Route::prefix('temples/{temple}')->whereNumber('temple')->name('temples.')->group(function (): void {
+                Route::get('/', [TrustTempleController::class, 'show'])->name('show');
+                Route::patch('/', [TrustTempleController::class, 'update'])->name('update');
+                Route::get('qr', [TrustTempleController::class, 'qr'])->name('qr');
+
+                Route::get('timings', [TrustScheduleController::class, 'timings'])->name('timings.index');
+                Route::post('timings', [TrustScheduleController::class, 'storeTiming'])->name('timings.store');
+                Route::post('timings/weekend', [TrustScheduleController::class, 'splitWeekend'])->name('timings.weekend');
+                Route::put('timings/{timing}', [TrustScheduleController::class, 'updateTiming'])->whereNumber('timing')->name('timings.update');
+                Route::delete('timings/{timing}', [TrustScheduleController::class, 'destroyTiming'])->whereNumber('timing')->name('timings.destroy');
+
+                Route::get('closures', [TrustScheduleController::class, 'closures'])->name('closures.index');
+                Route::post('closures', [TrustScheduleController::class, 'storeClosure'])->name('closures.store');
+                Route::put('closures/{closure}', [TrustScheduleController::class, 'updateClosure'])->whereNumber('closure')->name('closures.update');
+                Route::delete('closures/{closure}', [TrustScheduleController::class, 'destroyClosure'])->whereNumber('closure')->name('closures.destroy');
+
+                // POST for update too: multipart, so an image can ride along.
+                Route::get('events', [TrustEventController::class, 'index'])->name('events.index');
+                Route::post('events', [TrustEventController::class, 'store'])->middleware('throttle:30,1')->name('events.store');
+                Route::post('events/{event}', [TrustEventController::class, 'update'])->whereNumber('event')->name('events.update');
+                Route::delete('events/{event}', [TrustEventController::class, 'destroy'])->whereNumber('event')->name('events.destroy');
+                Route::get('events/{event}/registrations', [TrustEventController::class, 'registrations'])->whereNumber('event')->name('events.registrations');
+
+                Route::get('sevas', [TrustPujaController::class, 'index'])->name('sevas.index');
+                Route::post('sevas', [TrustPujaController::class, 'store'])->middleware('throttle:30,1')->name('sevas.store');
+                Route::post('sevas/{puja}', [TrustPujaController::class, 'update'])->whereNumber('puja')->name('sevas.update');
+                Route::delete('sevas/{puja}', [TrustPujaController::class, 'destroy'])->whereNumber('puja')->name('sevas.destroy');
+
+                Route::get('photos', [TrustPhotoController::class, 'index'])->name('photos.index');
+                Route::post('photos', [TrustPhotoController::class, 'store'])->middleware('throttle:30,1')->name('photos.store');
+                Route::patch('photos/{photo}', [TrustPhotoController::class, 'update'])->whereNumber('photo')->name('photos.update');
+                Route::delete('photos/{photo}', [TrustPhotoController::class, 'destroy'])->whereNumber('photo')->name('photos.destroy');
+
+                Route::get('bookings', [TrustBookingController::class, 'index'])->name('bookings.index');
+
+                // Money: bookings paid, the platform's settlements, the payout account.
+                Route::get('finance', [TrustFinanceController::class, 'show'])->name('finance');
+                Route::get('settlements', [TrustFinanceController::class, 'settlements'])->name('settlements.index');
+                Route::get('settlements/{settlement}', [TrustFinanceController::class, 'settlement'])->whereNumber('settlement')->name('settlements.show');
+                Route::put('payout-account', [TrustFinanceController::class, 'updatePayoutAccount'])->middleware('throttle:10,1')->name('payout-account.update');
+                Route::post('payout-account/kyc', [TrustFinanceController::class, 'submitKyc'])->middleware('throttle:10,1')->name('payout-account.kyc');
+                Route::get('donations', [TrustFinanceController::class, 'donations'])->name('donations.index');
+                Route::put('donation-settings', [TrustFinanceController::class, 'donationSettings'])->middleware('throttle:10,1')->name('donation-settings.update');
+
+                Route::get('reviews', [TrustReviewController::class, 'index'])->name('reviews.index');
+                Route::post('reviews/{review}/reply', [TrustReviewController::class, 'reply'])->whereNumber('review')->name('reviews.reply');
+            });
+        });
+    });
+
     Route::middleware('auth:devotee')->group(function (): void {
         Route::get('me', [DevoteeProfileController::class, 'show'])->name('me.show');
         Route::patch('me', [DevoteeProfileController::class, 'update'])->name('me.update');
+        Route::delete('me', [DevoteeProfileController::class, 'destroy'])->name('me.destroy');
 
         // Multipart, so it cannot ride on the JSON PATCH above.
         Route::post('me/avatar', [DevoteeProfileController::class, 'storeAvatar'])->name('me.avatar.store');
@@ -225,6 +386,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('me/likes', [EngagementController::class, 'likes'])->name('me.likes.index');
         Route::put('me/likes/{temple:slug}', [EngagementController::class, 'like'])->name('me.likes.store');
         Route::delete('me/likes/{temple:slug}', [EngagementController::class, 'unlike'])->name('me.likes.destroy');
+        // A bhajan gathering raised by a devotee: reviewed by the editors, always free.
+        Route::post('temples/{temple:slug}/bhajans', [BhajanController::class, 'store'])->middleware('throttle:10,1')->name('temples.bhajans.store');
+        Route::get('me/bhajans', [BhajanController::class, 'mine'])->name('me.bhajans.index');
         Route::get('me/follows', [EngagementController::class, 'follows'])->name('me.follows.index');
         Route::put('me/follows/{temple:slug}', [EngagementController::class, 'follow'])->name('me.follows.store');
         Route::delete('me/follows/{temple:slug}', [EngagementController::class, 'unfollow'])->name('me.follows.destroy');
@@ -273,6 +437,9 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::get('me/bookings/{reference}', [PujaBookingController::class, 'show'])
             ->where('reference', '[A-Za-z0-9]{6,16}')
             ->name('me.bookings.show');
+        Route::post('me/bookings/{reference}/pay', [PujaBookingController::class, 'pay'])
+            ->middleware('throttle:20,1')
+            ->name('me.bookings.pay');
         Route::post('me/bookings/{reference}/cancel', [PujaBookingController::class, 'cancel'])
             ->where('reference', '[A-Za-z0-9]{6,16}')
             ->name('me.bookings.cancel');
@@ -281,6 +448,32 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             ->whereNumber('puja')
             ->middleware('throttle:10,1')
             ->name('me.bookings.store');
+
+        // Events: "I'll join" and tickets, shaped like seva bookings.
+        Route::get('me/event-tickets', [EventRegistrationController::class, 'index'])->name('me.event-tickets.index');
+        Route::get('me/event-tickets/{reference}', [EventRegistrationController::class, 'show'])
+            ->where('reference', '[A-Za-z0-9]{6,16}')
+            ->name('me.event-tickets.show');
+        Route::post('me/event-tickets/{reference}/pay', [EventRegistrationController::class, 'pay'])
+            ->where('reference', '[A-Za-z0-9]{6,16}')
+            ->middleware('throttle:20,1')
+            ->name('me.event-tickets.pay');
+        Route::post('me/event-tickets/{reference}/cancel', [EventRegistrationController::class, 'cancel'])
+            ->where('reference', '[A-Za-z0-9]{6,16}')
+            ->name('me.event-tickets.cancel');
+        Route::post('events/{event}/join', [EventRegistrationController::class, 'store'])
+            ->whereNumber('event')
+            ->middleware('throttle:10,1')
+            ->name('events.join');
+
+        // Online hundi.
+        Route::get('me/donations', [DonationController::class, 'index'])->name('me.donations.index');
+        Route::get('me/donations/{reference}', [DonationController::class, 'show'])
+            ->where('reference', '[A-Za-z0-9]{6,16}')
+            ->name('me.donations.show');
+        Route::post('temples/{temple:slug}/donations', [DonationController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('me.donations.store');
 
         Route::post('me/passport/qr/reset', [PassportShareController::class, 'reset'])
             ->middleware('throttle:6,1')

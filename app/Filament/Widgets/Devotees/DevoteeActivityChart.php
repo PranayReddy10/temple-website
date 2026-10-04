@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets\Devotees;
 
 use App\Support\DevoteeStats;
+use Carbon\Carbon;
 use Filament\Widgets\ChartWidget;
 
 /**
@@ -89,7 +90,7 @@ class DevoteeActivityChart extends ChartWidget
             // Short labels: 90 days of "12 January 2027" is unreadable at any
             // width, and the year is the same on every point anyway.
             'labels' => $signUps->keys()
-                ->map(fn (string $date): string => \Carbon\Carbon::parse($date)->format('d M'))
+                ->map(fn (string $date): string => Carbon::parse($date)->format('d M'))
                 ->all(),
         ];
     }

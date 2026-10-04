@@ -96,6 +96,16 @@ final class MediaStorage
         }
     }
 
+    /**
+     * Where private files go (a temple owner's identity documents): the
+     * Space when uploads go there, written as private objects that only the
+     * staff link can open; otherwise the server's private disk.
+     */
+    public static function privateDisk(): string
+    {
+        return config('filesystems.media') === self::SPACES_DISK ? self::SPACES_DISK : 'local';
+    }
+
     /** What the panel should show as selected. */
     public static function selectedDisk(): string
     {
@@ -357,7 +367,7 @@ final class MediaStorage
         }
 
         return match (true) {
-            str_contains($message, 'InvalidAccessKeyId') => 'That access key does not exist. Check the key, and that it belongs to this Spaces region.',
+            str_contains($message, 'InvalidAccessKeyId') => 'DigitalOcean does not recognise that access key. Copy it again with the copy button in API → Spaces Keys (0/O and 8/B are easy to mistype). A new key comes with its own secret, shown only once: paste that too. A key made a moment ago can take a minute to work.',
             str_contains($message, 'SignatureDoesNotMatch') => 'The secret does not match the key. Re-copy it — a trailing space is enough to break it.',
             str_contains($message, 'NoSuchBucket') => 'There is no bucket by that name in this region.',
             str_contains($message, 'AccessDenied') => 'The key is valid but not allowed to write here. It needs read and write access to this bucket.',

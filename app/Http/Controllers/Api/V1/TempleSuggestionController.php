@@ -42,7 +42,40 @@ class TempleSuggestionController extends Controller
     /** Multipart: the fields below plus `photos[]`. */
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
+        $validated = $request->validate(self::rules($request));
+
+        $suggestion = DB::transaction(function () use ($request, $validated): TempleSuggestion {
+            $suggestion = new TempleSuggestion(collect($validated)->except('photos')->all());
+            $suggestion->devotee_id = $request->user()->getKey();
+            $suggestion->submitter_name ??= $request->user()->name;
+            $suggestion->save();
+
+            $disk = config('filesystems.media');
+
+            foreach ($request->file('photos', []) as $photo) {
+                $suggestion->photos()->create([
+                    'disk' => $disk,
+                    'path' => $photo->store('temple-suggestions/'.$suggestion->getKey(), ['disk' => $disk]),
+                ]);
+            }
+
+            return $suggestion;
+        });
+
+        return (new TempleSuggestionResource($suggestion->load(['state:id,name', 'photos'])))
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    /**
+     * What a temple needs before the editors can look at it. Shared with the
+     * trust app, where a temple's own team registers it.
+     *
+     * @return array<string, mixed>
+     */
+    public static function rules(Request $request): array
+    {
+        return [
             'name' => ['required', 'string', 'min:3', 'max:191'],
             'alternate_names' => ['nullable', 'string', 'max:255'],
             'deity_id' => ['nullable', 'integer', 'exists:deities,id'],
@@ -71,28 +104,6 @@ class TempleSuggestionController extends Controller
             'submitter_note' => ['nullable', 'string', 'max:2000'],
             'photos' => ['required', 'array', 'min:1', 'max:'.TempleSuggestion::MAX_PHOTOS],
             'photos.*' => ['image', 'mimes:'.UploadRules::mimesRuleFor('temple_photo'), 'max:'.UploadRules::maxKbFor('temple_photo')],
-        ]);
-
-        $suggestion = DB::transaction(function () use ($request, $validated): TempleSuggestion {
-            $suggestion = new TempleSuggestion(collect($validated)->except('photos')->all());
-            $suggestion->devotee_id = $request->user()->getKey();
-            $suggestion->submitter_name ??= $request->user()->name;
-            $suggestion->save();
-
-            $disk = config('filesystems.media');
-
-            foreach ($request->file('photos', []) as $photo) {
-                $suggestion->photos()->create([
-                    'disk' => $disk,
-                    'path' => $photo->store('temple-suggestions/'.$suggestion->getKey(), ['disk' => $disk]),
-                ]);
-            }
-
-            return $suggestion;
-        });
-
-        return (new TempleSuggestionResource($suggestion->load(['state:id,name', 'photos'])))
-            ->response()
-            ->setStatusCode(201);
+        ];
     }
 }

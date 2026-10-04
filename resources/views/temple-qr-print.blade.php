@@ -35,7 +35,7 @@
         <a href="{{ route('temples.qr.download', $temple) }}">Download SVG</a>
     </div>
     <main class="poster">
-        <div class="brand">{{ config('brand.name') }} · Temple Passport</div>
+        <div class="brand">{{ config('brand.name') }} · Passport check-in</div>
         <h1>{{ $temple->name }}</h1>
         <p class="city">{{ collect([$temple->city, $temple->deity?->name])->filter()->implode(' · ') }}</p>
         <div class="qr">{!! $svg !!}</div>

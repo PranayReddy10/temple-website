@@ -1,0 +1,188 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1\Trust;
+
+use App\Enums\PujaKind;
+use App\Http\Controllers\Api\V1\Trust\Concerns\ScopesToTrustTemples;
+use App\Http\Controllers\Controller;
+use App\Http\Resources\V1\PujaResource;
+use App\Models\Temple;
+use App\Models\TemplePayoutAccount;
+use App\Models\TemplePuja;
+use App\Support\UploadRules;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+
+/**
+ * Pujas, sevas and prasadam: what the temple offers, what it costs, and
+ * whether devotees may book it in the app.
+ *
+ * The fee and booking invariants (no fee and not free means no app booking,
+ * no URL means no official booking) are enforced by TemplePujaObserver on
+ * every write, so this controller does not repeat them.
+ */
+class TrustPujaController extends Controller
+{
+    use ScopesToTrustTemples;
+
+    public function index(Request $request, int $temple): JsonResponse
+    {
+        $rows = $this->managedTemple($request, $temple)->pujas()->orderBy('sort_order')->orderBy('name')->get();
+
+        return response()->json(['data' => $rows->map(fn (TemplePuja $p): array => $this->present($p, $request))->values()]);
+    }
+
+    public function store(Request $request, int $temple): JsonResponse
+    {
+        $record = $this->managedTemple($request, $temple);
+        $puja = new TemplePuja(['temple_id' => $record->getKey()]);
+
+        $this->save($request, $puja, $record->getKey());
+
+        return response()->json(['data' => $this->present($puja->refresh(), $request)], 201);
+    }
+
+    public function update(Request $request, int $temple, int $puja): JsonResponse
+    {
+        $record = $this->managedTemple($request, $temple);
+        $row = $record->pujas()->findOrFail($puja);
+
+        $this->save($request, $row, $record->getKey());
+
+        return response()->json(['data' => $this->present($row->refresh(), $request)]);
+    }
+
+    public function destroy(Request $request, int $temple, int $puja): JsonResponse
+    {
+        $row = $this->managedTemple($request, $temple)->pujas()->findOrFail($puja);
+
+        // Devotees hold bookings for it; hiding keeps their tickets readable.
+        abort_if($row->bookings()->exists(), 422, 'Devotees have booked this seva. Unpublish it instead of deleting it.');
+
+        $row->delete();
+
+        return response()->json(['data' => ['message' => 'Seva removed.']]);
+    }
+
+    protected function save(Request $request, TemplePuja $puja, int $templeId): void
+    {
+        $validated = $request->validate([
+            'kind' => ['required', Rule::enum(PujaKind::class)],
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:5000'],
+            'includes' => ['nullable', 'string', 'max:2000'],
+            'eligibility' => ['nullable', 'string', 'max:2000'],
+            'starts_at' => ['nullable', 'date_format:H:i'],
+            'duration_minutes' => ['nullable', 'integer', 'between:1,1440'],
+            'schedule_note' => ['nullable', 'string', 'max:255'],
+            'is_free' => ['required', 'boolean'],
+            'fee_amount' => ['nullable', 'numeric', 'min:0', 'max:10000000'],
+            'booking_url' => ['nullable', 'url:http,https', 'max:255'],
+            'booking_is_official' => ['nullable', 'boolean'],
+            'booking_note' => ['nullable', 'string', 'max:255'],
+            'app_booking_enabled' => ['nullable', 'boolean'],
+            'fee_per_person' => ['nullable', 'boolean'],
+            'max_people_per_booking' => ['nullable', 'integer', 'between:1,100'],
+            'booking_advance_days' => ['nullable', 'integer', 'between:0,365'],
+            'booking_capacity_per_day' => ['nullable', 'integer', 'between:1,100000'],
+            'booking_instructions' => ['nullable', 'string', 'max:2000'],
+            'sort_order' => ['nullable', 'integer', 'between:0,1000'],
+            'is_published' => ['nullable', 'boolean'],
+            'image' => ['nullable', 'image', 'mimes:'.UploadRules::mimesRuleFor('puja_image'), 'max:'.UploadRules::maxKbFor('puja_image')],
+            'remove_image' => ['nullable', 'boolean'],
+            // Time slots, sent whole: what is sent replaces what was there.
+            'slots' => ['nullable', 'array', 'max:48'],
+            'slots.*.id' => ['nullable', 'integer'],
+            'slots.*.starts_at' => ['required', 'date_format:H:i'],
+            'slots.*.ends_at' => ['nullable', 'date_format:H:i'],
+            'slots.*.capacity' => ['nullable', 'integer', 'between:1,100000'],
+            'slots.*.days' => ['nullable', 'array'],
+            'slots.*.days.*' => ['integer', 'between:0,6'],
+            'slots.*.is_active' => ['nullable', 'boolean'],
+        ]);
+
+        // Unset switches fall back to the model's own defaults rather than
+        // to null, which the non-null columns would refuse.
+        $data = collect($validated)->except(['image', 'remove_image', 'slots'])
+            ->reject(fn ($value, string $key): bool => $value === null && in_array($key, [
+                'booking_is_official', 'app_booking_enabled', 'fee_per_person',
+                'max_people_per_booking', 'booking_advance_days', 'sort_order', 'is_published',
+            ], true))
+            ->all();
+
+        // Paid booking in the app takes money: only once the owner and the
+        // bank details are approved.
+        $puja->fill($data);
+        if ($puja->app_booking_enabled && ! $puja->is_free && $puja->fee_amount !== null && ! (Temple::query()->find($templeId)?->canCollectPayments() ?? false)) {
+            throw ValidationException::withMessages(['app_booking_enabled' => TemplePayoutAccount::NOT_APPROVED_MESSAGE]);
+        }
+
+        $oldImage = [$puja->getOriginal('image_disk'), $puja->getOriginal('image_path')];
+
+        if ($request->hasFile('image')) {
+            $disk = config('filesystems.media');
+            $puja->image_disk = $disk;
+            $puja->image_path = $request->file('image')->store('pujas/'.$templeId, ['disk' => $disk]);
+        } elseif ($request->boolean('remove_image')) {
+            $puja->image_path = null;
+        }
+
+        $puja->fill($data)->save();
+
+        if ($request->has('slots')) {
+            $this->syncSlots($puja, (array) ($validated['slots'] ?? []));
+        }
+
+        if (filled($oldImage[1]) && $oldImage[1] !== $puja->image_path) {
+            Storage::disk($oldImage[0] ?? config('filesystems.media'))->delete($oldImage[1]);
+        }
+    }
+
+    /** @param  list<array<string, mixed>>  $rows */
+    protected function syncSlots(TemplePuja $puja, array $rows): void
+    {
+        $keep = [];
+        foreach (array_values($rows) as $i => $row) {
+            $slot = isset($row['id']) ? $puja->slots()->find($row['id']) : null;
+            $slot ??= $puja->slots()->make();
+            $slot->fill([
+                'starts_at' => $row['starts_at'],
+                'ends_at' => $row['ends_at'] ?? null,
+                'capacity' => $row['capacity'] ?? null,
+                'days' => array_values(array_map('intval', (array) ($row['days'] ?? []))),
+                'is_active' => $row['is_active'] ?? true,
+                'sort_order' => $i,
+            ])->save();
+            $keep[] = $slot->getKey();
+        }
+
+        // Bookings keep their copied times; the slot itself can go.
+        $puja->slots()->whereNotIn('id', $keep)->delete();
+        $puja->unsetRelation('slots');
+    }
+
+    /** @return array<string, mixed> */
+    protected function present(TemplePuja $puja, Request $request): array
+    {
+        return (new PujaResource($puja))->resolve($request) + [
+            'is_published' => (bool) $puja->is_published,
+            'sort_order' => (int) $puja->sort_order,
+            'raw' => [
+                'booking_is_official' => (bool) $puja->booking_is_official,
+                'app_booking_enabled' => (bool) $puja->app_booking_enabled,
+                // Every slot, switched off ones too, for the team's editor.
+                'slots' => $puja->slots->map(fn ($slot) => [
+                    'id' => $slot->getKey(),
+                    'starts_at' => $slot->startTime(),
+                    'ends_at' => $slot->endTime(),
+                    'capacity' => $slot->capacity,
+                    'days' => $slot->days ?? [],
+                    'is_active' => (bool) $slot->is_active,
+                ])->values(),
+            ],
+        ];
+    }
+}

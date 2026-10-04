@@ -6,7 +6,9 @@ use App\Enums\PhotoCategory;
 use App\Filament\Support\MediaColumn;
 use App\Models\TemplePhoto;
 use App\Support\FormState;
+use App\Support\PhotoPromotion;
 use App\Support\UploadRules;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
@@ -14,8 +16,10 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -144,13 +148,13 @@ class PhotosRelationManager extends RelationManager
                 EditAction::make(),
                 // A devotee's photo the temple does not want shown. Only for
                 // those: the temple's own uploads it simply edits or deletes.
-                \Filament\Actions\Action::make('object')
+                Action::make('object')
                     ->label('Object')
                     ->icon('heroicon-o-hand-raised')
                     ->color('warning')
                     ->visible(fn (TemplePhoto $record): bool => $record->isDevoteePhoto() && ! $record->templeObjected())
                     ->schema([
-                        \Filament\Forms\Components\Textarea::make('reason')
+                        Textarea::make('reason')
                             ->label('Why it should not be shown')
                             ->rows(2)
                             ->maxLength(255)
@@ -158,8 +162,8 @@ class PhotosRelationManager extends RelationManager
                             ->helperText('Seen by the editorial team; the photo comes down at once.'),
                     ])
                     ->action(function (TemplePhoto $record, array $data): void {
-                        \App\Support\PhotoPromotion::object($record, $data['reason']);
-                        \Filament\Notifications\Notification::make()->title('Taken down. The editors have been told why.')->success()->send();
+                        PhotoPromotion::object($record, $data['reason']);
+                        Notification::make()->title('Taken down. The editors have been told why.')->success()->send();
                     }),
                 DeleteAction::make(),
             ])

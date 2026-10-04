@@ -54,7 +54,7 @@ class MessagesRelationManager extends RelationManager
                     ->label('By')
                     ->state(fn (SupportTicketMessage $record): string => $record->authorName()),
 
-                TextColumn::make('created_at')->label('When')->dateTime('d M, H:i')->sortable(),
+                TextColumn::make('created_at')->label('When')->dateTime('d M, g:i A')->sortable(),
             ])
             ->filters([
                 Filter::make('replies_only')

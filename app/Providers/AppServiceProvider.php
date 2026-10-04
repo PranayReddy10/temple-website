@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\Controllers\MediaPreviewController;
 use App\Models\DevotionalMedia;
 use App\Models\Temple;
 use App\Models\TempleEvent;
@@ -13,13 +14,20 @@ use App\Observers\TempleEventObserver;
 use App\Observers\TempleObserver;
 use App\Observers\TemplePhotoObserver;
 use App\Observers\TemplePujaObserver;
+use App\Support\BrandName;
 use App\Support\LoginRecorder;
 use App\Support\MailSettings;
 use App\Support\MediaStorage;
 use App\Support\Pwa;
 use App\Support\TempleTheme;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\TimePicker;
+use Filament\Schemas\Schema;
 use Filament\Support\Facades\FilamentView;
+use Filament\Tables\Table;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
@@ -28,6 +36,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -39,6 +48,17 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        self::previewUploadsFromThisHost();
+        self::twelveHourClock();
+
+        // Photo and link URLs the API hands out must be https when the site
+        // is: Android refuses plain-http images, so a proxy or CDN that
+        // forwards requests over http would otherwise blank every photo in
+        // the app while the admin panel (relative URLs) looks fine.
+        if (str_starts_with((string) config('app.url'), 'https://')) {
+            URL::forceScheme('https');
+        }
+
         /*
          * Where uploads go is a setting, not only an environment variable.
          *
@@ -57,6 +77,9 @@ class AppServiceProvider extends ServiceProvider
         // panel; folded over config the same way, and as safe on a fresh
         // database.
         MailSettings::apply();
+
+        // One name everywhere: the Brand name from Settings over .env.
+        BrandName::apply();
 
         // The API-wide limit: 60 requests a minute per devotee, or per address
         // before sign-in.
@@ -132,5 +155,72 @@ class AppServiceProvider extends ServiceProvider
                 Pwa::headTags(Filament::getCurrentOrDefaultPanel()?->getId() ?? ''),
             ]),
         );
+    }
+
+    /**
+     * The admin shows times on the 12-hour clock ("5:30 PM"), as the apps
+     * and the site do. Pickers draw their own field so the browser's
+     * locale cannot turn it back to 24 hours; what is stored is unchanged.
+     */
+    protected static function twelveHourClock(): void
+    {
+        Table::configureUsing(fn (Table $table) => $table
+            ->defaultDateTimeDisplayFormat('d M Y, g:i A')
+            ->defaultTimeDisplayFormat('g:i A'));
+        Schema::configureUsing(fn (Schema $schema) => $schema
+            ->defaultDateTimeDisplayFormat('d M Y, g:i A')
+            ->defaultTimeDisplayFormat('g:i A'));
+        DateTimePicker::configureUsing(function (DateTimePicker $picker): void {
+            if ($picker instanceof DatePicker) {
+                return;
+            }
+            $picker->native(false)->displayFormat($picker instanceof TimePicker ? 'h:i A' : 'd M Y, h:i A');
+        });
+    }
+
+    /**
+     * Upload fields read saved files back through this host.
+     *
+     * Filament previews a saved file by downloading it with fetch(); from
+     * Spaces that is a cross-origin request the browser blocks without CORS
+     * on the bucket, and the field hangs at "Waiting for size". A signed,
+     * relative URL to MediaPreviewController makes it same-origin, whichever
+     * disk the file is on. The size and type are read the way Filament reads
+     * them.
+     */
+    protected static function previewUploadsFromThisHost(): void
+    {
+        FileUpload::configureUsing(function (FileUpload $upload): void {
+            // Opening a form asked the Space whether each saved file exists,
+            // and its size and type, before the page could render: a round
+            // trip per file, and a hang when the Space is slow to answer or
+            // the key is refused. The preview shows the file either way.
+            $upload->fetchFileInformation(fn (FileUpload $component): bool => $component->getDiskName() !== MediaStorage::SPACES_DISK);
+
+            $upload->getUploadedFileUsing(function (FileUpload $component, string $file, string|array|null $storedFileNames): ?array {
+                $disk = $component->getDiskName();
+                $storage = $component->getDisk();
+                $size = 0;
+                $type = null;
+
+                if ($component->shouldFetchFileInformation()) {
+                    try {
+                        $size = $storage->size($file);
+                        $type = $storage->mimeType($file);
+                    } catch (\Throwable) {
+                        return null;
+                    }
+                }
+
+                return [
+                    'name' => ($component->isMultiple() ? ($storedFileNames[$file] ?? null) : $storedFileNames) ?? basename($file),
+                    'size' => $size,
+                    'type' => $type,
+                    'url' => in_array($disk, MediaPreviewController::DISKS, true)
+                        ? URL::temporarySignedRoute('media.preview', now()->addHours(2), ['disk' => $disk, 'path' => $file], absolute: false)
+                        : $storage->url($file),
+                ];
+            });
+        });
     }
 }

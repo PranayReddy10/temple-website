@@ -3,10 +3,15 @@
 namespace App\Filament\Schemas;
 
 use App\Enums\PujaKind;
+use App\Filament\Support\PaymentsApproval;
 use App\Models\TemplePuja;
+use App\Models\TemplePujaSlot;
 use App\Support\UploadRules;
+use Carbon\Carbon;
 use Closure;
+use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -14,7 +19,9 @@ use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Str;
 
 /**
  * The puja and seva form, shared by the temple's own list and the top-level
@@ -147,7 +154,9 @@ class TemplePujaForm
                                 if ($value && ! $get('is_free') && blank($get('fee_amount'))) {
                                     $fail('To take bookings in the app, publish the fee above or mark the seva free.');
                                 }
-                            }),
+                            })
+                            // Paid booking takes money: only for an approved temple.
+                            ->rule(PaymentsApproval::rule(fn (Get $get, mixed $value): bool => (bool) $value && ! $get('is_free') && filled($get('fee_amount')))),
 
                         Toggle::make('fee_per_person')
                             ->label('Fee is per person')
@@ -178,6 +187,60 @@ class TemplePujaForm
                             ->maxValue(10000)
                             ->placeholder('No limit')
                             ->helperText('Leave blank for no limit.')
+                            ->visible(fn (Get $get): bool => (bool) $get('app_booking_enabled')),
+
+                        Repeater::make('slots')
+                            ->label('Time slots')
+                            ->relationship()
+                            ->helperText('Like show times: devotees pick a date, then a slot, and their booking shows both. Each slot takes up to its number of people a day. Leave empty for a seva with no set time. A booking that is not used on its day expires the next day.')
+                            ->schema([
+                                TimePicker::make('starts_at')->label('From')->seconds(false)->required(),
+                                TimePicker::make('ends_at')->label('To')->seconds(false)->after('starts_at'),
+                                TextInput::make('capacity')->label('People')->numeric()->minValue(1)->maxValue(100000)->placeholder('No limit'),
+                                Select::make('days')->label('Days')->multiple()->placeholder('Every day')
+                                    ->options([1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat', 0 => 'Sun']),
+                                Toggle::make('is_active')->label('Open')->default(true)->inline(false),
+                            ])
+                            ->columns(5)
+                            ->orderColumn('sort_order')
+                            ->defaultItems(0)
+                            ->addActionLabel('Add a time slot')
+                            ->itemLabel(fn (array $state): ?string => filled($state['starts_at'] ?? null)
+                                ? TemplePujaSlot::window(substr((string) $state['starts_at'], 0, 5), filled($state['ends_at'] ?? null) ? substr((string) $state['ends_at'], 0, 5) : null)
+                                    .(filled($state['capacity'] ?? null) ? ' · '.$state['capacity'].' people' : '')
+                                : null)
+                            ->collapsible()
+                            ->hintAction(
+                                Action::make('make_slots')
+                                    ->label('Make slots')
+                                    ->icon('heroicon-o-sparkles')
+                                    ->modalHeading('Make time slots')
+                                    ->modalDescription('For example 06:00 to 12:00, every 60 minutes, 15 people each, makes 6:00–7:00, 7:00–8:00 … 11:00–12:00. They are added to the list; save the seva to keep them.')
+                                    ->schema([
+                                        TimePicker::make('from')->seconds(false)->required()->default('06:00'),
+                                        TimePicker::make('to')->seconds(false)->required()->default('12:00')->after('from'),
+                                        TextInput::make('minutes')->label('Each slot (minutes)')->numeric()->minValue(5)->maxValue(720)->default(60)->required(),
+                                        TextInput::make('capacity')->label('People per slot')->numeric()->minValue(1)->placeholder('No limit'),
+                                    ])
+                                    ->action(function (array $data, Get $get, Set $set): void {
+                                        $slots = (array) ($get('slots') ?? []);
+                                        $at = Carbon::createFromFormat('H:i', substr($data['from'], 0, 5));
+                                        $end = Carbon::createFromFormat('H:i', substr($data['to'], 0, 5));
+                                        $step = max(5, (int) $data['minutes']);
+                                        for ($i = 0; $i < 48 && $at->copy()->addMinutes($step)->lte($end); $i++) {
+                                            $slots['new-'.Str::uuid()] = [
+                                                'starts_at' => $at->format('H:i'),
+                                                'ends_at' => $at->copy()->addMinutes($step)->format('H:i'),
+                                                'capacity' => filled($data['capacity'] ?? null) ? (int) $data['capacity'] : null,
+                                                'days' => [],
+                                                'is_active' => true,
+                                            ];
+                                            $at->addMinutes($step);
+                                        }
+                                        $set('slots', $slots);
+                                    }),
+                            )
+                            ->columnSpanFull()
                             ->visible(fn (Get $get): bool => (bool) $get('app_booking_enabled')),
 
                         Textarea::make('booking_instructions')

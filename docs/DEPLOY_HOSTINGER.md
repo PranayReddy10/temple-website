@@ -15,6 +15,101 @@ runs locally, so `composer install` on an 8.2 or 8.3 Hostinger plan cannot hit
 a package that secretly needs 8.4. Do not remove the pin without also raising
 the minimum PHP version documented here.
 
+**Domains.** Two sites, one domain. On Hostinger both live inside
+`domains/darshansaathi.com/public_html`:
+
+```
+domains/darshansaathi.com/public_html/
+├── laravel/            ← this whole project (app, vendor, .env, public …)
+│   └── public/         ← temple.darshansaathi.com serves only this
+├── .htaccess           ← from the web build: hides /laravel from darshansaathi.com
+├── index.html, main.dart.js, assets/ …   ← darshansaathi.com (Flutter web build)
+```
+
+| Address | Document root |
+|---|---|
+| `temple.darshansaathi.com` — admin (`/admin`), temple portal (`/temple`), API (`/api/v1`), QR pages | `public_html/laravel/public` |
+| `darshansaathi.com` — the devotees' website | `public_html` |
+
+1. Upload the project into `public_html/laravel` (with its hidden files:
+   `.env`, `.htaccess`).
+2. hPanel → *Domains → Subdomains*: create `temple`, tick **Custom folder
+   for subdomain**, and enter `laravel/public`.
+3. hPanel → *Security → SSL*: install for both addresses.
+4. Build the website (`cd temple-app && flutter build web --release`) and
+   upload the contents of `build/web/` into `public_html`, **including
+   `.htaccess`**, and without deleting `laravel/`.
+
+Two `.htaccess` files keep the project private: `laravel/.htaccess` denies
+everything, and the web build's `.htaccess` returns 404 for `/laravel` on
+darshansaathi.com. `laravel/public/.htaccess` grants access again for the one
+folder that is meant to be served. Check afterwards that
+`https://darshansaathi.com/laravel/.env` answers 403 or 404.
+
+**Search engines.** The Flutter site is a blank page to them, so the temple
+directory (`/temples`), each temple (`/temples/{slug}`), each state
+(`/states/{slug}`), each deity (`/deities/{slug}`) and the sitemap
+(`/sitemap.xml`, with each temple's cover photo) are rendered by Laravel.
+The web build's `.htaccess` hands exactly those paths, `/storage` for their
+photos and `google*.html` for Search Console, to `laravel/public/index.php`,
+so they answer on darshansaathi.com. The same pages on
+temple.darshansaathi.com carry `noindex` and a canonical link to the
+website's copy.
+
+**Policy pages.** Privacy policy, terms and conditions, refund and
+cancellation, shipping and delivery, account deletion, about, contact,
+community guidelines and disclaimer are created by `php artisan migrate`
+with default text, and edited in Admin → **Website → Pages** (super admins).
+They answer at `darshansaathi.com/{address}`: the web build's `.htaccess`
+sends any one-word address that is not a file to Laravel. Fill in
+Admin → Website → **Business details** (business name, address, Grievance
+Officer, city for disputes): the pages show them wherever they say
+`{business}`, `{address}`, `{grievance_officer}` or `{courts}`; `{email}` is
+the support email under Administration → Settings. Have the text checked by
+a lawyer before relying on it. Addresses to give elsewhere:
+
+| Where | Address |
+|---|---|
+| Play Console → App content → Privacy policy; App Store Connect | `https://darshansaathi.com/privacy-policy` |
+| Play Console → Data safety → Delete account URL | `https://darshansaathi.com/account-deletion` |
+| Razorpay / Cashfree / PhonePe website check | `/terms-and-conditions`, `/refund-and-cancellation`, `/shipping-and-delivery`, `/contact-us`, `/privacy-policy` |
+
+A deletion request sent from the website's form arrives as a support ticket
+(Account or sign-in). Confirm it with the account's owner, then open the
+devotee in Admin → Devotees and use **Delete account**. In the app,
+Profile → Delete account deletes straight away.
+
+**Google Search Console.** Add a *Domain* property for `darshansaathi.com`
+and verify it with the TXT record Google gives (hPanel → *Domains → DNS /
+Nameservers → Add record*, type TXT, name `@`). This covers both addresses.
+Alternatively add a *URL prefix* property for `https://darshansaathi.com/`,
+choose **HTML file**, and paste only the file's name
+(`google…….html`) into Admin → App → **Analytics & SEO**; the site then
+serves it. Then *Sitemaps* → submit `sitemap.xml`. Bing Webmaster Tools can
+import the site straight from Search Console.
+
+**Google Analytics.** In the Firebase project used for push (Admin → App →
+Push setup), open *Project settings → Integrations → Google Analytics* and
+link it. Add a **Web** app to the project and copy its `apiKey`, `appId` and
+`measurementId` into Admin → App → **Analytics & SEO**, then switch on
+*Collect usage analytics*. The Android and iOS apps report with the Push
+setup ids; the web app and these temple pages report to the web stream.
+Screens, temple views, searches, sign-ins, bookings and payments are
+recorded; no names, emails or phone numbers. Mention analytics in the
+privacy policy and in Play Console's *Data safety* form.
+
+**Android package / iOS bundle id: `com.darshansaathi.templevisit`.** The
+Play Store id cannot change after the first upload, so register this one in
+every service before publishing: Firebase (Android app + iOS app with this
+id; put the new app ids under Push setup, and the bundle id in *iOS bundle
+id*), Google Sign-In (an Android OAuth client with this package and the
+Play app-signing SHA-1), Sign in with Apple (the new bundle id under
+Sign-In), and the payment gateways' app whitelisting (Cashfree, PhonePe,
+Razorpay).
+
+The web build calls the API on `temple.darshansaathi.com`; Laravel's
+default CORS settings already allow that for `/api/*`.
+
 ---
 
 ## 1. Create the database
@@ -25,17 +120,18 @@ names look like `u123456789_temple` and `u123456789_admin`. Copy them exactly.
 
 ## 2. Get the code onto the server
 
-SSH in (hPanel → *Advanced → SSH Access*) and clone into a folder **beside**
-`public_html`, not inside it:
+SSH in (hPanel → *Advanced → SSH Access*) and clone into
+`public_html/laravel` (see **Domains** above):
 
 ```bash
-cd ~
-git clone https://github.com/PranayReddy10/temple-website.git app
-cd app
+cd ~/domains/darshansaathi.com/public_html
+git clone https://github.com/PranayReddy10/temple-website.git laravel
+cd laravel
 ```
 
-Keeping the application outside the web root means `.env`, `storage/` and
-`vendor/` are not reachable over HTTP. This matters: `.env` holds the database
+Only `laravel/public` is served (through temple.darshansaathi.com);
+`.env`, `storage/` and `vendor/` stay unreachable because of the two
+`.htaccess` files described above. This matters: `.env` holds the database
 password and the app key.
 
 ## 3. Install dependencies
@@ -63,7 +159,7 @@ Then edit `.env`:
 ```dotenv
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://your-temp-domain.example
+APP_URL=https://temple.darshansaathi.com
 
 DB_CONNECTION=mysql
 DB_HOST=localhost
@@ -71,7 +167,7 @@ DB_DATABASE=u123456789_temple
 DB_USERNAME=u123456789_admin
 DB_PASSWORD=the-password-you-set
 
-BRAND_NAME="Temple Passport"
+BRAND_NAME="Darshan Saathi"
 
 # Set this if the domain is proxied through Cloudflare, otherwise Laravel
 # builds http:// URLs on an https:// site.
@@ -88,19 +184,12 @@ prints environment variables, including the database password, to the visitor.
 
 Laravel serves from `public/`, and only `public/` may be web-reachable.
 
-**Preferred:** in hPanel → *Domains*, set the domain's document root to
-`app/public`.
+In hPanel → *Domains → Subdomains*, `temple.darshansaathi.com` uses the
+custom folder `laravel/public` (inside `public_html`). Leave
+`darshansaathi.com` on `public_html` for the devotees' website.
 
-**If your plan will not let you change the document root**, replace
-`public_html` with a symlink:
-
-```bash
-mv ~/public_html ~/public_html_backup
-ln -s ~/app/public ~/public_html
-```
-
-Do not copy the contents of `public/` into `public_html` and leave the app
-inside it — that publishes `.env` to the internet.
+Do not copy the contents of `public/` into `public_html` itself — the
+subdomain must point at `laravel/public`, never at the project folder.
 
 ## 6. Migrate and seed
 
@@ -217,14 +306,9 @@ devotee. When volume grows, move `TemplePhotoProcessor` into a queued job.
 
 ## 7b. Home-screen icons
 
-Nothing to do: the icons and `favicon.ico` are committed. If the brand colours
-in `config/brand.php` change, redraw them with
-
-```bash
-php artisan app:icons
-```
-
-and commit the result. Both panels are installable from **My profile → Use this
+Nothing to do: the icons, `favicon.ico` and `public/brand` are committed. They
+are drawn from the logo's source in the app repository (`tool/brand/`, see its
+README), not on the server. Both panels are installable from **My profile → Use this
 on your phone**; the service worker needs https, which a Hostinger domain has,
 and simply does not register without it.
 
@@ -260,7 +344,7 @@ chmod -R 775 storage bootstrap/cache
 ## Deploying an update
 
 ```bash
-cd ~/app
+cd ~/domains/darshansaathi.com/public_html/laravel
 php artisan down
 git pull origin main
 composer install --no-dev --optimize-autoloader
@@ -296,7 +380,7 @@ Shared plans run cron from hPanel → *Advanced → Cron Jobs*. Add one entry,
 every minute, and Laravel handles the rest of the scheduling itself:
 
 ```
-* * * * * cd ~/app && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd ~/domains/darshansaathi.com/public_html/laravel && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 Not needed for slice 1. It becomes necessary for stale-data flagging and
@@ -346,3 +430,13 @@ Note that none of these is about storage any more.
 
 Because the Flutter app only ever talks to `/api/v1`, that move is a hosting
 change, not an app release.
+
+## Search Console tag and code for every page
+
+`darshansaathi.com/` is served by Laravel from the web build's own
+`public_html/index.html` (the web build's `.htaccess` sends `/` here), so the
+Google/Bing verification tags and anything pasted under **Admin → Website →
+Analytics & SEO → Code for every page** reach the home page as well as the
+temple pages. If the build is somewhere else, set `WEB_APP_INDEX` in `.env`
+to the full path of its `index.html`. Upload the web build with its
+`.htaccess` for this to take effect.

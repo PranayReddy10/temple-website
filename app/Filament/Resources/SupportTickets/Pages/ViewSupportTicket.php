@@ -4,8 +4,18 @@ namespace App\Filament\Resources\SupportTickets\Pages;
 
 use App\Enums\TicketPriority;
 use App\Enums\TicketStatus;
+use App\Filament\Resources\Devotees\DevoteeResource;
+use App\Filament\Resources\SevaDrives\SevaDriveResource;
 use App\Filament\Resources\SupportTickets\SupportTicketResource;
+use App\Filament\Resources\TempleEvents\TempleEventResource;
+use App\Filament\Resources\TemplePujas\TemplePujaResource;
+use App\Filament\Resources\Temples\TempleResource;
+use App\Models\Devotee;
+use App\Models\SevaDrive;
 use App\Models\SupportTicket;
+use App\Models\Temple;
+use App\Models\TempleEvent;
+use App\Models\TemplePuja;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
@@ -181,7 +191,7 @@ class ViewSupportTicket extends ViewRecord
                         ->extraAttributes(['class' => 'break-all'])
                         ->columnSpan(2),
 
-                    TextEntry::make('created_at')->label('Received')->dateTime('d M Y, H:i'),
+                    TextEntry::make('created_at')->label('Received')->dateTime('d M Y, g:i A'),
 
                     /*
                      * What it is about, and a way to open it.
@@ -196,8 +206,6 @@ class ViewSupportTicket extends ViewRecord
                         ->color(fn (SupportTicket $record): ?string => self::subjectUrl($record) ? 'primary' : null)
                         ->columnSpan(2),
 
-
-
                     TextEntry::make('source')
                         ->label('Came from')
                         ->state(fn (SupportTicket $record): string => collect([
@@ -210,7 +218,7 @@ class ViewSupportTicket extends ViewRecord
                 ->schema([
                     TextEntry::make('resolution_note')->hiddenLabel()->prose(),
                     TextEntry::make('resolver.name')->label('Resolved by')->placeholder('—'),
-                    TextEntry::make('resolved_at')->label('When')->dateTime('d M Y, H:i'),
+                    TextEntry::make('resolved_at')->label('When')->dateTime('d M Y, g:i A'),
                 ])
                 ->columns(2),
         ]);
@@ -226,11 +234,11 @@ class ViewSupportTicket extends ViewRecord
         }
 
         return match ($subject::class) {
-            \App\Models\Temple::class => \App\Filament\Resources\Temples\TempleResource::getUrl('edit', ['record' => $subject]),
-            \App\Models\TempleEvent::class => \App\Filament\Resources\TempleEvents\TempleEventResource::getUrl('edit', ['record' => $subject]),
-            \App\Models\Devotee::class => \App\Filament\Resources\Devotees\DevoteeResource::getUrl('view', ['record' => $subject]),
-            \App\Models\TemplePuja::class => \App\Filament\Resources\TemplePujas\TemplePujaResource::getUrl('edit', ['record' => $subject]),
-            \App\Models\SevaDrive::class => \App\Filament\Resources\SevaDrives\SevaDriveResource::getUrl('view', ['record' => $subject]),
+            Temple::class => TempleResource::getUrl('edit', ['record' => $subject]),
+            TempleEvent::class => TempleEventResource::getUrl('edit', ['record' => $subject]),
+            Devotee::class => DevoteeResource::getUrl('view', ['record' => $subject]),
+            TemplePuja::class => TemplePujaResource::getUrl('edit', ['record' => $subject]),
+            SevaDrive::class => SevaDriveResource::getUrl('view', ['record' => $subject]),
             default => null,
         };
     }

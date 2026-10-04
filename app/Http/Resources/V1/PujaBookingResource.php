@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Enums\BookingStatus;
+use App\Models\PujaBooking;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -9,7 +11,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * A seva booking as the devotee who made it sees it: what, where, when, for
  * whom, what it cost, and the code the counter scans.
  *
- * @mixin \App\Models\PujaBooking
+ * @mixin PujaBooking
  */
 class PujaBookingResource extends JsonResource
 {
@@ -19,10 +21,13 @@ class PujaBookingResource extends JsonResource
         $temple = $this->whenLoaded('temple', fn () => $this->temple);
 
         return [
+            'kind' => 'seva',
             // The reference is the public id; the row id never leaves.
             'reference' => $this->reference,
-            'code' => $this->code,
-            'qr_url' => $this->qrUrl(),
+            // The counter code only once the booking holds: a booking still
+            // waiting on its money must not look like a ticket.
+            'code' => $this->isLive() ? $this->code : null,
+            'qr_url' => $this->isLive() ? $this->qrUrl() : null,
             'status' => [
                 'value' => $this->status->value,
                 'label' => $this->status->getLabel(),
@@ -33,6 +38,10 @@ class PujaBookingResource extends JsonResource
                 'slug' => $this->temple->slug,
                 'name' => $this->temple->name,
                 'city' => $this->temple->city,
+                'cover' => $this->temple->coverUrls(),
+                // For "Directions" on the booking.
+                'latitude' => $this->temple->latitude !== null ? (float) $this->temple->latitude : null,
+                'longitude' => $this->temple->longitude !== null ? (float) $this->temple->longitude : null,
             ],
             'puja' => $this->puja === null ? null : [
                 'id' => $this->puja->getKey(),
@@ -43,9 +52,16 @@ class PujaBookingResource extends JsonResource
                 'instructions' => $this->puja->booking_instructions,
             ],
             'booked_for' => $this->booked_for?->toDateString(),
+            // The time slot, like a show time; null for a seva without slots.
+            'slot' => $this->slot_starts_at ? [
+                'starts_at' => substr((string) $this->slot_starts_at, 0, 5),
+                'ends_at' => $this->slot_ends_at ? substr((string) $this->slot_ends_at, 0, 5) : null,
+                'label' => $this->slotLabel(),
+            ] : null,
+            'expired_at' => $this->expired_at?->toIso8601String(),
             'people' => $this->people,
             'devotee_name' => $this->devotee_name,
-            'devotee_phone' => $this->devotee_phone,
+            'devotee_phone' => $this->phoneFor($request),
             'gotram' => $this->gotram,
             'nakshatram' => $this->nakshatram,
             'note' => $this->note,
@@ -63,7 +79,23 @@ class PujaBookingResource extends JsonResource
             'cancelled_at' => $this->cancelled_at?->toIso8601String(),
             'cancel_reason' => $this->cancel_reason,
             'can_cancel' => $this->canBeCancelledByDevotee(),
+            // Awaiting payment and not yet past: the app offers "Pay now".
+            'can_pay' => $this->canBePaidFor(),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * The temple's team sees the number only while the devotee is still to
+     * come: once received, or if the booking fell through, there is no call
+     * to make. The devotee always sees their own.
+     */
+    protected function phoneFor(Request $request): ?string
+    {
+        if ($request->user('trust') !== null && $this->status !== BookingStatus::Confirmed) {
+            return null;
+        }
+
+        return $this->devotee_phone;
     }
 }

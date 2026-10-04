@@ -6,6 +6,7 @@ use App\Enums\EventStatus;
 use App\Enums\EventType;
 use App\Filament\Resources\TempleEvents\Pages\EditTempleEvent;
 use App\Filament\Resources\TempleEvents\Pages\ListTempleEvents;
+use App\Filament\Schemas\EventGatheringFields;
 use App\Filament\Support\MediaColumn;
 use App\Models\TempleEvent;
 use BackedEnum;
@@ -77,7 +78,11 @@ class TempleEventResource extends Resource
                             ->label('To')
                             ->afterOrEqual('starts_on')
                             ->helperText('Leave blank for a single day.'),
+
+                        EventGatheringFields::recurrence(),
                     ]),
+
+                EventGatheringFields::section(),
 
                 Section::make('Review')
                     ->columns(2)

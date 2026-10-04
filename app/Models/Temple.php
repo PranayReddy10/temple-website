@@ -3,10 +3,10 @@
 namespace App\Models;
 
 use App\Enums\TempleStatus;
+use App\Enums\VerificationStatus;
 use App\Models\Concerns\HasMantra;
 use App\Models\Concerns\HasTranslations;
 use Carbon\CarbonInterface;
-use App\Enums\VerificationStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 
 class Temple extends Model
 {
@@ -43,6 +44,20 @@ class Temple extends Model
         'photography_policy',
     ];
 
+    /**
+     * What a temple's own team may change on its listing: the temple
+     * portal's form (MyTempleForm) and the trust app. Identity, taxonomy and
+     * trust level stay with the editors.
+     */
+    public const TEAM_EDITABLE = [
+        'short_description', 'address', 'city', 'state_id', 'district_id', 'pincode', 'latitude', 'longitude',
+        'official_website', 'contact_phone', 'contact_email',
+        'dress_code', 'photography_policy', 'mobile_policy', 'footwear_policy',
+        'entry_rules', 'queue_information',
+        // The online hundi: the trust app lets only the owner change it.
+        'accepts_donations',
+    ];
+
     protected $fillable = [
         'name', 'slug', 'deity_id',
         'state_id', 'district_id', 'city', 'address', 'pincode', 'latitude', 'longitude',
@@ -51,16 +66,21 @@ class Temple extends Model
         'architecture_style', 'built_period',
         'dress_code', 'photography_policy', 'mobile_policy', 'footwear_policy',
         'entry_rules', 'queue_information',
-        'official_website', 'contact_phone', 'contact_email',
+        'official_website', 'google_maps_url', 'contact_phone', 'contact_email',
         'verification_status', 'source_name', 'source_url', 'last_verified_at',
-        'status', 'is_featured', 'published_at', 'created_by', 'updated_by',
+        'status', 'is_featured', 'accepts_donations', 'published_at', 'created_by', 'updated_by',
     ];
 
     protected function casts(): array
     {
         return [
+            'official_import' => 'array',
+            'official_site_pages' => 'array',
+            'official_import_at' => 'datetime',
+            'official_import_reviewed_at' => 'datetime',
             'status' => TempleStatus::class,
             'is_featured' => 'boolean',
+            'accepts_donations' => 'boolean',
             'verification_status' => VerificationStatus::class,
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
@@ -104,9 +124,41 @@ class Temple extends Model
         return $this->hasMany(TemplePhoto::class)->orderBy('sort_order')->orderBy('id');
     }
 
+    /**
+     * The cover: the lead photo, or, when none is marked as lead (or the lead
+     * one is hidden), the first published photo, so a temple with photos
+     * never shows up without one. Only published photos, since this is what
+     * devotees see. Eager loading keeps the first row per temple, which the
+     * ordering makes the lead one.
+     */
     public function primaryPhoto(): HasOne
     {
-        return $this->hasOne(TemplePhoto::class)->where('is_primary', true);
+        return $this->hasOne(TemplePhoto::class)
+            ->where('is_published', true)
+            ->orderByDesc('is_primary')
+            ->orderBy('sort_order')
+            ->orderBy('id');
+    }
+
+    /**
+     * The cover's sizes for a temple nested in another answer (a booking, a
+     * visit, a review, a yatra stop), so every screen that names the temple
+     * can show it. Null unless primaryPhoto was loaded, so it never costs a
+     * query per row.
+     *
+     * @return array{thumbnail: ?string, medium: ?string, original: ?string}|null
+     */
+    public function coverUrls(): ?array
+    {
+        if (! $this->relationLoaded('primaryPhoto') || $this->primaryPhoto === null) {
+            return null;
+        }
+
+        return [
+            'thumbnail' => $this->primaryPhoto->thumbnailUrl(),
+            'medium' => $this->primaryPhoto->mediumUrl(),
+            'original' => $this->primaryPhoto->url(),
+        ];
     }
 
     public function timings(): HasMany
@@ -133,6 +185,39 @@ class Temple extends Model
     public function pujaBookings(): HasMany
     {
         return $this->hasMany(PujaBooking::class);
+    }
+
+    /** Where the platform pays this temple what devotees paid for its sevas. */
+    public function payoutAccount(): HasOne
+    {
+        return $this->hasOne(TemplePayoutAccount::class);
+    }
+
+    /**
+     * Devotees may pay this temple in the app: its bank details and the
+     * owner's documents are approved by staff. Free sevas and free events
+     * never need this.
+     */
+    public function canCollectPayments(): bool
+    {
+        return $this->payoutAccount?->canReceiveMoney() ?? false;
+    }
+
+    public function settlements(): HasMany
+    {
+        return $this->hasMany(TempleSettlement::class);
+    }
+
+    /** Places at its events: "I'll join" and tickets. */
+    public function eventRegistrations(): HasMany
+    {
+        return $this->hasMany(EventRegistration::class);
+    }
+
+    /** Online hundi: money devotees gave through the app. */
+    public function donations(): HasMany
+    {
+        return $this->hasMany(TempleDonation::class);
     }
 
     // --- What devotees add ---
@@ -330,7 +415,7 @@ class Temple extends Model
     /**
      * What to play here: this temple's media first, then its deity's.
      *
-     * @return \Illuminate\Support\Collection<int, DevotionalMedia>
+     * @return Collection<int, DevotionalMedia>
      */
     public function allMedia(bool $publishedOnly = true)
     {

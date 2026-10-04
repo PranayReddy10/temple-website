@@ -24,7 +24,7 @@ class ManagePayments extends SettingsPage
 
     protected static string|\UnitEnum|null $navigationGroup = 'Monetisation';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 3;
 
     protected static ?string $title = 'Payment gateways';
 
@@ -34,6 +34,7 @@ class ManagePayments extends SettingsPage
     {
         return [
             'payments_enabled' => ['boolean', false],
+            'temple_payments_enabled' => ['boolean', true],
             'payments_android' => ['boolean', true],
             'payments_ios' => ['boolean', false],
             'payments_default_gateway' => ['string', 'razorpay'],
@@ -59,6 +60,9 @@ class ManagePayments extends SettingsPage
             'payments_payu_env' => ['string', 'test'],
             'payments_payu_key' => ['string', null],
             'payments_payu_salt' => ['secret', null],
+
+            'finance_platform_fee_percent' => ['string', '0'],
+            'finance_donation_fee_percent' => ['string', '0'],
         ];
     }
 
@@ -71,6 +75,8 @@ class ManagePayments extends SettingsPage
                 ->icon('heroicon-o-credit-card')
                 ->schema([
                     Toggle::make('payments_enabled')->label('Sell subscriptions in the app'),
+                    Toggle::make('temple_payments_enabled')->label('Take seva, ticket and hundi payments in the app')
+                        ->helperText('Paid sevas, event tickets and the online hundi, for temples whose payout details are approved. Independent of subscriptions; needs an enabled gateway. Turn off to pause every temple at once.'),
                     Toggle::make('payments_android')->label('Offer on Android')
                         ->helperText('Google Play requires Play Billing for digital goods such as ad removal. In India, Play\'s user-choice billing allows another gateway alongside it once you enrol; check your Play Console before going live.'),
                     Toggle::make('payments_ios')->label('Offer on iPhone and iPad')
@@ -78,6 +84,26 @@ class ManagePayments extends SettingsPage
                     Select::make('payments_default_gateway')->label('Default gateway')->native(false)->options([
                         'razorpay' => 'Razorpay', 'phonepe' => 'PhonePe', 'cashfree' => 'Cashfree', 'payu' => 'PayU',
                     ])->helperText('The one used when the devotee does not choose. Only enabled gateways are offered.'),
+                ]),
+
+            Section::make('Temple settlements')
+                ->icon('heroicon-o-building-library')
+                ->description('Devotees pay the platform for sevas booked in the app; the platform settles with each temple under Finance → Temple balances.')
+                ->schema([
+                    TextInput::make('finance_platform_fee_percent')
+                        ->label('Platform fee on seva bookings and event tickets (%)')
+                        ->numeric()
+                        ->minValue(0)
+                        ->maxValue(100)
+                        ->step(0.01)
+                        ->helperText('Kept from each settlement, for example 2 to cover gateway charges. A temple can have its own rate under Temple balances → Payout details & fee. Applies to settlements prepared from now on.'),
+                    TextInput::make('finance_donation_fee_percent')
+                        ->label('Platform fee on online hundi gifts (%)')
+                        ->numeric()
+                        ->minValue(0)
+                        ->maxValue(100)
+                        ->step(0.01)
+                        ->helperText('Usually 0, or just the gateway\'s charge. Applies to settlements prepared from now on.'),
                 ]),
 
             Section::make('Razorpay')

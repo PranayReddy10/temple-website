@@ -7,6 +7,7 @@ use App\Enums\TempleStatus;
 use App\Models\AppNotification;
 use App\Models\TempleEvent;
 use App\Models\TempleFollow;
+use App\Support\Clock;
 use App\Support\DevotionalClock;
 
 /**
@@ -77,7 +78,7 @@ final class EventReminders
     {
         $when = $event->is_all_day || blank($event->starts_at)
             ? 'Tomorrow'
-            : 'Tomorrow at '.substr((string) $event->starts_at, 0, 5);
+            : 'Tomorrow at '.Clock::twelve((string) $event->starts_at);
         $kind = match ($event->type) {
             EventType::Festival => 'Festival',
             default => $event->type?->getLabel() ?? 'Event',
