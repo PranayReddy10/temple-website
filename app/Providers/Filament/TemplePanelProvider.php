@@ -3,22 +3,23 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Profile;
+use App\Filament\Temple\Pages\Dashboard;
 use App\Support\InitialsAvatarProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages\Dashboard;
 use Filament\Panel;
-use Filament\View\PanelsRenderHook;
-use Illuminate\Contracts\View\View;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
+use Illuminate\Contracts\View\View;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 /**
@@ -51,7 +52,7 @@ class TemplePanelProvider extends PanelProvider
             ->brandName(fn (): string => setting('brand_name', 'brand.name').' — Temple Portal')
             // The mark beside the name (public/brand, drawn by the app repo's
             // tool/brand/render.js). Root-relative, like the favicon below.
-            ->brandLogo(fn () => new \Illuminate\Support\HtmlString(
+            ->brandLogo(fn () => new HtmlString(
                 '<span style="display:inline-flex;align-items:center;gap:.55rem;font-weight:700">'
                 .'<img src="/brand/logo-mark.svg" alt="" style="height:2.1rem;width:2.1rem">'
                 .'<span>'.e(setting('brand_name', 'brand.name').' — Temple Portal').'</span></span>'
@@ -68,6 +69,7 @@ class TemplePanelProvider extends PanelProvider
                 'info' => Color::Sky,
                 'gray' => Color::Stone,
             ])
+            ->navigationGroups(['Temple', 'Counter', 'Money', 'Help'])
             ->discoverResources(in: app_path('Filament/Temple/Resources'), for: 'App\Filament\Temple\Resources')
             ->discoverPages(in: app_path('Filament/Temple/Pages'), for: 'App\Filament\Temple\Pages')
             // The running version, in the sidebar and under the sign-in form.

@@ -3,9 +3,12 @@
 namespace App\Observers;
 
 use App\Enums\EventStatus;
+use App\Models\Temple;
 use App\Models\TempleEvent;
+use App\Models\TemplePayoutAccount;
 use App\Support\ActingStaff;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Decides what a temple may publish without review.
@@ -28,8 +31,29 @@ class TempleEventObserver
 
     public function saving(TempleEvent $event): void
     {
+        $this->guardMoney($event);
         $this->applyModeration($event);
         $this->stampPublishedAt($event);
+    }
+
+    /**
+     * Paid tickets take money only once the temple's owner and bank are
+     * approved (for a temple team), and a price is set before tickets are
+     * sold, never changed under them (for anyone).
+     */
+    protected function guardMoney(TempleEvent $event): void
+    {
+        if (ActingStaff::user()?->isTempleAdmin()
+            && $event->isDirty(['registration_enabled', 'ticket_price_paise'])
+            && $event->registration_enabled && (int) $event->ticket_price_paise > 0
+            && ! (Temple::query()->find($event->temple_id)?->canCollectPayments() ?? false)) {
+            throw ValidationException::withMessages(['ticket_price_paise' => TemplePayoutAccount::NOT_APPROVED_MESSAGE]);
+        }
+
+        if ($event->exists && $event->isDirty('ticket_price_paise')
+            && $event->registrations()->where('amount_paise', '>', 0)->whereIn('status', ['pending_payment', 'confirmed', 'verified'])->exists()) {
+            throw ValidationException::withMessages(['ticket_price_paise' => 'Tickets are already sold at the current price. Create a new event for a new price.']);
+        }
     }
 
     public function deleted(TempleEvent $event): void

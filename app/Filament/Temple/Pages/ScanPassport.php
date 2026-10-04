@@ -23,6 +23,8 @@ class ScanPassport extends Page
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-qr-code';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Counter';
+
     protected static ?string $title = 'Scan a devotee passport';
 
     protected static ?string $navigationLabel = 'Scan passport';

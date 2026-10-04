@@ -25,6 +25,8 @@ class BookingResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-ticket';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Counter';
+
     protected static ?string $navigationLabel = 'Seva bookings';
 
     protected static ?string $modelLabel = 'booking';
