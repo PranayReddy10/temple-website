@@ -11,6 +11,7 @@ use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ViewField;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -63,17 +64,16 @@ class TranslationsRelationManager extends RelationManager
                 // The English alongside, because translating from memory of
                 // what the field said is how a dress code ends up describing
                 // the wrong temple.
-                Textarea::make('english')
-                    ->label('English (for reference)')
-                    ->rows(3)
-                    ->disabled()
+                ViewField::make('english')
+                    ->view('filament.forms.reference-text')
+                    // Read from the chosen field each time the form redraws,
+                    // so it follows the Field picker (and loads when editing).
+                    ->viewData(fn (Get $get): array => [
+                        'text' => $this->baseValue($get('field')),
+                        'picked' => filled($get('field')),
+                    ])
                     ->dehydrated(false)
-                    ->columnSpanFull()
-                    ->placeholder('Pick a field to see the English text.')
-                    ->afterStateHydrated(fn ($component, Get $get) => $component->state(
-                        $this->baseValue($get('field')),
-                    ))
-                    ->formatStateUsing(fn ($state, Get $get) => $this->baseValue($get('field'))),
+                    ->columnSpanFull(),
 
                 Textarea::make('value')
                     ->label('Translation')
