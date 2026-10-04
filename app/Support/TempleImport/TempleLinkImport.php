@@ -81,9 +81,8 @@ final class TempleLinkImport
             'status' => TempleStatus::Draft,
             'latitude' => $maps['latitude'] ?? null,
             'longitude' => $maps['longitude'] ?? null,
-            'google_maps_url' => $mapsUrl ? mb_substr($mapsUrl, 0, 2048) : null,
-            'official_website' => $website ? OfficialSiteReader::normaliseUrl($website) : null,
-            'source_name' => $website ? 'Official website' : 'Google Maps link',
+            'official_website' => $website ? mb_substr((string) OfficialSiteReader::normaliseUrl($website), 0, 255) ?: null : null,
+            'source_name' => $website ? 'Official website' : 'Map location',
         ]);
 
         $found = OfficialSiteImport::read($temple, $website, null, $mapsUrl);
@@ -95,12 +94,9 @@ final class TempleLinkImport
         ];
     }
 
-    /** A temple already listed at that place, or from the same link. */
+    /** A temple already listed at that place, or with the same website. */
     public static function existing(?array $maps, ?string $website, string $name): ?Temple
     {
-        if (filled($maps['url'] ?? null) && ($t = Temple::where('google_maps_url', $maps['url'])->first())) {
-            return $t;
-        }
         if (filled($website) && ($url = OfficialSiteReader::normaliseUrl($website))) {
             $host = preg_replace('/^www\./', '', (string) parse_url($url, PHP_URL_HOST));
             $t = Temple::where('official_website', 'like', '%'.$host.'%')->get()

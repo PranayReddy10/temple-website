@@ -337,13 +337,6 @@ class TempleForm
                     ->maxLength(255)
                     ->prefixIcon('heroicon-o-globe-alt'),
 
-                TextInput::make('google_maps_url')
-                    ->label('Google Maps link')
-                    ->url()
-                    ->maxLength(2048)
-                    ->prefixIcon('heroicon-o-map-pin')
-                    ->helperText('Used by "Import from Maps & website" for the pin, address and nearby photos.'),
-
                 TextInput::make('contact_phone')
                     ->label('Phone')
                     ->tel()

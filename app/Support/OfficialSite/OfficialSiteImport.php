@@ -28,7 +28,6 @@ final class OfficialSiteImport
     public static function read(Temple $temple, ?string $url = null, ?array $extraPages = null, ?string $mapsUrl = null): array
     {
         $url = filled($url) ? $url : $temple->official_website;
-        $mapsUrl = filled($mapsUrl) ? $mapsUrl : $temple->google_maps_url;
         if ($extraPages !== null) {
             $extraPages = array_values(array_unique(array_filter(array_map(
                 fn ($u) => OfficialSiteReader::normaliseUrl((string) $u), $extraPages))));
@@ -43,7 +42,9 @@ final class OfficialSiteImport
         }
         if (filled($mapsUrl)) {
             $maps = MapsLink::read((string) $mapsUrl);
-            isset($maps['error']) ? $problems[] = $maps['error'] : $found['maps'] = $maps;
+            // Only what the link says is kept: the name and the pin. The
+            // link itself is not stored; it can run to a thousand characters.
+            isset($maps['error']) ? $problems[] = $maps['error'] : $found['maps'] = array_diff_key($maps, ['url' => true]);
         }
         if ($found === []) {
             return ['error' => $problems !== [] ? implode(' ', $problems) : 'Give the temple\'s Google Maps link or its website.'];
@@ -63,7 +64,6 @@ final class OfficialSiteImport
         if ($problems !== []) {
             $found['warning'] = trim(($found['warning'] ?? '').' '.implode(' ', $problems));
         }
-        $found['source_url'] ??= $found['maps']['url'] ?? null;
         $found['read_at'] ??= now()->toIso8601String();
         $found = array_filter($found, fn ($v) => $v !== null && $v !== []);
 
@@ -73,10 +73,7 @@ final class OfficialSiteImport
             'official_import_reviewed_at' => null,
         ]);
         if (blank($temple->official_website) && filled($url) && ! isset($site['error'])) {
-            $temple->official_website = $site['source_url'] ?? $url;
-        }
-        if (filled($mapsUrl) && isset($found['maps'])) {
-            $temple->google_maps_url = mb_substr((string) $mapsUrl, 0, 2048);
+            $temple->official_website = mb_substr((string) ($site['source_url'] ?? $url), 0, 255);
         }
         $temple->saveQuietly();
 
@@ -173,9 +170,10 @@ final class OfficialSiteImport
                 $done[] = count($fields).' '.(count($fields) === 1 ? 'detail' : 'details');
             }
             // The source of what was taken, so the listing says where it is from.
+            $fromSite = filled($found['source_url'] ?? null);
             $temple->forceFill([
-                'source_name' => $temple->source_name ?: 'Official website',
-                'source_url' => $found['source_url'] ?? $temple->source_url,
+                'source_name' => $temple->source_name ?: ($fromSite ? 'Official website' : 'Map location'),
+                'source_url' => $fromSite && blank($temple->source_url) ? mb_substr($found['source_url'], 0, 255) : $temple->source_url,
                 'official_import_reviewed_at' => now(),
                 'last_verified_at' => $fields !== [] ? now() : $temple->last_verified_at,
             ])->save();

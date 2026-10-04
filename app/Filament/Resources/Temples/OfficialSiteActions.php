@@ -42,7 +42,6 @@ final class OfficialSiteActions
             ->modalHeading('Import details')
             ->modalDescription('From the Google Maps link: the exact pin, and the address, PIN code, district and state the map has there. From the website: phone, email, timings and sevas. Nothing on the listing changes until you review it.')
             ->fillForm(fn (Temple $record): array => [
-                'maps' => $record->google_maps_url,
                 'url' => $record->official_website,
                 'pages' => implode("\n", $record->official_site_pages ?? []),
             ])
@@ -85,9 +84,8 @@ final class OfficialSiteActions
             ->visible(fn (Temple $record): bool => ! empty($record->official_import))
             ->modalWidth('5xl')
             ->modalHeading(fn (Temple $record): string => 'Imported details for '.$record->name)
-            ->modalDescription(fn (Temple $record): HtmlString => new HtmlString(
-                'Read from <a href="'.e($record->official_import['source_url'] ?? '#').'" target="_blank" rel="noopener" class="underline">'.e($record->official_import['source_url'] ?? '').'</a> '
-                .e(optional($record->official_import_at)->diffForHumans() ?? '').'. Tick what is right; correct anything before taking it. Facts are kept with the website as their source.'))
+            ->modalDescription(fn (Temple $record): HtmlString => new HtmlString(self::readFrom($record->official_import ?? [])
+                .' '.e(optional($record->official_import_at)->diffForHumans() ?? '').'. Tick what is right; correct anything before taking it.'))
             ->fillForm(fn (Temple $record): array => self::prefill($record))
             ->schema(fn (Temple $record): array => self::form($record))
             ->modalSubmitActionLabel('Take the ticked details')
@@ -98,6 +96,21 @@ final class OfficialSiteActions
                     ->body($done === [] ? 'Marked as reviewed.' : 'New sevas are added as drafts unless you chose to publish them; app booking stays off.')
                     ->success()->send();
             });
+    }
+
+    /** "Read from the Google Maps link and example-temple.org": short, whatever the links' length. */
+    private static function readFrom(array $f): string
+    {
+        $parts = [];
+        if (isset($f['maps'])) {
+            $parts[] = 'the Google Maps link';
+        }
+        if (filled($f['source_url'] ?? null)) {
+            $host = preg_replace('/^www\./', '', (string) parse_url($f['source_url'], PHP_URL_HOST)) ?: 'the website';
+            $parts[] = '<a href="'.e($f['source_url']).'" target="_blank" rel="noopener" class="underline">'.e($host).'</a>';
+        }
+
+        return 'Read from '.($parts === [] ? 'the links' : implode(' and ', $parts));
     }
 
     /** @return array<string, mixed> */
