@@ -159,8 +159,9 @@ class EventsRelationManager extends RelationManager
                     ->label('Approve')
                     ->icon('heroicon-o-check')
                     ->color('success')
+                    // Our staff, or the temple's owner in the temple portal.
                     ->visible(fn (TempleEvent $record): bool => $record->status === EventStatus::PendingReview
-                        && (Auth::user()?->role?->isStaff() ?? false))
+                        && $record->mayBeReviewedBy(Auth::user()))
                     ->requiresConfirmation()
                     ->action(fn (TempleEvent $record) => $record->update([
                         'status' => EventStatus::Published,
@@ -172,8 +173,9 @@ class EventsRelationManager extends RelationManager
                     ->label('Reject')
                     ->icon('heroicon-o-x-mark')
                     ->color('danger')
+                    // Our staff, or the temple's owner in the temple portal.
                     ->visible(fn (TempleEvent $record): bool => $record->status === EventStatus::PendingReview
-                        && (Auth::user()?->role?->isStaff() ?? false))
+                        && $record->mayBeReviewedBy(Auth::user()))
                     ->form([
                         Textarea::make('review_note')->label('Reason')->required()->rows(2),
                     ])

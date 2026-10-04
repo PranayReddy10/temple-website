@@ -2,8 +2,11 @@
 
 namespace App\Http\Resources\V1\Trust;
 
+use App\Enums\TempleStatus;
 use App\Http\Resources\V1\PhotoResource;
 use App\Models\Temple;
+use App\Models\TempleUser;
+use App\Support\Seo;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -44,7 +47,9 @@ class TrustTempleResource extends JsonResource
                 'level' => $this->verification_status?->value,
                 'label' => $this->verification_status?->getLabel(),
             ],
-            'access_level' => $this->pivot?->role,
+            'access_level' => $this->pivot?->role ?? $this->accessLevelFor($request),
+            // The temple's page on the website, to share; only once published.
+            'public_url' => $this->status === TempleStatus::Published ? Seo::url('temples/'.$this->slug) : null,
             'primary_photo' => $this->relationLoaded('primaryPhoto') && $this->primaryPhoto
                 ? new PhotoResource($this->primaryPhoto)
                 : null,
@@ -73,5 +78,14 @@ class TrustTempleResource extends JsonResource
 
             'stats' => $this->when($this->stats !== null, fn () => $this->stats),
         ];
+    }
+
+    /** The signed-in team member's role here, when the temple was not loaded through their list. */
+    protected function accessLevelFor(Request $request): ?string
+    {
+        $user = $request->user('trust');
+
+        return $user === null ? null : TempleUser::query()->approved()
+            ->where('temple_id', $this->id)->where('user_id', $user->getKey())->value('role');
     }
 }

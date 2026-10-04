@@ -80,9 +80,11 @@ class TempleEventObserver
             return;
         }
 
-        // Editorial staff publish directly. A temple admin does not, and
-        // neither does anything else that happens to be authenticated.
-        if (ActingStaff::user()?->role?->isStaff() ?? false) {
+        // Editorial staff publish directly, and so does the temple's own
+        // owner: it is their temple. A manager does not, and neither does
+        // anything else that happens to be authenticated; their event waits
+        // for the owner or our staff.
+        if ($event->mayBeReviewedBy(ActingStaff::user())) {
             return;
         }
 

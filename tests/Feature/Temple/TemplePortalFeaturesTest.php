@@ -6,6 +6,7 @@ use App\Enums\BookingStatus;
 use App\Enums\EventStatus;
 use App\Enums\TempleStatus;
 use App\Enums\UserRole;
+use App\Filament\Resources\Temples\RelationManagers\EventsRelationManager;
 use App\Filament\Resources\Temples\RelationManagers\PujasRelationManager;
 use App\Filament\Temple\Pages\BankDetails;
 use App\Filament\Temple\Pages\Dashboard;
@@ -262,6 +263,19 @@ class TemplePortalFeaturesTest extends TestCase
             ->callTableAction('receive', $mine);
 
         $this->assertSame(BookingStatus::Verified, $mine->fresh()->status);
+    }
+
+    public function test_the_owner_approves_proposed_events_in_the_portal_and_a_manager_cannot(): void
+    {
+        $event = TempleEvent::create(['temple_id' => $this->temple->id, 'title' => 'Ekadashi Bhajan', 'type' => 'bhajan', 'starts_on' => now()->addDays(2)->toDateString(), 'status' => EventStatus::PendingReview, 'devotee_id' => Devotee::factory()->create()->id]);
+        $manager = fn () => Livewire::test(EventsRelationManager::class, ['ownerRecord' => $this->temple, 'pageClass' => EditMyTemple::class]);
+
+        $this->team('manager');
+        $manager()->assertTableActionHidden('approve', $event);
+
+        $this->team('owner');
+        $manager()->assertTableActionVisible('approve', $event)->callTableAction('approve', $event);
+        $this->assertSame(EventStatus::Published, $event->fresh()->status);
     }
 
     // --- QR and support ---

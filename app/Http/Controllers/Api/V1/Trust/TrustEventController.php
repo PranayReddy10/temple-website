@@ -34,7 +34,10 @@ class TrustEventController extends Controller
 
     public function index(Request $request, int $temple): JsonResponse
     {
-        $rows = $this->managedTemple($request, $temple)->events()->latest('starts_on')->limit(200)->get();
+        $rows = $this->managedTemple($request, $temple)->events()->with('devotee:id,name')
+            // Waiting for approval first, then the newest.
+            ->orderByRaw("case when status = 'pending_review' then 0 else 1 end")
+            ->latest('starts_on')->limit(200)->get();
 
         return response()->json(['data' => $rows->map(fn (TempleEvent $e): array => $this->present($e, $request))->values()]);
     }
@@ -57,6 +60,40 @@ class TrustEventController extends Controller
         $this->save($request, $row, $record->getKey());
 
         return response()->json(['data' => $this->present($row->refresh(), $request)]);
+    }
+
+    /**
+     * The temple's owner approves an event waiting for review: one a
+     * devotee proposed, or one a manager wrote. It goes live in the app.
+     */
+    public function approve(Request $request, int $temple, int $event): JsonResponse
+    {
+        $row = $this->reviewable($request, $temple, $event);
+        $row->update(['status' => EventStatus::Published, 'reviewed_by' => $this->trustUser($request)->getKey(), 'review_note' => null]);
+
+        return response()->json(['data' => $this->present($row->refresh()->load('devotee:id,name'), $request)]);
+    }
+
+    /** The owner turns it down, saying why: whoever proposed it sees the reason. */
+    public function reject(Request $request, int $temple, int $event): JsonResponse
+    {
+        $validated = $request->validate(['note' => ['required', 'string', 'max:1000']]);
+        $row = $this->reviewable($request, $temple, $event);
+        $row->update(['status' => EventStatus::Rejected, 'reviewed_by' => $this->trustUser($request)->getKey(), 'review_note' => $validated['note']]);
+
+        return response()->json(['data' => $this->present($row->refresh()->load('devotee:id,name'), $request)]);
+    }
+
+    protected function reviewable(Request $request, int $temple, int $event): TempleEvent
+    {
+        /** @var TempleEvent $row */
+        $row = $this->managedTemple($request, $temple)->events()->findOrFail($event);
+        abort_unless($row->mayBeReviewedBy($this->trustUser($request)), 403, 'Only the temple\'s owner can approve events.');
+        if ($row->status !== EventStatus::PendingReview) {
+            throw ValidationException::withMessages(['status' => 'This event is not waiting for approval.']);
+        }
+
+        return $row;
     }
 
     public function destroy(Request $request, int $temple, int $event): JsonResponse
@@ -146,6 +183,8 @@ class TrustEventController extends Controller
                 'label' => $event->status?->getLabel(),
             ],
             'review_note' => $event->review_note,
+            // May this person approve or reject it (the temple's owner)?
+            'can_review' => $event->status === EventStatus::PendingReview && $event->mayBeReviewedBy($this->trustUser($request)),
             'recurrence' => $event->recurrence,
             // The editor's own values, and who is coming.
             'ticket_price' => $event->ticket_price_paise / 100,
