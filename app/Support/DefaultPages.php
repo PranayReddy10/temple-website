@@ -280,6 +280,10 @@ Fill in the form below with the email or phone number on your account, or write 
 
 Records of puja bookings and payments are kept, as tax and accounting law requires (up to 8 years), and are not used for anything else. Bookings for a future date stay with the temple so the puja or seva can still be performed; cancel them first if you want a refund.
 
+## Temple team accounts ({app} Trust app and Temple Portal)
+
+In the {app} Trust app, open **Account → Delete account**, enter your password and confirm. Or use the form above, or write to [{email}](mailto:{email}). Your name, email, phone and password are erased and your access to every temple ends. The temple's own information (timings, sevas, events, photos) and its booking, donation and settlement records stay with the temple.
+
 Deletion cannot be undone. Premium plans end when the account is deleted and are not refunded.
 MD,
             ],

@@ -257,6 +257,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('auth/logout', [TrustAuthController::class, 'logout'])->name('auth.logout');
             Route::get('me', [TrustAuthController::class, 'me'])->name('me');
             Route::patch('me', [TrustAuthController::class, 'update'])->name('me.update');
+            Route::delete('me', [TrustAuthController::class, 'destroy'])->middleware('throttle:5,1')->name('me.destroy');
 
             Route::get('options', TrustOptionsController::class)->name('options');
 
