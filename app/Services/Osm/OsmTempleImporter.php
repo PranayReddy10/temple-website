@@ -289,7 +289,7 @@ class OsmTempleImporter
 
     /**
      * @param  array{type: string, id: int, tags: array<string, string>}  $element
-     * @return array{osm_ref: string, wikidata_id: ?string, commons_image: ?string}
+     * @return array{osm_ref: string, wikidata_id: ?string, commons_image: ?string, wikipedia_url: ?string}
      */
     protected function references(array $element): array
     {
@@ -299,7 +299,47 @@ class OsmTempleImporter
             'osm_ref' => $element['type'].'/'.$element['id'],
             'wikidata_id' => $wikidata !== null && preg_match('/^Q\d+$/', $wikidata) === 1 ? $wikidata : null,
             'commons_image' => $this->commonsFile($element['tags']),
+            'wikipedia_url' => $this->wikipediaUrl($element['tags']),
         ];
+    }
+
+    /**
+     * The article OpenStreetMap links: its wikipedia tag is "en:Ramappa
+     * Temple" (language, then title), or wikipedia:te for another language.
+     *
+     * @param  array<string, string>  $tags
+     */
+    public function wikipediaUrl(array $tags): ?string
+    {
+        $tag = trim($tags['wikipedia'] ?? '');
+        if ($tag === '') {
+            foreach (['en', 'te', 'hi'] as $lang) {
+                if (filled($tags['wikipedia:'.$lang] ?? null)) {
+                    $tag = $lang.':'.trim($tags['wikipedia:'.$lang]);
+                    break;
+                }
+            }
+        }
+        if (preg_match('~^https?://([a-z]{2,3})\.(?:m\.)?wikipedia\.org/wiki/(.+)$~i', $tag, $m) === 1) {
+            $tag = $m[1].':'.rawurldecode($m[2]);
+        }
+        if (preg_match('/^([a-z]{2,3}):(.+)$/', $tag, $m) !== 1) {
+            return null;
+        }
+
+        return Str::limit('https://'.$m[1].'.wikipedia.org/wiki/'.str_replace(' ', '_', trim($m[2])), 500, '');
+    }
+
+    /**
+     * Whether two names are the same temple's: the distinctive words of the
+     * shorter are nearly all in the longer ("Ramappa Temple" and "Ramappa
+     * Rudreswara Temple"). Used to accept a Wikipedia article found nearby.
+     */
+    public function sameName(string $a, string $b): bool
+    {
+        [$overlap] = $this->similarity($this->tokens($a), $this->tokens($b));
+
+        return $overlap >= 0.6;
     }
 
     /**

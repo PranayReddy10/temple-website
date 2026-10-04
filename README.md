@@ -202,11 +202,22 @@ php artisan temples:osm-scan --district=Karimnagar --district=Sangareddy
 #    import them as drafts for review instead.
 php artisan temples:osm-scan --import
 
-# 3. Photos: for temples OSM or Wikidata links to a Wikimedia Commons image,
+# 3. Wikipedia: link each temple to its article (the one OSM or Wikidata
+#    names, or an English article within 500 m whose title names the
+#    temple), record its Wikidata item, and give a temple with no
+#    description the article's opening, shown as "From Wikipedia, CC BY-SA".
+php artisan temples:fetch-wikipedia --dry-run
+php artisan temples:fetch-wikipedia
+
+# 4. Photos: for temples OSM or Wikidata links to a Wikimedia Commons image,
 #    download it with its photographer and licence (public domain, CC0,
-#    CC BY and CC BY-SA only).
+#    CC BY and CC BY-SA only). Run after step 3: the Wikidata items it
+#    finds are photo leads too.
 php artisan temples:fetch-commons-photos --dry-run
 php artisan temples:fetch-commons-photos
+
+# 5. Tell the search engines (or wait up to 10 minutes for the scheduler).
+php artisan seo:indexnow --all
 ```
 
 - **No duplicates.** Each temple remembers its OSM element (`osm_ref`), so a
@@ -218,6 +229,11 @@ php artisan temples:fetch-commons-photos
 - **Unnamed temples are skipped.** The locality comes from the nearest
   village or town on the map, and the deity is read from the name
   ("Anjaneya" → Hanuman) when it is clear.
+- **Credits are shown.** The temple page says "© OpenStreetMap contributors"
+  (ODbL), each photo shows its photographer and licence, and a description
+  from Wikipedia shows "From Wikipedia, CC BY-SA 4.0" with the article link;
+  the API sends the same credits for the app. An editor rewriting a
+  Wikipedia description makes it ours, and the credit goes.
 - Set `OVERPASS_URL` to use another Overpass server if the default one is busy.
 
 ## Slices 2–4 — media, pujas and the public API
