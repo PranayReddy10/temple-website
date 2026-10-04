@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Page;
 use App\Models\Setting;
 use App\Models\Temple;
 use Illuminate\Support\Facades\Http;
@@ -74,15 +75,31 @@ final class IndexNow
         return $sent;
     }
 
-    /** The temple pages changed since a time (all of them when null), plus the directory. */
+    /**
+     * The pages changed since a time (all of them when null): each changed
+     * temple, the state and deity pages that list it, the directory, and
+     * any changed information page.
+     *
+     * @return array<int, string>
+     */
     public static function templeUrls(?\DateTimeInterface $since = null): array
     {
-        return Temple::query()->published()
+        $temples = Temple::query()->published()
             ->when($since !== null, fn ($q) => $q->where('updated_at', '>', $since))
+            ->with(['state:id,slug', 'deity:id,slug'])
             ->orderBy('id')
-            ->pluck('slug')
-            ->map(fn (string $slug): string => Seo::url('temples/'.$slug))
-            ->prepend(Seo::url('temples'))
+            ->get(['id', 'slug', 'state_id', 'deity_id']);
+
+        $pages = Page::query()->published()
+            ->when($since !== null, fn ($q) => $q->where('updated_at', '>', $since))
+            ->pluck('slug');
+
+        return collect([Seo::url('temples')])
+            ->merge($temples->map(fn (Temple $t): string => Seo::url('temples/'.$t->slug)))
+            ->merge($temples->pluck('state.slug')->filter()->unique()->map(fn (string $s): string => Seo::url('states/'.$s)))
+            ->merge($temples->pluck('deity.slug')->filter()->unique()->map(fn (string $s): string => Seo::url('deities/'.$s)))
+            ->merge($pages->map(fn (string $s): string => Seo::url($s)))
+            ->values()
             ->all();
     }
 }

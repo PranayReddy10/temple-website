@@ -3,14 +3,19 @@
 namespace Tests\Feature\Http;
 
 use App\Enums\TempleStatus;
+use App\Enums\UserRole;
+use App\Filament\Pages\Settings\ManageAnalytics;
 use App\Models\Setting;
 use App\Models\State;
 use App\Models\Temple;
 use App\Models\TemplePuja;
 use App\Models\TempleTiming;
+use App\Models\User;
 use App\Support\IndexNow;
+use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
@@ -106,6 +111,45 @@ class TempleSharingSeoTest extends TestCase
 
         // Nothing changed since: nothing sent.
         Http::fake(['api.indexnow.org/*' => Http::response('', 202)]);
-        $this->artisan('seo:indexnow')->expectsOutputToContain('No temple pages changed')->assertSuccessful();
+        $this->artisan('seo:indexnow')->expectsOutputToContain('No pages changed')->assertSuccessful();
+    }
+
+    /** A change to timings, sevas or photos is a change to the temple's page. */
+    public function test_a_change_to_a_temples_timings_sends_its_page_again(): void
+    {
+        Http::fake(['api.indexnow.org/*' => Http::response('', 202)]);
+        $temple = $this->temple();
+        $this->artisan('seo:indexnow')->assertSuccessful();
+
+        $this->travel(5)->minutes();
+        $before = $temple->refresh()->updated_at;
+        $this->travel(1)->minutes();
+        TempleTiming::create(['temple_id' => $temple->id, 'kind' => 'aarti', 'label' => 'Sandhya Arati', 'opens_at' => '19:00', 'days' => [6, 0]]);
+        $this->assertTrue($temple->refresh()->updated_at->gt($before), 'the temple is marked changed');
+
+        Http::fake(['api.indexnow.org/*' => Http::response('', 202)]);
+        $this->artisan('seo:indexnow')->assertSuccessful();
+        Http::assertSent(fn ($request) => in_array('https://darshansaathi.com/temples/sri-rama-bhadrachalam', $request['urlList'], true)
+            && in_array('https://darshansaathi.com/states/telangana', $request['urlList'], true));
+        $this->assertSame(3, (int) Setting::get('indexnow_last_count'));
+
+        // The sitemap's date for the page moves with it.
+        $this->get('https://darshansaathi.com/sitemap-temples-1.xml')->assertOk()
+            ->assertSee($temple->updated_at->toAtomString(), false);
+    }
+
+    public function test_staff_see_when_pages_were_sent_and_can_send_them_all(): void
+    {
+        Http::fake(['api.indexnow.org/*' => Http::response('', 202)]);
+        $this->temple();
+        $this->actingAs(User::factory()->create(['role' => UserRole::SuperAdmin, 'is_active' => true]));
+
+        Livewire::test(ManageAnalytics::class)
+            ->assertSee('Nothing sent yet')
+            ->callAction(TestAction::make('sendAllPages')->schemaComponent('indexnow_actions'))
+            ->assertHasNoErrors();
+
+        Http::assertSent(fn ($request) => in_array('https://darshansaathi.com/temples/sri-rama-bhadrachalam', $request['urlList'], true));
+        $this->assertNotNull(Setting::get('indexnow_last_sent'));
     }
 }

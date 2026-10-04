@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\EventStatus;
 use App\Enums\EventType;
 use App\Enums\VerificationStatus;
+use App\Models\Concerns\MarksTempleChanged;
 use App\Support\DevotionalClock;
 use App\Support\MediaUrl;
 use Carbon\CarbonImmutable;
@@ -18,7 +19,7 @@ use Illuminate\Validation\ValidationException;
 
 class TempleEvent extends Model
 {
-    use HasFactory;
+    use HasFactory, MarksTempleChanged;
 
     protected $fillable = [
         'temple_id', 'type', 'title', 'description',

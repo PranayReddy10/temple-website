@@ -22,7 +22,7 @@ class IndexNowCommand extends Command
         $urls = IndexNow::templeUrls($since);
         // Only the directory itself and nothing new: nothing to say.
         if ($since !== null && count($urls) <= 1) {
-            $this->info('No temple pages changed since '.$since->toDateTimeString().'.');
+            $this->info('No pages changed since '.$since->toDateTimeString().'.');
             Setting::set('indexnow_last_run', $started->toIso8601String());
 
             return self::SUCCESS;
@@ -36,6 +36,8 @@ class IndexNowCommand extends Command
         }
 
         Setting::set('indexnow_last_run', $started->toIso8601String());
+        Setting::set('indexnow_last_sent', $started->toIso8601String());
+        Setting::set('indexnow_last_count', $sent);
         $this->info('Sent '.$sent.' pages to IndexNow.');
 
         return self::SUCCESS;
