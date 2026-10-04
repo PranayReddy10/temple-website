@@ -24,6 +24,8 @@ class OsmWikipediaTest extends TestCase
 
     private const RAMAPPA = 'The Ramappa Temple, also known as the Rudreswara Temple, is a Kakatiya style Hindu temple dedicated to the god Shiva, located in Palampet village of Mulugu district of Telangana, India. It was built in 1213 by Recharla Rudra.';
 
+    private const ARTICLE = "The Ramappa Temple is a Kakatiya style Hindu temple.\n\n== History ==\nThe temple was built in 1213 CE during the reign of the Kakatiya ruler Ganapati Deva by his general Recharla Rudra, and is named after its sculptor Ramappa.\n\n=== Restoration ===\nThe Archaeological Survey of India restored parts of the temple in the twentieth century.\n\n== Architecture ==\nThe temple stands on a star-shaped platform six feet high, with sculptures of dancers and musicians.\n\n== Legend ==\nDevotees believe Shiva as Ramalingeswara protects the village, and the temple draws pilgrims every Maha Shivaratri for the night-long vigil.\n\n== References ==\nSee also.";
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -48,6 +50,9 @@ class OsmWikipediaTest extends TestCase
             $url = $request->url();
             if (str_contains($url, 'wikidata.org') && str_contains($url, 'wbgetentities')) {
                 return Http::response(['entities' => ['Q3635467' => ['sitelinks' => ['enwiki' => ['title' => 'Ramappa Temple']]]]]);
+            }
+            if (str_contains($url, 'prop=extracts')) {
+                return Http::response(['query' => ['pages' => [['title' => 'Ramappa Temple', 'extract' => self::ARTICLE]]]]);
             }
             if (str_contains($url, 'list=geosearch')) {
                 return Http::response(['query' => ['geosearch' => $geosearch]]);
@@ -147,5 +152,38 @@ class OsmWikipediaTest extends TestCase
         $this->assertLessThanOrEqual(600, mb_strlen($opening));
         $this->assertStringEndsWith('steps.', $opening);
         $this->assertNull($finder->opening('Too short.'));
+    }
+
+    public function test_history_and_significance_come_from_the_articles_sections(): void
+    {
+        $sections = app(TempleWikipediaFinder::class)->sectionsFrom(self::ARTICLE);
+
+        $this->assertStringStartsWith('The temple was built in 1213 CE', $sections['history']);
+        // A sub-section stays with its parent.
+        $this->assertStringContainsString('Archaeological Survey of India', $sections['history']);
+        $this->assertStringNotContainsString('star-shaped', $sections['history']);
+        $this->assertStringStartsWith('Devotees believe Shiva', $sections['significance']);
+    }
+
+    public function test_the_command_fills_history_and_significance_credited(): void
+    {
+        $this->fakeWikipedia();
+        $temple = $this->temple(['wikidata_id' => 'Q3635467', 'history' => 'Written by our editors.']);
+
+        $this->artisan('temples:fetch-wikipedia')->assertSuccessful();
+
+        $temple->refresh();
+        $this->assertSame('Written by our editors.', $temple->history, 'a written text is never replaced');
+        $this->assertStringStartsWith('Devotees believe Shiva', $temple->significance);
+        $this->assertSame(['significance'], $temple->wikipedia_fields);
+
+        $this->get('/temples/ramappa-temple')->assertOk()->assertSee('Devotees believe Shiva');
+        $this->getJson('/api/v1/temples/ramappa-temple')->assertOk()
+            ->assertJsonPath('data.about.credits.significance.text', 'From Wikipedia, CC BY-SA 4.0')
+            ->assertJsonMissingPath('data.about.credits.history');
+
+        // Rewritten by an editor, it is ours.
+        $temple->update(['significance' => 'Our words.']);
+        $this->assertNull($temple->refresh()->wikipedia_fields);
     }
 }

@@ -31,9 +31,15 @@ class TempleObserver
     {
         $this->guardPublishing($temple);
 
-        // A description someone rewrote is ours, not Wikipedia's any more.
+        // A text someone rewrote is ours, not Wikipedia's any more.
         if ($temple->isDirty('short_description') && ! $temple->isDirty('description_source')) {
             $temple->description_source = null;
+        }
+        if (! $temple->isDirty('wikipedia_fields') && ! empty($temple->wikipedia_fields)) {
+            $kept = array_values(array_filter($temple->wikipedia_fields, fn (string $f): bool => ! $temple->isDirty($f)));
+            if ($kept !== $temple->wikipedia_fields) {
+                $temple->wikipedia_fields = $kept === [] ? null : $kept;
+            }
         }
 
         // A published temple keeps its slug: the public URL and any shared link

@@ -206,8 +206,15 @@
                 @endforeach
             @endif
 
-            @if ($significance)<h2>Significance</h2><p>{{ $significance }}</p>@endif
-            @if ($history)<h2>History</h2><p>{{ $history }}</p>@endif
+            @foreach (['significance' => [$significance, 'Significance'], 'history' => [$history, 'History']] as $field => [$text, $heading])
+                @if ($text)
+                    <h2>{{ $heading }}</h2>
+                    <p style="white-space:pre-line">{{ $text }}</p>
+                    @if (in_array($field, $temple->wikipedia_fields ?? [], true) && $temple->wikipedia_url)
+                        <p style="font-size:.85rem;opacity:.75">From <a href="{{ $temple->wikipedia_url }}" rel="noopener">Wikipedia</a>, under <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license noopener">CC BY-SA 4.0</a>.</p>
+                    @endif
+                @endif
+            @endforeach
 
             @if ($temple->events->isNotEmpty())
                 <h2>Festivals and events</h2>

@@ -21,7 +21,7 @@ class FetchTempleWikipedia extends Command
         {--limit=500 : Stop after this many temples}
         {--dry-run : Show what would be taken, change nothing}';
 
-    protected $description = 'Link temples to their Wikipedia articles and fill empty descriptions from them, credited';
+    protected $description = 'Link temples to their Wikipedia articles and fill empty description, history and significance from them, credited';
 
     public function handle(TempleWikipediaFinder $finder): int
     {
@@ -42,11 +42,15 @@ class FetchTempleWikipedia extends Command
 
         $linked = 0;
         $described = 0;
+        $sections = 0;
 
         foreach ($temples as $temple) {
             try {
                 $found = $finder->articleFor($temple);
                 $article = $found !== null ? $finder->summary(...$found) : null;
+                if ($article !== null) {
+                    $article += $finder->sections($article['lang'], $article['title']);
+                }
             } catch (Throwable $e) {
                 $this->warn("{$temple->name}: Wikipedia could not be reached ({$e->getMessage()}).");
 
@@ -67,6 +71,7 @@ class FetchTempleWikipedia extends Command
             if ($changed !== []) {
                 $linked++;
                 $described += in_array('description', $changed, true) ? 1 : 0;
+                $sections += count(array_intersect(['history', 'significance'], $changed));
                 $this->info("{$temple->name}: ".implode(', ', $changed).' ← '.$article['url']);
             }
 
@@ -75,7 +80,7 @@ class FetchTempleWikipedia extends Command
             }
         }
 
-        $this->line("{$linked} temple(s) linked to Wikipedia, {$described} given a description from it (shown as \"From Wikipedia\", CC BY-SA).");
+        $this->line("{$linked} temple(s) linked to Wikipedia; {$described} description(s) and {$sections} history or significance text(s) taken from it, each shown as \"From Wikipedia\" (CC BY-SA).");
 
         return self::SUCCESS;
     }

@@ -46,6 +46,9 @@ class LinkImportOpenDataTest extends TestCase
             if (str_contains($url, 'wikidata.org')) {
                 return Http::response(['entities' => ['Q6384010' => ['sitelinks' => ['enwiki' => ['title' => 'Keesaragutta Temple']]]]]);
             }
+            if (str_contains($url, 'prop=extracts')) {
+                return Http::response(['query' => ['pages' => [['extract' => "Lead.\n\n== History ==\nThe temple is said to have been consecrated by Rama himself, and the present shrine dates from the Kakatiya period and was renovated in later centuries.\n\n== Significance ==\nThe hill draws lakhs of devotees at Maha Shivaratri, when the lingas on the hill are worshipped through the night."]]]]);
+            }
             if (str_contains($url, '/page/summary/Keesaragutta_Temple')) {
                 return Http::response(['type' => 'standard', 'title' => 'Keesaragutta Temple', 'extract' => self::OPENING, 'wikibase_item' => 'Q6384010',
                     'content_urls' => ['desktop' => ['page' => 'https://en.wikipedia.org/wiki/Keesaragutta_Temple']]]);
@@ -87,6 +90,8 @@ class LinkImportOpenDataTest extends TestCase
             ->mountAction('reviewOfficialSite')
             ->assertSet('mountedActions.0.data.use_osm', true)
             ->assertSet('mountedActions.0.data.use_wikipedia_description', true)
+            ->assertSet('mountedActions.0.data.use_wikipedia_history', true)
+            ->assertSet('mountedActions.0.data.use_wikipedia_significance', true)
             ->callMountedAction(['timings' => [], 'sevas' => []])
             ->assertHasNoFormErrors();
 
@@ -96,6 +101,9 @@ class LinkImportOpenDataTest extends TestCase
         $this->assertSame('https://en.wikipedia.org/wiki/Keesaragutta_Temple', $temple->wikipedia_url);
         $this->assertSame(self::OPENING, $temple->short_description);
         $this->assertSame('wikipedia', $temple->description_source);
+        $this->assertStringStartsWith('The temple is said to have been consecrated by Rama', $temple->history);
+        $this->assertStringStartsWith('The hill draws lakhs of devotees', $temple->significance);
+        $this->assertEqualsCanonicalizing(['history', 'significance'], $temple->wikipedia_fields);
         $this->assertSame('+91 40 2721 1234', $temple->contact_phone);
         $this->assertSame('OpenStreetMap contributors', $temple->source_name);
         $this->assertSame('https://www.openstreetmap.org/way/4242', $temple->source_url);

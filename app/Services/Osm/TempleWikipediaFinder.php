@@ -166,6 +166,22 @@ class TempleWikipediaFinder
             $changed[] = 'description';
         }
 
+        // History and significance, the same way: only empty fields, only
+        // where no editor owns the temple, and listed for the credit.
+        $taken = $temple->wikipedia_fields ?? [];
+        if (! $this->editorOwns($temple)) {
+            foreach (['history', 'significance'] as $field) {
+                if (filled($article[$field] ?? null) && blank($temple->getAttribute($field))) {
+                    $fill[$field] = $article[$field];
+                    $taken[] = $field;
+                    $changed[] = $field;
+                }
+            }
+        }
+        if ($taken !== ($temple->wikipedia_fields ?? [])) {
+            $fill['wikipedia_fields'] = array_values(array_unique($taken));
+        }
+
         if ($fill !== []) {
             // Quietly: only references and an empty field are written, and
             // a temple team's own rules for editing are not in question.
@@ -173,6 +189,86 @@ class TempleWikipediaFinder
         }
 
         return $changed;
+    }
+
+    /** Longest history or significance taken, cut at a sentence. */
+    protected const SECTION_LENGTH = 1500;
+
+    /**
+     * Which of the article's sections fill which field, best match first.
+     * A temple article usually has "History", and "Legend", "Significance"
+     * or "Religious significance" for why devotees come.
+     */
+    protected const SECTIONS = [
+        'history' => '/^(history|historical background|origins?|construction|early history)$/i',
+        'significance' => '/^((religious |spiritual |cultural )?significance|importance|legends?|mythology|sthala purana|sthalapuranam|puranic (story|significance)|beliefs?)$/i',
+    ];
+
+    /**
+     * The article's History and Significance (or Legend) sections as plain
+     * text, each cut at a sentence. Only English articles.
+     *
+     * @return array{history?: string, significance?: string}
+     */
+    public function sections(string $lang, string $title): array
+    {
+        if ($lang !== 'en') {
+            return [];
+        }
+
+        // The sections are extra: if they cannot be read, the article's
+        // link and opening still are.
+        try {
+            $pages = $this->client()->get('https://en.wikipedia.org/w/api.php', [
+                'action' => 'query', 'format' => 'json', 'formatversion' => 2,
+                'prop' => 'extracts', 'explaintext' => 1, 'exsectionformat' => 'wiki',
+                'redirects' => 1, 'titles' => $title,
+            ])->throw()->json('query.pages') ?? [];
+        } catch (\Throwable) {
+            return [];
+        }
+
+        return $this->sectionsFrom((string) ($pages[0]['extract'] ?? ''));
+    }
+
+    /**
+     * Plain article text ("== History ==" headings) to the fields. Pure,
+     * for testing.
+     *
+     * @return array{history?: string, significance?: string}
+     */
+    public function sectionsFrom(string $text): array
+    {
+        // Split on top-level headings; a sub-section stays with its parent.
+        $parts = preg_split('/^==\s*([^=].*?)\s*==\s*$/m', $text, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [];
+        $sections = [];
+        for ($i = 1; $i + 1 < count($parts); $i += 2) {
+            $body = preg_replace('/^===+\s*.*?\s*===+\s*$/m', '', $parts[$i + 1]);
+            $sections[] = [trim($parts[$i]), Str::squish((string) $body)];
+        }
+
+        $out = [];
+        foreach (self::SECTIONS as $field => $pattern) {
+            foreach ($sections as [$heading, $body]) {
+                if (preg_match($pattern, $heading) === 1 && mb_strlen($body) >= 80) {
+                    $out[$field] = $this->cut($body, self::SECTION_LENGTH);
+                    break;
+                }
+            }
+        }
+
+        return $out;
+    }
+
+    protected function cut(string $text, int $length): string
+    {
+        if (mb_strlen($text) <= $length) {
+            return $text;
+        }
+        $cut = mb_substr($text, 0, $length);
+        $end = (int) mb_strrpos($cut, '. ');
+
+        return $end > 80 ? mb_substr($cut, 0, $end + 1) : Str::limit($text, $length);
     }
 
     /** The article's opening, cut at the end of a sentence. */
