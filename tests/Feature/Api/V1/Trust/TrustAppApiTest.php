@@ -78,6 +78,29 @@ class TrustAppApiTest extends TestCase
         return $this->withToken($token);
     }
 
+    /** App stores require it: a team member deletes their own account in the app. */
+    public function test_a_team_member_deletes_their_account(): void
+    {
+        [$token, $user] = $this->manager();
+
+        $this->as($token)->deleteJson('/api/v1/trust/me', ['password' => 'wrong-password', 'confirm' => 'DELETE'])->assertUnprocessable()->assertJsonValidationErrors('password');
+        $this->as($token)->deleteJson('/api/v1/trust/me', ['password' => 'a-long-password'])->assertUnprocessable()->assertJsonValidationErrors('confirm');
+        $this->as($token)->deleteJson('/api/v1/trust/me', ['password' => 'a-long-password', 'confirm' => 'DELETE'])->assertOk();
+
+        $user->refresh();
+        $this->assertFalse($user->is_active);
+        $this->assertSame('Deleted account', $user->name);
+        $this->assertNull($user->phone);
+        $this->assertStringEndsWith('@deleted.invalid', $user->email);
+        $this->assertSame([], $user->tokens()->pluck('id')->all());
+        $this->assertSame(0, TempleUser::where('user_id', $user->id)->count());
+        // The temple and its records stay.
+        $this->assertModelExists($this->temple);
+
+        $this->as($token)->getJson('/api/v1/trust/me')->assertUnauthorized();
+        $this->postJson('/api/v1/trust/auth/login', ['email' => 'secretary@example.org', 'password' => 'a-long-password'])->assertUnprocessable();
+    }
+
     public function test_signing_up_makes_a_temple_admin_with_no_temples(): void
     {
         $response = $this->postJson('/api/v1/trust/auth/register', [

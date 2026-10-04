@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\Trust\TrustAccountResource;
 use App\Models\User;
 use App\Support\LoginRecorder;
+use App\Support\TempleTeam\TrustAccounts;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -133,6 +134,33 @@ class TrustAuthController extends Controller
         $user->save();
 
         return $this->me($request);
+    }
+
+    /**
+     * Deletes the signed-in team member's account, as app stores require.
+     * Their password confirms it. The temples they ran keep everything they
+     * added (timings, sevas, money records); the person is removed: signed
+     * out everywhere, their access to temples and open requests withdrawn,
+     * and their name, email and phone erased from the account row.
+     */
+    public function destroy(Request $request): JsonResponse
+    {
+        $user = $request->user('trust');
+
+        $validated = $request->validate([
+            'password' => ['required', 'string'],
+            'confirm' => ['required', 'in:DELETE'],
+        ], ['confirm.in' => 'Type DELETE to confirm.']);
+
+        if (! Hash::check($validated['password'], (string) $user->password)) {
+            throw ValidationException::withMessages(['password' => 'That is not your password.']);
+        }
+        // Staff accounts are managed by the platform, not deleted from the app.
+        abort_unless($user->isTempleAdmin(), 403, 'Staff accounts are closed by a super admin in the admin panel.');
+
+        TrustAccounts::delete($user);
+
+        return response()->json(['data' => ['message' => 'Your account has been deleted.']]);
     }
 
     /** Revokes only the token that made this request, not every device. */
