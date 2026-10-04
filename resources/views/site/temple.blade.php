@@ -138,12 +138,25 @@
     @endforeach
 
     @if ($image)
+        @php($lead = $temple->primaryPhoto ?? $temple->photos->first())
         <div class="hero"><img src="{{ $image }}" alt="{{ $temple->name }}"></div>
+        @if ($lead?->credit || $lead?->license)
+            {{-- Commons photos may be used only with their photographer and licence beside them. --}}
+            <p style="font-size:.8rem;opacity:.7;margin:4px 0 0">Photo: @if ($lead->source_url)<a href="{{ $lead->source_url }}" rel="noopener">{{ $lead->credit ?? 'source' }}</a>@else{{ $lead->credit }}@endif{{ $lead->license ? ', '.$lead->license : '' }}</p>
+        @endif
     @endif
 
     <div class="cols">
         <div>
-            @if ($about)<p>{{ $about }}</p>@endif
+            @if ($about)
+                <p>{{ $about }}</p>
+                @if ($temple->description_source === 'wikipedia')
+                    <p style="font-size:.85rem;opacity:.75">From <a href="{{ $temple->wikipedia_url }}" rel="noopener">Wikipedia</a>, under <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license noopener">CC BY-SA 4.0</a>.</p>
+                @endif
+            @endif
+            @if ($temple->wikipedia_url && $temple->description_source !== 'wikipedia')
+                <p style="font-size:.9rem"><a href="{{ $temple->wikipedia_url }}" rel="noopener">Read about {{ $temple->name }} on Wikipedia</a></p>
+            @endif
 
             @if ($temple->timings->isNotEmpty())
                 <h2>Darshan timings</h2>
@@ -201,6 +214,10 @@
                     @if ($temple->footwear_policy)<dt>Footwear</dt><dd>{{ $temple->footwear_policy }}</dd>@endif
                     @if ($temple->mobile_policy)<dt>Mobile phones</dt><dd>{{ $temple->mobile_policy }}</dd>@endif
                     @if ($temple->contact_phone)<dt>Phone</dt><dd><a href="tel:{{ $temple->contact_phone }}">{{ $temple->contact_phone }}</a></dd>@endif
+                    @if ($temple->source_name)
+                        {{-- OpenStreetMap's licence (ODbL) asks for this credit wherever its data is shown. --}}
+                        <dt>Source</dt><dd>@if ($temple->source_url)<a href="{{ $temple->source_url }}" rel="nofollow noopener" target="_blank">{{ $temple->source_name === 'OpenStreetMap contributors' ? '© OpenStreetMap contributors' : $temple->source_name }}</a>@else{{ $temple->source_name }}@endif</dd>
+                    @endif
                     @if ($temple->official_website)<dt>Official website</dt><dd><a href="{{ $temple->official_website }}" rel="nofollow noopener" target="_blank">{{ parse_url($temple->official_website, PHP_URL_HOST) ?: $temple->official_website }}</a></dd>@endif
                 </dl>
             </div>
