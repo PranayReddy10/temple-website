@@ -82,6 +82,8 @@ This policy explains how {business} ("we", "us") handles personal data when you 
 
 **Location.** Only when you allow it, to show nearby temples and to check that you are at a temple when you check in. We do not track your location in the background.
 
+**Temple teams ({app} Trust app and Temple Portal).** If you run a temple on {app}: your name, email, phone number and password; the temples you manage and your role there; your location when you ask to manage a temple or register a new one, to check that you are at the temple (used only at that moment); photos and details you add for the temple; and what you do at the counter (bookings and passports you scan). If the temple takes payments, the owner also gives the bank account or UPI id that settlements are paid to, and, to verify who represents the temple, their name and Aadhaar number, photos of the Aadhaar card, a photo of themselves and a document proving the temple is theirs to represent. These documents are stored privately, seen only by our verification team, and used only to approve payouts and meet legal duties; only the last four digits of the Aadhaar number are ever shown.
+
 **Device and usage information.** App version, device type and operating system, language, a push-notification token, sign-in times, crash information, and which screens and features are used (through Google Analytics for Firebase, when switched on). This is used to keep {app} working and to improve it, not to identify you.
 
 **Advertising.** If {app} shows ads, the ad network (Google AdMob or AppLovin) may use your device's advertising identifier to show and measure ads. You can reset it or opt out of personalised ads in your phone's settings. Premium plans remove ads.
