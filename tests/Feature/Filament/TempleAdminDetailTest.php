@@ -23,6 +23,7 @@ use App\Models\Temple;
 use App\Models\TemplePhoto;
 use App\Models\TemplePuja;
 use App\Models\User;
+use Filament\Forms\Components\ViewField;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -403,5 +404,35 @@ class TempleAdminDetailTest extends TestCase
 
         $this->assertContains(DevotionalMediaRelationManager::class, $relations);
         $this->assertContains(TranslationsRelationManager::class, $relations);
+    }
+
+    /**
+     * Translating needs the English beside it: it follows the field picked,
+     * on a new translation and when editing one, with a button to copy it.
+     */
+    public function test_the_english_reference_follows_the_field_and_can_be_copied(): void
+    {
+        $this->actingAs($this->staff());
+        $temple = Temple::create(['name' => 'Kashi Vishwanath', 'short_description' => 'Jyotirlinga on the Ganga ghats.', 'dress_code' => 'Traditional attire only.']);
+        // The reference box, as the open form draws it now.
+        $reference = fn ($test): string => collect($test->instance()->getSchema('mountedActionSchema0')->getFlatComponents())
+            ->first(fn ($c) => $c instanceof ViewField && $c->getName() === 'english')
+            ->toHtml();
+        $manager = fn () => Livewire::test(TranslationsRelationManager::class, ['ownerRecord' => $temple, 'pageClass' => EditTemple::class]);
+
+        $create = $manager()->mountTableAction('create');
+        $this->assertStringContainsString('Pick a field to see the English text.', $reference($create));
+
+        $create->set('mountedActions.0.data.field', 'short_description');
+        $this->assertStringContainsString('Jyotirlinga on the Ganga ghats.', $reference($create));
+        $this->assertStringContainsString('navigator.clipboard.writeText', $reference($create));
+
+        $create->set('mountedActions.0.data.field', 'dress_code');
+        $html = $reference($create);
+        $this->assertStringContainsString('Traditional attire only.', $html);
+        $this->assertStringNotContainsString('Jyotirlinga', $html);
+
+        $translation = $temple->translations()->create(['locale' => 'te', 'field' => 'dress_code', 'value' => 'సంప్రదాయ దుస్తులు మాత్రమే.']);
+        $this->assertStringContainsString('Traditional attire only.', $reference($manager()->mountTableAction('edit', $translation)));
     }
 }
