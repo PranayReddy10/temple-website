@@ -34,7 +34,11 @@ class TempleEventObserver
 
     public function deleted(TempleEvent $event): void
     {
-        if (filled($event->image_path)) {
+        // Only the event's own temple's image folder: a path naming another
+        // temple's file is left alone.
+        if (filled($event->image_path)
+            && str_starts_with($event->image_path, 'events/'.$event->temple_id.'/')
+            && ! str_contains($event->image_path, '..')) {
             Storage::disk($event->image_disk ?? config('filesystems.media'))
                 ->delete($event->image_path);
         }

@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\EventStatus;
+use App\Enums\TempleStatus;
 use App\Enums\TicketCategory;
 use App\Enums\TicketKind;
+use App\Enums\TicketStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\SupportTicketResource;
 use App\Models\Devotee;
@@ -142,7 +145,7 @@ class SupportController extends Controller
             ->first();
 
         if ($ticket === null) {
-            throw new NotFoundHttpException();
+            throw new NotFoundHttpException;
         }
 
         return new SupportTicketResource($ticket);
@@ -161,7 +164,7 @@ class SupportController extends Controller
             ->first();
 
         if ($ticket === null) {
-            throw new NotFoundHttpException();
+            throw new NotFoundHttpException;
         }
 
         $ticket->messages()->create([
@@ -174,7 +177,7 @@ class SupportController extends Controller
 
         // Their reply puts it back on us, including on one already resolved:
         // a resolution they did not accept is not a resolution.
-        $ticket->update(['status' => \App\Enums\TicketStatus::Open]);
+        $ticket->update(['status' => TicketStatus::Open]);
 
         return new SupportTicketResource($ticket->fresh()->load('replies.author'));
     }
@@ -196,13 +199,25 @@ class SupportController extends Controller
         $record = $model::find($id);
 
         if ($record === null) {
-            throw new NotFoundHttpException();
+            throw new NotFoundHttpException;
         }
 
-        // A drive nobody can see yet cannot be reported by somebody who has
-        // seen it; its id being guessable should not make it reportable.
-        if ($record instanceof SevaDrive && ! $record->status->isPublic()) {
-            throw new NotFoundHttpException();
+        // Only what the reporter could already see is reportable. Ids are
+        // guessable, and the reply names the subject, so a draft temple, an
+        // event awaiting review or a private photo answers exactly like one
+        // that does not exist.
+        $published = fn (?Temple $temple): bool => $temple?->status === TempleStatus::Published;
+        $visible = match (true) {
+            $record instanceof Temple => $published($record),
+            $record instanceof TempleEvent => $record->status === EventStatus::Published && $published($record->temple),
+            $record instanceof TemplePuja => (bool) $record->is_published && $published($record->temple),
+            $record instanceof VisitPhoto => $record->isVisibleToOthers(),
+            $record instanceof SevaDrive => $record->status->isPublic(),
+            default => false,
+        };
+
+        if (! $visible) {
+            throw new NotFoundHttpException;
         }
 
         return $record;

@@ -16,7 +16,11 @@ use Throwable;
  */
 final class MapsLink
 {
-    private const HOSTS = '/(^|\.)(google\.[a-z.]+|goo\.gl|g\.co|maps\.app\.goo\.gl)$/i';
+    /** Google's own hosts only: "google.co.in.example.com" is not Google. */
+    private const HOSTS = '/^([a-z0-9-]+\.)*google\.(com|[a-z]{2}|co\.[a-z]{2}|com\.[a-z]{2})$|^([a-z0-9-]+\.)*goo\.gl$|^g\.co$/i';
+
+    /** Short-link hosts, followed one redirect at a time. */
+    private const SHORT_HOSTS = '/^([a-z0-9-]+\.)*goo\.gl$|^g\.co$/i';
 
     /** @return array{url: string, name: ?string, latitude: ?float, longitude: ?float, cid: ?string}|array{error: string} */
     public static function read(string $link): array
@@ -112,10 +116,11 @@ final class MapsLink
     {
         for ($hop = 0; $hop < 6; $hop++) {
             $host = (string) parse_url($url, PHP_URL_HOST);
-            if (! preg_match('/goo\.gl|g\.co/i', $host) && ! str_contains($host, 'consent.')) {
+            $consent = preg_match('/^consent\.google\./i', $host) && preg_match(self::HOSTS, $host);
+            if (! preg_match(self::SHORT_HOSTS, $host) && ! $consent) {
                 return $url;
             }
-            if (str_contains($host, 'consent.')) {
+            if ($consent) {
                 // Google's cookie page carries the real address in "continue".
                 parse_str((string) parse_url($url, PHP_URL_QUERY), $q);
                 $url = (string) ($q['continue'] ?? '');

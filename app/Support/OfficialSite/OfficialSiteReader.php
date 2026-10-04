@@ -3,6 +3,8 @@
 namespace App\Support\OfficialSite;
 
 use App\Support\Clock;
+use App\Support\Http\CappedSink;
+use App\Support\Http\PublicAddress;
 use DOMDocument;
 use DOMElement;
 use DOMNode;
@@ -826,6 +828,11 @@ final class OfficialSiteReader
         if ($html !== null) {
             return [$html, '', $url];
         }
+        // An address that is not on the public internet stays refused; a
+        // "www." in front of an IP is not another site either.
+        if ($why === self::NOT_PUBLIC || filter_var(trim((string) parse_url($url, PHP_URL_HOST), '[]'), FILTER_VALIDATE_IP)) {
+            return [null, $why, $url];
+        }
         // Temple sites often have an expired certificate, or answer only
         // with (or without) "www.".
         $host = (string) parse_url($url, PHP_URL_HOST);
@@ -842,26 +849,60 @@ final class OfficialSiteReader
         return [null, $why, $url];
     }
 
+    /** The most read of any one page or sitemap, after decompression. */
+    public const MAX_BYTES = 3_000_000;
+
+    private const NOT_PUBLIC = 'not a public web address';
+
+    /** Redirects followed, each checked like the first address. */
+    private const MAX_REDIRECTS = 3;
+
     /** @return array{0: ?string, 1: string} the page's html, or why it could not be read */
     private static function fetch(string $url, bool $xml = false): array
     {
         try {
-            $response = Http::timeout(20)->connectTimeout(10)->withHeaders([
-                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36 '.config('brand.name').'/1.0',
-                'Accept' => $xml ? 'application/xml,text/xml,*/*' : 'text/html,application/xhtml+xml,*/*;q=0.8',
-                'Accept-Language' => 'en-IN,en;q=0.9,te;q=0.8,hi;q=0.7',
-            ])->get($url);
+            for ($hop = 0; ; $hop++) {
+                // The address comes from a temple team: the server only ever
+                // goes to the public internet, never to itself or its network.
+                $ip = PublicAddress::for($url);
+                if ($ip === null) {
+                    return [null, self::NOT_PUBLIC];
+                }
+                $sink = new CappedSink(self::MAX_BYTES);
+                $port = (int) (parse_url($url, PHP_URL_PORT) ?? (str_starts_with(strtolower($url), 'https:') ? 443 : 80));
+                $response = Http::timeout(20)->connectTimeout(10)->withOptions([
+                    // Redirects are followed here, one checked hop at a time.
+                    'allow_redirects' => false,
+                    'sink' => $sink,
+                    // Connect to the address that was checked, so a DNS answer
+                    // that changes in between cannot lead somewhere else.
+                    'curl' => [CURLOPT_RESOLVE => [parse_url($url, PHP_URL_HOST).':'.$port.':'.(str_contains($ip, ':') ? '['.$ip.']' : $ip)]],
+                ])->withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36 '.config('brand.name').'/1.0',
+                    'Accept' => $xml ? 'application/xml,text/xml,*/*' : 'text/html,application/xhtml+xml,*/*;q=0.8',
+                    'Accept-Language' => 'en-IN,en;q=0.9,te;q=0.8,hi;q=0.7',
+                ])->get($url);
+                if ($response->redirect() && filled($location = $response->header('Location'))) {
+                    if ($hop >= self::MAX_REDIRECTS || ($next = self::absolute($location, $url)) === null) {
+                        return [null, 'too many redirects'];
+                    }
+                    $url = $next;
+
+                    continue;
+                }
+                break;
+            }
             if (! $response->successful()) {
                 return [null, 'the site answered '.$response->status()];
             }
             $type = strtolower((string) $response->header('Content-Type'));
-            $body = (string) $response->body();
+            $body = substr((string) $response->body(), 0, self::MAX_BYTES);
             $looksRight = $xml ? (str_contains($type, 'xml') || str_starts_with(ltrim($body), '<?xml')) : (str_contains($type, 'html') || ($type === '' && str_starts_with(ltrim($body), '<')));
             if (! $looksRight) {
                 return [null, 'not a web page'];
             }
 
-            return [mb_substr($body, 0, 3_000_000), ''];
+            return [mb_substr($body, 0, self::MAX_BYTES), ''];
         } catch (Throwable) {
             return [null, 'no answer'];
         }

@@ -82,9 +82,16 @@ class SocialAuthController extends Controller
             $devotee = Devotee::withTrashed()->where($column, $subject)->first();
 
             if ($devotee === null && $emailVerified) {
-                // The provider vouches for this address, so the account that
-                // already uses it is the same person's.
+                // The provider vouches for this address. An account that
+                // already proved it is the same person's; one that never did
+                // may have been opened by someone else with this address, so
+                // the provider-verified owner takes it over and whatever
+                // password and sign-ins it had stop working.
                 $devotee = Devotee::withTrashed()->where('email', $email)->first();
+                if ($devotee !== null && $devotee->email_verified_at === null) {
+                    $devotee->forceFill(['password' => null])->save();
+                    $devotee->tokens()->delete();
+                }
                 $devotee?->forceFill([$column => $subject, 'email_verified_at' => $devotee->email_verified_at ?? now()])->save();
             }
 

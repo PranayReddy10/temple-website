@@ -174,6 +174,14 @@ BRAND_NAME="Darshan Saathi"
 TRUSTED_PROXIES=*
 ```
 
+`APP_URL` and `BRAND_WEBSITE` must be the real addresses
+(`https://temple.darshansaathi.com`, `https://darshansaathi.com`). The app
+answers only on those hosts and their subdomains, so a request naming any
+other host is refused, and a wrong value here takes the site offline with a
+"Untrusted Host" error. Behind a proxy only the client address, scheme and
+port are believed, never `X-Forwarded-Host`: emailed links (staff password
+resets) always use the real host.
+
 `APP_DEBUG=false` is not optional in production. With it on, any error page
 prints environment variables, including the database password, to the visitor.
 
@@ -398,6 +406,7 @@ notifications later in the roadmap.
 | "These credentials do not match our records" | The dump stores a hash, not a password. Run `php artisan admin:create` to set one you know. |
 | "No application encryption key" | `php artisan key:generate`, then `php artisan config:clear`. No SSH? See [TROUBLESHOOTING_403.md](TROUBLESHOOTING_403.md). |
 | Admin panel loads over https but assets or login fail | Behind Cloudflare without `TRUSTED_PROXIES=*`, so Laravel emits http:// URLs. |
+| 400 "Untrusted Host" on every page | `APP_URL` or `BRAND_WEBSITE` does not match the address in the browser. Fix them, then `php artisan config:clear`. |
 | Directory listing, or the raw project tree | Document root is not pointing at `public/`. See step 5. |
 | **403 Forbidden** | Almost always the document root or a symlink. Full diagnostic: [TROUBLESHOOTING_403.md](TROUBLESHOOTING_403.md). |
 | `.env` downloads in a browser | The app is inside the web root. Stop, move it out, then **rotate the DB password and `APP_KEY`** — treat them as leaked. |

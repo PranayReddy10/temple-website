@@ -12,6 +12,7 @@ use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EditTemple extends EditRecord
@@ -49,7 +50,8 @@ class EditTemple extends EditRecord
                     ['Content-Type' => 'image/svg+xml'],
                 )),
             DeleteAction::make(),
-            ForceDeleteAction::make(),
+            // Permanent removal is for super admins only.
+            ForceDeleteAction::make()->visible(fn (): bool => Auth::user()?->canManageUsers() ?? false),
             RestoreAction::make(),
         ];
     }

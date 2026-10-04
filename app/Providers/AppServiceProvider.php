@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Http\Controllers\MediaPreviewController;
+use App\Models\Devotee;
 use App\Models\DevotionalMedia;
 use App\Models\Temple;
 use App\Models\TempleEvent;
@@ -38,6 +39,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -50,6 +52,15 @@ class AppServiceProvider extends ServiceProvider
     {
         self::previewUploadsFromThisHost();
         self::twelveHourClock();
+
+        // A devotee's sign-in is good only while the account is: a suspended
+        // devotee is refused on every request, not just at the next sign-in.
+        // (Staff are checked per request by ActAsTempleTeam, which answers
+        // 403 so the trust app can say why.)
+        Sanctum::authenticateAccessTokensUsing(
+            fn ($token, bool $isValid): bool => $isValid
+                && (! $token->tokenable instanceof Devotee || (bool) $token->tokenable->is_active),
+        );
 
         // Photo and link URLs the API hands out must be https when the site
         // is: Android refuses plain-http images, so a proxy or CDN that
@@ -191,6 +202,12 @@ class AppServiceProvider extends ServiceProvider
     protected static function previewUploadsFromThisHost(): void
     {
         FileUpload::configureUsing(function (FileUpload $upload): void {
+            // A field keeps only the record's own files or ones uploaded
+            // through it: a path typed into the form's state (another
+            // temple's photo, a private document) is refused, so it can be
+            // neither saved, previewed nor deleted through this record.
+            $upload->preventFilePathTampering();
+
             // Opening a form asked the Space whether each saved file exists,
             // and its size and type, before the page could render: a round
             // trip per file, and a hang when the Space is slow to answer or

@@ -6,7 +6,9 @@ use App\Enums\TempleStatus;
 use App\Models\Temple;
 use App\Support\ActingStaff;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Keeps slug, audit stamps and publish timestamps correct no matter where a
@@ -53,6 +55,20 @@ class TempleObserver
         }
 
         $this->syncPublishedAt($temple);
+    }
+
+    /**
+     * Removing a temple for good would take its bookings, tickets, offerings
+     * and settlements with it (the database cascades). Money records are
+     * never erased: such a temple stays archived or in the bin.
+     */
+    public function forceDeleting(Temple $temple): void
+    {
+        foreach (['puja_bookings', 'event_registrations', 'temple_donations', 'temple_settlements'] as $table) {
+            if (DB::table($table)->where('temple_id', $temple->getKey())->exists()) {
+                throw ValidationException::withMessages(['temple' => 'This temple has bookings, tickets, offerings or settlements, so it cannot be deleted permanently. Archive it instead.']);
+            }
+        }
     }
 
     /**

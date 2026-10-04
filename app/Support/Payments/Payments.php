@@ -2,15 +2,22 @@
 
 namespace App\Support\Payments;
 
+use App\Enums\BookingStatus;
 use App\Models\Devotee;
 use App\Models\DevoteeSubscription;
+use App\Models\EventRegistration;
 use App\Models\Payment;
+use App\Models\PujaBooking;
 use App\Models\SubscriptionPlan;
 use App\Support\AppConfig;
+use App\Support\Bookings\PujaBookings;
+use App\Support\Donations\Donations;
+use App\Support\Events\EventRegistrations;
 use App\Support\Payments\Gateways\Cashfree;
 use App\Support\Payments\Gateways\PayU;
 use App\Support\Payments\Gateways\PhonePe;
 use App\Support\Payments\Gateways\Razorpay;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -68,7 +75,7 @@ class Payments
     }
 
     /** Asks the gateway how this payment ended and records it. */
-    public function reconcile(Payment $payment, ?\Illuminate\Http\Request $request = null): Payment
+    public function reconcile(Payment $payment, ?Request $request = null): Payment
     {
         if ($payment->isSettled() || $payment->gateway_order_id === null) {
             return $payment;
@@ -83,8 +90,10 @@ class Payments
             $locked = Payment::query()->lockForUpdate()->findOrFail($payment->getKey());
 
             // A paid payment stays paid: a late "failed" webhook for an
-            // earlier attempt must not undo it.
-            if ($locked->isPaid() || $status === Payment::PENDING) {
+            // earlier attempt must not undo it. A refunded one stays
+            // refunded: the money went back, and no callback (late, replayed
+            // or re-queried) may mark it paid again.
+            if ($locked->isPaid() || $locked->status === Payment::REFUNDED || $status === Payment::PENDING) {
                 return $locked;
             }
 
@@ -94,13 +103,13 @@ class Payments
                     // A booking waiting on this money is off; the slot goes
                     // back to whoever books next.
                     if ($locked->booking !== null) {
-                        app(\App\Support\Bookings\PujaBookings::class)->paymentFailed($locked->booking, $locked->failure_reason);
+                        app(PujaBookings::class)->paymentFailed($locked->booking, $locked->failure_reason);
                     }
                     if ($locked->registration !== null) {
-                        app(\App\Support\Events\EventRegistrations::class)->paymentFailed($locked->registration, $locked->failure_reason);
+                        app(EventRegistrations::class)->paymentFailed($locked->registration, $locked->failure_reason);
                     }
                     if ($locked->donation !== null) {
-                        app(\App\Support\Donations\Donations::class)->failed($locked->donation);
+                        app(Donations::class)->failed($locked->donation);
                     }
                 }
 
@@ -121,35 +130,35 @@ class Payments
             // The one place a booking becomes confirmed: the gateway said
             // the money arrived, not the app.
             if ($locked->booking !== null) {
-                app(\App\Support\Bookings\PujaBookings::class)->confirm($locked->booking);
+                app(PujaBookings::class)->confirm($locked->booking);
             } elseif ($locked->purpose === Payment::PUJA_BOOKING && filled($locked->meta['booking'] ?? null)) {
                 // An earlier attempt for a booking that has since been given
                 // a new payment ("Pay now" again) went through after all:
                 // the money is in, so the booking holds, on this payment.
-                $booking = \App\Models\PujaBooking::query()->where('reference', $locked->meta['booking'])
+                $booking = PujaBooking::query()->where('reference', $locked->meta['booking'])
                     ->where('devotee_id', $locked->devotee_id)->first();
-                if ($booking !== null && $booking->status === \App\Enums\BookingStatus::PendingPayment) {
+                if ($booking !== null && $booking->status === BookingStatus::PendingPayment) {
                     $booking->payment()->associate($locked);
                     $booking->save();
-                    app(\App\Support\Bookings\PujaBookings::class)->confirm($booking);
+                    app(PujaBookings::class)->confirm($booking);
                 }
             }
 
             // Event tickets and hundi gifts, the same way: the money is in.
             if ($locked->registration !== null) {
-                app(\App\Support\Events\EventRegistrations::class)->confirm($locked->registration);
+                app(EventRegistrations::class)->confirm($locked->registration);
             } elseif ($locked->purpose === Payment::EVENT_TICKET && filled($locked->meta['registration'] ?? null)) {
-                $registration = \App\Models\EventRegistration::query()->where('reference', $locked->meta['registration'])
+                $registration = EventRegistration::query()->where('reference', $locked->meta['registration'])
                     ->where('devotee_id', $locked->devotee_id)->first();
-                if ($registration !== null && $registration->status === \App\Enums\BookingStatus::PendingPayment) {
+                if ($registration !== null && $registration->status === BookingStatus::PendingPayment) {
                     $registration->payment()->associate($locked);
                     $registration->save();
-                    app(\App\Support\Events\EventRegistrations::class)->confirm($registration);
+                    app(EventRegistrations::class)->confirm($registration);
                 }
             }
 
             if ($locked->donation !== null) {
-                app(\App\Support\Donations\Donations::class)->paid($locked->donation);
+                app(Donations::class)->paid($locked->donation);
             }
 
             return $locked;
@@ -184,13 +193,13 @@ class Payments
             $payment->subscription?->forceFill(['cancelled_at' => now()])->save();
 
             if ($payment->booking !== null) {
-                app(\App\Support\Bookings\PujaBookings::class)->refunded($payment->booking);
+                app(PujaBookings::class)->refunded($payment->booking);
             }
             if ($payment->registration !== null) {
-                app(\App\Support\Events\EventRegistrations::class)->refunded($payment->registration);
+                app(EventRegistrations::class)->refunded($payment->registration);
             }
             if ($payment->donation !== null) {
-                app(\App\Support\Donations\Donations::class)->refunded($payment->donation);
+                app(Donations::class)->refunded($payment->donation);
             }
         });
     }

@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use Illuminate\Http\Request;
+
 /**
  * Turns the TRUSTED_PROXIES environment value into what Laravel's
  * trustProxies() expects.
@@ -15,9 +17,34 @@ namespace App\Support;
  */
 class TrustedProxies
 {
+    /** The forwarded headers believed from a trusted proxy: never the host. */
+    public const HEADERS = Request::HEADER_X_FORWARDED_FOR
+        | Request::HEADER_X_FORWARDED_PROTO
+        | Request::HEADER_X_FORWARDED_PORT
+        | Request::HEADER_X_FORWARDED_AWS_ELB;
+
+    /**
+     * Hosts the app answers on, as patterns for trustHosts(): the admin host
+     * from APP_URL and the website, each with its subdomains.
+     *
+     * @return array<int, string>
+     */
+    public static function hosts(): array
+    {
+        $hosts = [];
+        foreach ([config('app.url'), config('brand.website')] as $url) {
+            $host = parse_url((string) $url, PHP_URL_HOST);
+            if (is_string($host) && $host !== '') {
+                $hosts[] = '^(.+\\.)?'.preg_quote(strtolower($host)).'$';
+            }
+        }
+
+        return array_values(array_unique($hosts));
+    }
+
     /**
      * @return string|array<int, string>|null
-     *   '*' to trust any proxy, a list of addresses, or null to trust none.
+     *                                        '*' to trust any proxy, a list of addresses, or null to trust none.
      */
     public static function from(?string $value): string|array|null
     {

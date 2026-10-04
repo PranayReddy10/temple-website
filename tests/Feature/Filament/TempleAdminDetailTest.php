@@ -2,9 +2,14 @@
 
 namespace Tests\Feature\Filament;
 
+use App\Enums\DevotionalMediaType;
 use App\Enums\TempleStatus;
 use App\Enums\UserRole;
+use App\Filament\RelationManagers\DevotionalMediaRelationManager;
+use App\Filament\RelationManagers\TranslationsRelationManager;
 use App\Filament\Resources\Deities\DeityResource;
+use App\Filament\Resources\Deities\Pages\ListDeities;
+use App\Filament\Resources\TemplePhotos\Pages\ListTemplePhotos;
 use App\Filament\Resources\TemplePhotos\TemplePhotoResource;
 use App\Filament\Resources\TemplePujas\Pages\ListTemplePujas;
 use App\Filament\Resources\TemplePujas\TemplePujaResource;
@@ -12,12 +17,14 @@ use App\Filament\Resources\Temples\Pages\CreateTemple;
 use App\Filament\Resources\Temples\Pages\EditTemple;
 use App\Filament\Resources\Temples\Pages\ListTemples;
 use App\Models\Deity;
+use App\Models\DevotionalMedia;
 use App\Models\State;
 use App\Models\Temple;
 use App\Models\TemplePhoto;
 use App\Models\TemplePuja;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -73,7 +80,7 @@ class TempleAdminDetailTest extends TestCase
         ]);
         $bare = Deity::create(['name' => 'Hanuman', 'slug' => 'hanuman']);
 
-        Livewire::test(\App\Filament\Resources\Deities\Pages\ListDeities::class)
+        Livewire::test(ListDeities::class)
             ->assertOk()
             ->filterTable('needs_image')
             ->assertCanSeeTableRecords([$bare])
@@ -118,14 +125,14 @@ class TempleAdminDetailTest extends TestCase
         $temple = Temple::create(['name' => 'Tirumala', 'deity_id' => $deity->id]);
 
         $deity->media()->create([
-            'type' => \App\Enums\DevotionalMediaType::Chant,
+            'type' => DevotionalMediaType::Chant,
             'title' => 'Vishnu Sahasranama',
             'external_url' => 'https://example.com/deity',
             'is_published' => true,
         ]);
 
         $temple->media()->create([
-            'type' => \App\Enums\DevotionalMediaType::Chant,
+            'type' => DevotionalMediaType::Chant,
             'title' => 'Suprabhatam',
             'external_url' => 'https://example.com/temple',
             'is_published' => true,
@@ -142,7 +149,7 @@ class TempleAdminDetailTest extends TestCase
         $temple = Temple::create(['name' => 'Tirumala', 'deity_id' => $deity->id]);
 
         $temple->media()->create([
-            'type' => \App\Enums\DevotionalMediaType::Chant,
+            'type' => DevotionalMediaType::Chant,
             'title' => 'Draft',
             'external_url' => 'https://example.com/draft',
             'is_published' => false,
@@ -157,8 +164,8 @@ class TempleAdminDetailTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
 
-        \App\Models\DevotionalMedia::create([
-            'type' => \App\Enums\DevotionalMediaType::Song,
+        DevotionalMedia::create([
+            'type' => DevotionalMediaType::Song,
             'title' => 'Orphan',
             'external_url' => 'https://example.com/a',
         ]);
@@ -169,12 +176,13 @@ class TempleAdminDetailTest extends TestCase
     public function test_a_cover_image_can_be_set_while_creating_a_temple(): void
     {
         $this->actingAs($this->staff());
+        Storage::fake(config('filesystems.media'));
 
         Livewire::test(CreateTemple::class)
             ->fillForm([
                 'name' => 'Kashi Vishwanath',
                 'status' => TempleStatus::Draft->value,
-                'cover_image' => ['temples/covers/kashi.jpg'],
+                'cover_image' => [UploadedFile::fake()->image('kashi.jpg', 1200, 600)],
                 'cover_image_credit' => 'Photo by A Devotee',
             ])
             ->call('create')
@@ -186,7 +194,7 @@ class TempleAdminDetailTest extends TestCase
         // Written to temple_photos, not to a second column that could
         // disagree with the gallery about which photo leads.
         $this->assertNotNull($photo);
-        $this->assertSame('temples/covers/kashi.jpg', $photo->path);
+        $this->assertStringStartsWith('temples/covers/', $photo->path);
         $this->assertSame('Photo by A Devotee', $photo->credit);
     }
 
@@ -276,14 +284,15 @@ class TempleAdminDetailTest extends TestCase
             'disk' => 'public', 'path' => 'temples/1/old.jpg', 'is_primary' => true,
         ]);
 
+        Storage::fake(config('filesystems.media'));
         Livewire::test(EditTemple::class, ['record' => $temple->getKey()])
-            ->fillForm(['cover_image' => ['temples/covers/new.jpg']])
+            ->fillForm(['cover_image' => [UploadedFile::fake()->image('new.jpg', 1200, 600)]])
             ->call('save')
             ->assertHasNoFormErrors();
 
         $this->assertModelExists($original);
         $this->assertFalse($original->fresh()->is_primary);
-        $this->assertSame('temples/covers/new.jpg', $temple->fresh()->photos()->where('is_primary', true)->value('path'));
+        $this->assertStringStartsWith('temples/covers/', (string) $temple->fresh()->photos()->where('is_primary', true)->value('path'));
         $this->assertSame(2, $temple->photos()->count());
     }
 
@@ -323,7 +332,7 @@ class TempleAdminDetailTest extends TestCase
 
         $this->get(TemplePhotoResource::getUrl('index'))->assertOk();
 
-        Livewire::test(\App\Filament\Resources\TemplePhotos\Pages\ListTemplePhotos::class)
+        Livewire::test(ListTemplePhotos::class)
             ->filterTable('uncredited')
             ->assertCanSeeTableRecords([$uncredited])
             ->assertCanNotSeeTableRecords([$credited]);
@@ -392,7 +401,7 @@ class TempleAdminDetailTest extends TestCase
     {
         $relations = DeityResource::getRelations();
 
-        $this->assertContains(\App\Filament\RelationManagers\DevotionalMediaRelationManager::class, $relations);
-        $this->assertContains(\App\Filament\RelationManagers\TranslationsRelationManager::class, $relations);
+        $this->assertContains(DevotionalMediaRelationManager::class, $relations);
+        $this->assertContains(TranslationsRelationManager::class, $relations);
     }
 }
