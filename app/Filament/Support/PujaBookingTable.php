@@ -207,10 +207,17 @@ class PujaBookingTable
             ->label('Mark refunded')
             ->icon('heroicon-o-receipt-refund')
             ->color('warning')
-            ->visible(fn (PujaBooking $record): bool => $record->payment?->isPaid() === true && $record->status !== BookingStatus::Refunded)
+            // Money records belong to super admins, as on tickets, hundi and
+            // payments: an editor cannot void a paid booking.
+            ->visible(fn (PujaBooking $record): bool => $record->payment?->isPaid() === true
+                && $record->status !== BookingStatus::Refunded
+                && (Auth::user()?->canManageUsers() ?? false))
             ->requiresConfirmation()
             ->modalDescription('Only after the refund has been made in the payment gateway. This records it: the payment reads refunded and the booking is void.')
             ->action(function (PujaBooking $record): void {
+                if (! (Auth::user()?->canManageUsers() ?? false)) {
+                    throw new AuthorizationException;
+                }
                 app(Payments::class)->refunded($record->payment);
                 Notification::make()->title('Marked refunded.')->success()->send();
             });

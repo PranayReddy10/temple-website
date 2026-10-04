@@ -40,10 +40,30 @@ class TemplePhotoObserver
         $disk = Storage::disk($photo->disk ?? config('filesystems.media'));
 
         foreach ($photo->storedPaths() as $path) {
-            $disk->delete($path);
+            if (self::ownsFile($photo, $path)) {
+                $disk->delete($path);
+            }
         }
 
         $this->promoteAnotherPrimary($photo);
+    }
+
+    /**
+     * Only this temple's own files are deleted with its photo: a row that
+     * names another temple's file (or one still used by another photo) must
+     * not take that file with it.
+     */
+    public static function ownsFile(TemplePhoto $photo, string $path): bool
+    {
+        if (str_contains($path, '..')) {
+            return false;
+        }
+        $own = str_starts_with($path, 'temples/'.$photo->temple_id.'/') || str_starts_with($path, 'temples/covers/');
+
+        return $own && ! TemplePhoto::query()
+            ->whereKeyNot($photo->getKey())
+            ->where(fn ($q) => $q->where('path', $path)->orWhere('medium_path', $path)->orWhere('thumbnail_path', $path))
+            ->exists();
     }
 
     /** A temple has exactly one lead image, or none at all. */

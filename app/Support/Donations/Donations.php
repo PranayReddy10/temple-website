@@ -63,7 +63,8 @@ final class Donations
 
     public function paid(TempleDonation $donation): TempleDonation
     {
-        if ($donation->status !== TempleDonation::PAID) {
+        // A refunded offering is never counted again.
+        if (! in_array($donation->status, [TempleDonation::PAID, TempleDonation::REFUNDED], true)) {
             $donation->forceFill([
                 'status' => TempleDonation::PAID,
                 'paid_at' => now(),

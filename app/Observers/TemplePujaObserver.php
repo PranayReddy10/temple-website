@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\TemplePuja;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Keeps the fee and booking fields internally consistent.
@@ -21,10 +22,26 @@ class TemplePujaObserver
         $puja->image_disk ??= config('filesystems.media');
     }
 
+    /**
+     * Bookings are money records: a seva devotees booked is unpublished,
+     * never deleted with their bookings. Same rule as the trust app and
+     * temple events, enforced here so every path (admin, portal, bulk) obeys.
+     */
+    public function deleting(TemplePuja $puja): void
+    {
+        if ($puja->bookings()->exists()) {
+            throw ValidationException::withMessages(['puja' => 'Devotees have booked this seva. Unpublish it instead of deleting it.']);
+        }
+    }
+
     /** Deleting the row deletes its image, so object storage stays tidy. */
     public function deleted(TemplePuja $puja): void
     {
-        if (filled($puja->image_path)) {
+        // Only the seva's own temple's image folder: a path naming another
+        // temple's file is left alone.
+        if (filled($puja->image_path)
+            && str_starts_with($puja->image_path, 'pujas/'.$puja->temple_id.'/')
+            && ! str_contains($puja->image_path, '..')) {
             Storage::disk($puja->image_disk ?? config('filesystems.media'))
                 ->delete($puja->image_path);
         }

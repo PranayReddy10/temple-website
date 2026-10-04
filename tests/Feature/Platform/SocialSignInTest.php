@@ -85,6 +85,40 @@ class SocialSignInTest extends TestCase
         $this->assertSame(1, Devotee::count());
     }
 
+    /**
+     * Someone registers with Meera's address before she ever signs in. Her
+     * Google sign-in proves the address is hers, so the account becomes
+     * hers alone: the stranger's password and sign-in stop working.
+     */
+    public function test_an_account_that_never_proved_its_email_is_taken_over_not_shared(): void
+    {
+        $stranger = $this->postJson('/api/v1/auth/register', [
+            'name' => 'Stranger', 'email' => 'meera@example.com',
+            'password' => 'stranger-pass-1', 'password_confirmation' => 'stranger-pass-1',
+        ])->assertCreated()->json('data.token');
+        $this->assertNull(Devotee::firstOrFail()->email_verified_at);
+
+        $meera = $this->postJson('/api/v1/auth/google', ['id_token' => $this->google()])->assertOk()
+            ->assertJsonPath('data.created', false)->json('data.token');
+        $this->assertSame(1, Devotee::count());
+
+        $this->withToken($stranger)->getJson('/api/v1/me')->assertUnauthorized();
+        $this->app['auth']->forgetGuards();
+        $this->postJson('/api/v1/auth/login', ['identifier' => 'meera@example.com', 'password' => 'stranger-pass-1'])->assertUnprocessable();
+        $this->withToken($meera)->getJson('/api/v1/me')->assertOk()->assertJsonPath('data.email', 'meera@example.com');
+    }
+
+    public function test_an_account_that_proved_its_email_keeps_its_password_when_linked(): void
+    {
+        $existing = Devotee::factory()->create(['email' => 'meera@example.com', 'password' => 'own-pass-123', 'email_verified_at' => now()]);
+        $token = $existing->createToken('app')->plainTextToken;
+
+        $this->postJson('/api/v1/auth/google', ['id_token' => $this->google()])->assertOk();
+
+        $this->assertNotNull($existing->fresh()->password);
+        $this->withToken($token)->getJson('/api/v1/me')->assertOk();
+    }
+
     public function test_an_unverified_email_is_neither_linked_nor_taken(): void
     {
         Devotee::factory()->create(['email' => 'meera@example.com']);

@@ -56,8 +56,17 @@ return Application::configure(basePath: dirname(__DIR__))
          * is the usual setting.
          */
         if ($proxies = TrustedProxies::from(env('TRUSTED_PROXIES'))) {
-            $middleware->trustProxies(at: $proxies);
+            // Client address, scheme and port only. Never X-Forwarded-Host:
+            // links the app emails (staff password resets) are built from
+            // the request's host, and a forwarded host is whatever the
+            // sender typed. Cloudflare keeps the real Host header anyway.
+            $middleware->trustProxies(at: $proxies, headers: TrustedProxies::HEADERS);
         }
+
+        // Only our own addresses (the admin host, the website and their
+        // subdomains) are answered; a request naming another host cannot
+        // make the app build links to it.
+        $middleware->trustHosts(at: fn (): array => TrustedProxies::hosts());
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

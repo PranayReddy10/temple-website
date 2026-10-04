@@ -138,6 +138,9 @@ class TempleForm
                     ->maxSize(UploadRules::maxKbFor('temple_photo'))
                     ->acceptedFileTypes(UploadRules::typesFor('temple_photo'))
                     ->helperText('Landscape works best: it is cropped to a wide card in the app.')
+                    // Its saved value comes from the temple's photos, not a
+                    // column, so those are the paths it may keep.
+                    ->preventFilePathTampering(allowFilePathUsing: fn (string $file, ?Temple $record): bool => $record?->photos()->where('path', $file)->exists() ?? false)
                     // Not a column on temples: the page strips these two out
                     // and writes them to the primary temple_photos row
                     // instead. See SyncsCoverPhoto.

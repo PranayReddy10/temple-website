@@ -2,7 +2,10 @@
 
 namespace App\Models;
 
+use App\Enums\Gender;
 use App\Support\MediaUrl;
+use App\Support\PassportQr;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -11,7 +14,6 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -50,7 +52,7 @@ class Devotee extends Authenticatable
             'phone_verified_at' => 'datetime',
             'last_seen_at' => 'datetime',
             'date_of_birth' => 'date',
-            'gender' => \App\Enums\Gender::class,
+            'gender' => Gender::class,
             'password' => 'hashed',
             'is_active' => 'boolean',
         ];
@@ -62,6 +64,14 @@ class Devotee extends Authenticatable
         // show one without a second request to mint it.
         static::creating(function (Devotee $devotee): void {
             $devotee->passport_code ??= static::newPassportCode();
+        });
+
+        // A suspended account is signed out everywhere at once: the app's
+        // sign-ins never expire on their own.
+        static::updated(function (Devotee $devotee): void {
+            if ($devotee->wasChanged('is_active') && ! $devotee->is_active) {
+                $devotee->tokens()->delete();
+            }
         });
     }
 
@@ -78,7 +88,7 @@ class Devotee extends Authenticatable
      */
     public static function findByPassportCode(?string $code): ?self
     {
-        $code = \App\Support\PassportQr::parse((string) $code);
+        $code = PassportQr::parse((string) $code);
 
         if ($code === null) {
             return null;
@@ -274,7 +284,7 @@ class Devotee extends Authenticatable
     }
 
     /** Sign-ins are what "active" is measured from, not record edits. */
-    public function lastLoginAt(): ?\Carbon\CarbonInterface
+    public function lastLoginAt(): ?CarbonInterface
     {
         return $this->loginEvents()->succeeded()->value('occurred_at');
     }
