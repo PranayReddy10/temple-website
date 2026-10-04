@@ -287,6 +287,20 @@ class TempleEvent extends Model
      * decides — and the whole behaviour can be switched off from settings when
      * something goes wrong.
      */
+    /**
+     * Who may approve or reject this event, and publish it directly: our
+     * editorial staff, or the temple's own approved owner. A manager's
+     * event, or one a devotee proposed, waits for one of them.
+     */
+    public function mayBeReviewedBy(?User $user): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        return ($user->role?->isStaff() ?? false) || $user->ownsTemple((int) $this->temple_id);
+    }
+
     public function templeMaySelfPublish(): bool
     {
         if (! (bool) setting('temple_self_publish_enabled', null, false)) {

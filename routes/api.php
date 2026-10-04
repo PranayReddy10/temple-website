@@ -337,6 +337,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
                 Route::post('events', [TrustEventController::class, 'store'])->middleware('throttle:30,1')->name('events.store');
                 Route::post('events/{event}', [TrustEventController::class, 'update'])->whereNumber('event')->name('events.update');
                 Route::delete('events/{event}', [TrustEventController::class, 'destroy'])->whereNumber('event')->name('events.destroy');
+                Route::post('events/{event}/approve', [TrustEventController::class, 'approve'])->whereNumber('event')->name('events.approve');
+                Route::post('events/{event}/reject', [TrustEventController::class, 'reject'])->whereNumber('event')->name('events.reject');
                 Route::get('events/{event}/registrations', [TrustEventController::class, 'registrations'])->whereNumber('event')->name('events.registrations');
 
                 Route::get('sevas', [TrustPujaController::class, 'index'])->name('sevas.index');

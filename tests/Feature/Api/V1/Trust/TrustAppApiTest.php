@@ -58,13 +58,13 @@ class TrustAppApiTest extends TestCase
     }
 
     /** A signed-in team member whose claim on $this->temple is approved. */
-    protected function manager(): array
+    protected function manager(string $role = 'owner'): array
     {
         $token = $this->register();
         $user = User::query()->where('email', 'secretary@example.org')->firstOrFail();
 
         TempleUser::create([
-            'temple_id' => $this->temple->id, 'user_id' => $user->id, 'role' => 'owner',
+            'temple_id' => $this->temple->id, 'user_id' => $user->id, 'role' => $role,
             'requested_at' => now(), 'approved_at' => now(),
         ]);
 
@@ -366,9 +366,9 @@ class TrustAppApiTest extends TestCase
         $this->as($token)->deleteJson($base.'/timings/'.$id)->assertOk();
     }
 
-    public function test_an_event_the_team_publishes_waits_for_review_unless_the_temple_is_verified(): void
+    public function test_a_managers_event_waits_for_review(): void
     {
-        [$token, $user] = $this->manager();
+        [$token, $user] = $this->manager('manager');
 
         $this->as($token)->post('/api/v1/trust/temples/'.$this->temple->id.'/events', [
             'type' => 'festival',
@@ -389,6 +389,59 @@ class TrustAppApiTest extends TestCase
         $this->as($token)->post('/api/v1/trust/temples/'.$this->temple->id.'/events/'.$event->id, [
             'type' => 'festival', 'title' => 'x', 'starts_on' => now()->toDateString(), 'is_all_day' => '1', 'status' => 'pending_review',
         ], self::JSON)->assertUnprocessable();
+    }
+
+    /**
+     * The temple's owner publishes events directly, and approves (or turns
+     * down) the ones devotees propose and managers write.
+     */
+    public function test_the_owner_publishes_directly_and_approves_proposed_events(): void
+    {
+        [$token] = $this->manager('owner');
+        $base = '/api/v1/trust/temples/'.$this->temple->id.'/events';
+
+        $this->as($token)->post($base, [
+            'type' => 'festival', 'title' => 'Sri Rama Navami', 'starts_on' => now()->addWeek()->toDateString(), 'is_all_day' => '1', 'status' => 'published',
+        ], self::JSON)->assertCreated()->assertJsonPath('data.status.value', 'published');
+
+        $devotee = Devotee::factory()->create(['name' => 'Bhajan Leader']);
+        $proposed = TempleEvent::create(['temple_id' => $this->temple->id, 'type' => 'bhajan', 'title' => 'Ekadashi Bhajan', 'starts_on' => now()->addDays(3)->toDateString(), 'status' => EventStatus::PendingReview, 'devotee_id' => $devotee->id]);
+        $other = TempleEvent::create(['temple_id' => $this->temple->id, 'type' => 'bhajan', 'title' => 'Second Bhajan', 'starts_on' => now()->addDays(4)->toDateString(), 'status' => EventStatus::PendingReview, 'devotee_id' => $devotee->id]);
+
+        // Waiting ones come first, and say the owner may decide.
+        $this->as($token)->getJson($base)->assertOk()
+            ->assertJsonPath('data.0.status.value', 'pending_review')
+            ->assertJsonPath('data.0.can_review', true)
+            ->assertJsonPath('data.0.raised_by', 'Bhajan Leader');
+
+        $this->as($token)->postJson($base.'/'.$proposed->id.'/approve')->assertOk()->assertJsonPath('data.status.value', 'published');
+        $this->as($token)->postJson($base.'/'.$other->id.'/reject', ['note' => 'Clashes with the Navami festival.'])->assertOk()->assertJsonPath('data.status.value', 'rejected');
+        $this->assertSame('Clashes with the Navami festival.', $other->fresh()->review_note);
+        $this->as($token)->postJson($base.'/'.$proposed->id.'/approve')->assertUnprocessable();
+    }
+
+    public function test_a_manager_cannot_approve_events(): void
+    {
+        [$token] = $this->manager('manager');
+        $event = TempleEvent::create(['temple_id' => $this->temple->id, 'type' => 'bhajan', 'title' => 'Ekadashi Bhajan', 'starts_on' => now()->addDays(3)->toDateString(), 'status' => EventStatus::PendingReview, 'devotee_id' => Devotee::factory()->create()->id]);
+
+        $this->as($token)->getJson('/api/v1/trust/temples/'.$this->temple->id.'/events')->assertJsonPath('data.0.can_review', false);
+        $this->as($token)->postJson('/api/v1/trust/temples/'.$this->temple->id.'/events/'.$event->id.'/approve')->assertForbidden();
+        $this->assertSame(EventStatus::PendingReview, $event->fresh()->status);
+    }
+
+    public function test_a_temple_shares_its_website_page_once_published_and_says_the_role(): void
+    {
+        [$token] = $this->manager('owner');
+        config(['brand.website' => 'https://darshansaathi.com']);
+
+        $this->as($token)->getJson('/api/v1/trust/temples/'.$this->temple->id)->assertOk()
+            ->assertJsonPath('data.access_level', 'owner')
+            ->assertJsonPath('data.public_url', $this->temple->status === TempleStatus::Published ? 'https://darshansaathi.com/temples/'.$this->temple->slug : null);
+
+        $this->temple->forceFill(['status' => TempleStatus::Published, 'published_at' => now()])->saveQuietly();
+        $this->as($token)->getJson('/api/v1/trust/me')->assertJsonPath('data.temples.0.public_url', 'https://darshansaathi.com/temples/'.$this->temple->slug)
+            ->assertJsonPath('data.temples.0.access_level', 'owner');
     }
 
     /** A devotee at the counter without a phone: found by number or reference, then received. */
@@ -537,7 +590,7 @@ class TrustAppApiTest extends TestCase
     {
         $team = $this->register();
         $this->as($team)->postJson('/api/v1/trust/claims', [
-            'temple_id' => $this->temple->id, 'role' => 'owner', 'note' => 'Secretary of the temple trust.', 'latitude' => 17.6936, 'longitude' => 78.9686, 'location_accuracy' => 12,
+            'temple_id' => $this->temple->id, 'role' => 'manager', 'note' => 'Secretary of the temple trust.', 'latitude' => 17.6936, 'longitude' => 78.9686, 'location_accuracy' => 12,
         ])->assertCreated();
         $this->as($team)->post('/api/v1/trust/registrations', [
             'name' => 'Village Shiva Temple', 'city' => 'Kolanupaka',
@@ -566,7 +619,7 @@ class TrustAppApiTest extends TestCase
         $this->as($admin)->patchJson('/api/v1/trust/admin/temples/'.$templeId.'/status', ['status' => 'published'])
             ->assertOk()->assertJsonPath('data.status.value', 'published');
 
-        // The team's event waits; the super admin approves it.
+        // A manager's event waits; the super admin approves it.
         $this->as($team)->post('/api/v1/trust/temples/'.$this->temple->id.'/events', [
             'type' => 'festival', 'title' => 'Sri Rama Navami', 'starts_on' => now()->addWeek()->toDateString(), 'is_all_day' => '1', 'status' => 'published',
         ], self::JSON)->assertCreated()->assertJsonPath('data.status.value', 'pending_review');
