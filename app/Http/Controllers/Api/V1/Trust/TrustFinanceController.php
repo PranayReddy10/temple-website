@@ -8,14 +8,12 @@ use App\Models\Temple;
 use App\Models\TempleDonation;
 use App\Models\TemplePayoutAccount;
 use App\Models\TempleSettlement;
-use App\Models\TempleUser;
 use App\Support\DevotionalClock;
+use App\Support\Finance\PayoutAccounts;
 use App\Support\Finance\Settlements;
-use App\Support\MediaStorage;
 use App\Support\UploadRules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -98,39 +96,9 @@ class TrustFinanceController extends Controller
             'upi_id.regex' => 'A UPI id looks like name@bank.',
         ]);
 
-        /** @var TemplePayoutAccount $account */
-        $account = $record->payoutAccount()->firstOrNew();
-        $account->fill([
-            'account_name' => $validated['account_name'] ?? null,
-            'ifsc' => isset($validated['ifsc']) ? strtoupper($validated['ifsc']) : null,
-            'bank_name' => $validated['bank_name'] ?? null,
-            'upi_id' => $validated['upi_id'] ?? null,
-            'updated_by' => $this->trustUser($request)->getKey(),
-        ]);
+        $account = app(PayoutAccounts::class)->updateBank($record, $validated, $this->trustUser($request));
 
-        // A blank number keeps the one on file: the app never receives it,
-        // so it cannot send it back. Clearing the name clears the account.
-        if (filled($validated['account_number'] ?? null)) {
-            $account->account_number = $validated['account_number'];
-        } elseif (blank($validated['account_name'] ?? null)) {
-            $account->account_number = null;
-        }
-
-        if (! $account->isComplete()) {
-            return response()->json([
-                'message' => 'Enter a bank account (holder name, number and IFSC) or a UPI id.',
-                'errors' => ['account_number' => ['Enter a bank account (holder name, number and IFSC) or a UPI id.']],
-            ], 422);
-        }
-
-        $wasApproved = $account->exists && $account->isVerified();
-        $account->save();
-
-        if ($wasApproved && ! $account->isVerified()) {
-            $account->recordEvent('bank_changed', 'Changed by the temple; payments paused until approved again.', $this->trustUser($request)->getKey());
-        }
-
-        return response()->json(['data' => $account->refresh()->toPublicArray()]);
+        return response()->json(['data' => $account->toPublicArray()]);
     }
 
     /**
@@ -174,45 +142,11 @@ class TrustFinanceController extends Controller
             'kyc_name.required' => 'Enter the name as it is on the Aadhaar card.',
         ]);
 
-        // Documents go where uploads go (privately on Spaces when it is on).
-        // Ones already sent elsewhere are carried over, so one account's
-        // documents always sit on one disk.
-        $disk = MediaStorage::privateDisk();
-        if (filled($account->kyc_disk) && $account->kyc_disk !== $disk) {
-            foreach (TemplePayoutAccount::DOCUMENTS as $field => [$column]) {
-                if (filled($account->{$column}) && ! $request->hasFile($field) && Storage::disk($account->kyc_disk)->exists($account->{$column})) {
-                    Storage::disk($disk)->writeStream($account->{$column}, Storage::disk($account->kyc_disk)->readStream($account->{$column}), ['visibility' => 'private']);
-                }
-            }
-        }
-        $account->kyc_disk = $disk;
-
-        foreach (TemplePayoutAccount::DOCUMENTS as $field => [$column]) {
-            if ($request->hasFile($field)) {
-                $account->{$column} = $request->file($field)->store('kyc/'.$record->getKey(), ['disk' => $disk, 'visibility' => 'private']);
-            }
-        }
-
-        foreach (['kyc_name', 'aadhaar_number', 'temple_proof_kind'] as $key) {
-            if (filled($validated[$key] ?? null)) {
-                $account->{$key} = $validated[$key];
-            }
-        }
-
-        $account->forceFill([
-            'temple_id' => $record->getKey(),
-            'kyc_submitted_at' => now(),
-            'rejection_reason' => null,
-            'rejected_at' => null,
-            'updated_by' => $this->trustUser($request)->getKey(),
-            // New documents are always checked again.
-            'verified_at' => null,
-            'verified_by' => null,
-        ])->save();
-
-        // The replaced files are kept: the history shows what each
-        // submission (and each rejection) was about.
-        $account->refresh()->recordEvent('submitted', null, $this->trustUser($request)->getKey());
+        $files = collect(array_keys(TemplePayoutAccount::DOCUMENTS))
+            ->filter(fn (string $field): bool => $request->hasFile($field))
+            ->mapWithKeys(fn (string $field): array => [$field => $request->file($field)])
+            ->all();
+        $account = app(PayoutAccounts::class)->submitKyc($record, $validated, $files, $this->trustUser($request));
 
         return response()->json(['data' => $account->toPublicArray()]);
     }
@@ -300,13 +234,6 @@ class TrustFinanceController extends Controller
 
     protected function canEditPayout(Request $request, Temple $temple): bool
     {
-        $user = $this->trustUser($request);
-
-        return $user->isSuperAdmin() || TempleUser::query()
-            ->approved()
-            ->where('temple_id', $temple->getKey())
-            ->where('user_id', $user->getKey())
-            ->where('role', 'owner')
-            ->exists();
+        return $this->trustUser($request)->ownsTemple($temple);
     }
 }

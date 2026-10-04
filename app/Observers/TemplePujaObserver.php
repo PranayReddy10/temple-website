@@ -2,7 +2,9 @@
 
 namespace App\Observers;
 
+use App\Models\TemplePayoutAccount;
 use App\Models\TemplePuja;
+use App\Support\ActingStaff;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -49,6 +51,17 @@ class TemplePujaObserver
 
     public function saving(TemplePuja $puja): void
     {
+        // Paid booking in the app takes money: a temple team may switch it
+        // on only once the owner and the bank details are approved. The
+        // trust app checks this too; here the portal (and anything else a
+        // team uses) obeys the same rule.
+        if (ActingStaff::user()?->isTempleAdmin()
+            && $puja->isDirty(['app_booking_enabled', 'is_free', 'fee_amount'])
+            && $puja->app_booking_enabled && ! $puja->is_free && $puja->fee_amount !== null
+            && ! ($puja->temple?->canCollectPayments() ?? false)) {
+            throw ValidationException::withMessages(['app_booking_enabled' => TemplePayoutAccount::NOT_APPROVED_MESSAGE]);
+        }
+
         // "Official booking" is a claim about a URL. With no URL there is no
         // claim to make, so the flag cannot stand on its own.
         if (blank($puja->booking_url)) {

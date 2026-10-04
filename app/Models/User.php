@@ -6,9 +6,9 @@ use App\Enums\UserRole;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -115,6 +115,22 @@ class User extends Authenticatable implements FilamentUser
         $id = $temple instanceof Temple ? $temple->getKey() : $temple;
 
         return in_array((int) $id, $this->approvedTempleIds(), true);
+    }
+
+    /**
+     * The temple's approved owner (or a super admin): the one who decides
+     * where its money is paid and whether it takes online hundi.
+     */
+    public function ownsTemple(Temple|int $temple): bool
+    {
+        $id = $temple instanceof Temple ? $temple->getKey() : $temple;
+
+        return $this->isSuperAdmin() || TempleUser::query()
+            ->approved()
+            ->where('temple_id', $id)
+            ->where('user_id', $this->getKey())
+            ->where('role', 'owner')
+            ->exists();
     }
 
     public function isTempleAdmin(): bool

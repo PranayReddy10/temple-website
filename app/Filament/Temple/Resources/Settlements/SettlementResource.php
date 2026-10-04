@@ -22,13 +22,15 @@ class SettlementResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-banknotes';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Money';
+
     protected static ?string $navigationLabel = 'Settlements';
 
     protected static ?string $modelLabel = 'settlement';
 
     protected static ?string $slug = 'settlements';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 3;
 
     public static function canCreate(): bool
     {
