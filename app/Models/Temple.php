@@ -439,6 +439,40 @@ class Temple extends Model
             ->values();
     }
 
+    /**
+     * How complete the public page is, as search engines and devotees judge
+     * it: what a page needs to answer "<temple> timings", "<temple> photos"
+     * and "how to reach <temple>". Reads photos_count, published_photos_count,
+     * timings_count and pujas_count when the query loaded them.
+     *
+     * @return array{score: int, missing: array<int, string>}
+     */
+    public function pageChecklist(): array
+    {
+        $photos = (int) ($this->published_photos_count ?? $this->photos_count ?? $this->photos()->count());
+        $checks = [
+            'Cover photo' => $this->relationLoaded('primaryPhoto') ? $this->primaryPhoto !== null : $this->primaryPhoto()->exists(),
+            'At least 3 photos' => $photos >= 3,
+            'Timings' => (int) ($this->timings_count ?? $this->timings()->count()) > 0,
+            'Short description' => filled($this->short_description),
+            'Map location' => $this->hasCoordinates(),
+            'Address and PIN' => filled($this->address) && filled($this->pincode),
+            'District' => $this->district_id !== null,
+            'Deity' => $this->deity_id !== null,
+            'Dress code' => filled($this->dress_code),
+            'Phone or website' => filled($this->contact_phone) || filled($this->official_website),
+            'Sevas' => (int) ($this->pujas_count ?? $this->pujas()->count()) > 0,
+            'Name in another language' => (int) ($this->reviewed_names_count ?? $this->translations()->where('field', 'name')->where('is_reviewed', true)->count()) > 0,
+        ];
+
+        $done = count(array_filter($checks));
+
+        return [
+            'score' => (int) round($done / count($checks) * 100),
+            'missing' => array_keys(array_filter($checks, fn (bool $ok): bool => ! $ok)),
+        ];
+    }
+
     public function hasCoordinates(): bool
     {
         return $this->latitude !== null && $this->longitude !== null;

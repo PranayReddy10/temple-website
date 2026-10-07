@@ -31,6 +31,23 @@ class Translation extends Model
         ];
     }
 
+    /**
+     * A temple's translation is part of its page in that language: the
+     * temple counts as changed, so the sitemap and IndexNow pick it up (see
+     * MarksTempleChanged, which does the same for timings and photos).
+     */
+    protected static function booted(): void
+    {
+        $mark = function (Translation $t): void {
+            if ($t->translatable_type === (new Temple)->getMorphClass()) {
+                Temple::withoutGlobalScopes()->whereKey($t->translatable_id)->toBase()->update(['updated_at' => now()]);
+            }
+        };
+
+        static::saved($mark);
+        static::deleted($mark);
+    }
+
     public function translatable(): MorphTo
     {
         return $this->morphTo();

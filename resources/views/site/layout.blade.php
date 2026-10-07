@@ -1,18 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ $locale ?? 'en' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title }} · {{ config('brand.name') }}</title>
     <meta name="description" content="{{ $description }}">
     <link rel="canonical" href="{{ $canonical }}">
+    @foreach ($alternates ?? [] as $hreflang => $href)
+        <link rel="alternate" hreflang="{{ $hreflang }}" href="{{ $href }}">
+    @endforeach
     @if (! \App\Support\Seo::onWebsite(request()) || ! empty($noindex))
         {{-- The admin host's copy (the website's is the one to list), a search, or a missing page. --}}
         <meta name="robots" content="noindex, follow">
     @endif
     <meta property="og:site_name" content="{{ config('brand.name') }}">
     <meta property="og:type" content="{{ $ogType ?? 'website' }}">
-    <meta property="og:locale" content="en_IN">
+    <meta property="og:locale" content="{{ ($locale ?? 'en').'_IN' }}">
     <meta property="og:title" content="{{ $title }}">
     <meta property="og:description" content="{{ $description }}">
     <meta property="og:url" content="{{ $canonical }}">
@@ -76,7 +79,7 @@
             <span style="width:34px;height:34px;display:inline-block">{!! file_get_contents(public_path('brand/logo-mark-light.svg')) !!}</span>
             {{ config('brand.name') }}
         </a>
-        <a class="cta" href="{{ $appLink ?? \App\Support\Seo::url('/') }}">Open the app</a>
+        <a class="cta" href="{{ $appLink ?? \App\Support\Seo::url('/') }}">{{ __('Open the app') }}</a>
     </div>
 </header>
 <main class="wrap">
@@ -84,7 +87,7 @@
 </main>
 <footer class="bottom">
     <div class="wrap">
-        <p><a href="{{ \App\Support\Seo::url('temples') }}">All temples</a> · {{ config('brand.tagline') }} · <a href="mailto:{{ setting('support_email', 'brand.support_email') }}">{{ setting('support_email', 'brand.support_email') }}</a></p>
+        <p><a href="{{ \App\Support\Seo::url('temples') }}">{{ __('All temples') }}</a> · {{ config('brand.tagline') }} · <a href="mailto:{{ setting('support_email', 'brand.support_email') }}">{{ setting('support_email', 'brand.support_email') }}</a></p>
         @php($footerPages = rescue(fn () => \App\Models\Page::footer(), collect(), report: false))
         @if ($footerPages->isNotEmpty())
             <nav class="legal" aria-label="Policies">
@@ -93,7 +96,7 @@
                 @endforeach
             </nav>
         @endif
-        <p>Timings and rules change; confirm with the temple before travelling.</p>
+        <p>{{ __('Timings and rules change; confirm with the temple before travelling.') }}</p>
     </div>
 </footer>
 </body>

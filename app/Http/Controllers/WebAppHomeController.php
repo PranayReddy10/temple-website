@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Temple;
 use App\Support\Seo;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * darshansaathi.com/ — the web app's own index.html, with the verification
@@ -26,7 +28,7 @@ class WebAppHomeController extends Controller
             return response('The website is being updated. Please try again in a minute.', 503, ['Retry-After' => '60']);
         }
 
-        return response(self::withExtras($html), 200, [
+        return response(self::withExtras(self::withDirectoryLinks($html)), 200, [
             'Content-Type' => 'text/html; charset=utf-8',
             // The app's new version must reach people at once.
             'Cache-Control' => 'no-cache',
@@ -50,6 +52,53 @@ class WebAppHomeController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * Links into the temple directory, inside the page's search-engine text
+     * (<main id="seo">): the states, deities and best-known temples.
+     *
+     * The home page is the site's strongest page, but the app draws on a
+     * canvas that crawlers cannot follow; without these, the only way from it
+     * to a temple was one "browse all temples" link.
+     */
+    public static function withDirectoryLinks(string $html): string
+    {
+        if (! preg_match('#<main[^>]*id="seo"[^>]*>#i', $html, $m, PREG_OFFSET_CAPTURE)) {
+            return $html;
+        }
+
+        $close = stripos($html, '</main>', $m[0][1]);
+        if ($close === false) {
+            return $html;
+        }
+
+        $links = Cache::remember('home:directory-links', now()->addHour(), function (): string {
+            $section = function (string $heading, iterable $items): string {
+                $out = '';
+                foreach ($items as [$href, $label]) {
+                    $out .= '<li><a href="'.e($href).'">'.e($label).'</a></li>';
+                }
+
+                return $out === '' ? '' : '<h2>'.e($heading).'</h2><ul>'.$out.'</ul>';
+            };
+
+            $temples = Temple::query()->published()
+                ->orderByDesc('is_featured')->orderByDesc('published_at')
+                ->limit(60)->get(['id', 'name', 'slug', 'city']);
+
+            return $section('Popular temples', $temples->map(fn (Temple $t): array => [
+                Seo::url('temples/'.$t->slug), $t->name.($t->city ? ', '.$t->city : ''),
+            ]))
+                .$section('Temples by state', PublicTempleController::statesWithTemples()->map(fn ($s): array => [
+                    Seo::url('states/'.$s->slug), 'Temples in '.$s->name.' ('.$s->temples_count.')',
+                ]))
+                .$section('Temples by deity', PublicTempleController::deitiesWithTemples()->take(20)->map(fn ($d): array => [
+                    Seo::url('deities/'.$d->slug), PublicTempleController::deityPhrase($d->name).' temples',
+                ]));
+        });
+
+        return substr($html, 0, $close).$links.substr($html, $close);
     }
 
     public static function withExtras(string $html): string

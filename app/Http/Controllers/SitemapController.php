@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Page;
 use App\Models\Temple;
 use App\Support\Seo;
+use App\Support\SiteLocale;
 use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
 
 /**
  * sitemap.xml for the devotees' website: an index of smaller sitemaps, the
@@ -37,6 +39,9 @@ class SitemapController extends Controller
         $xml .= self::entry('url', Seo::url('temples'), Temple::query()->published()->max('updated_at'), 'daily', '0.9');
         foreach (PublicTempleController::statesWithTemples() as $state) {
             $xml .= self::entry('url', Seo::url('states/'.$state->slug), null, 'weekly', '0.7');
+            foreach (PublicTempleController::districtsWithTemples($state) as $district) {
+                $xml .= self::entry('url', Seo::url('states/'.$state->slug.'/'.$district->slug), null, 'weekly', '0.6');
+            }
         }
         foreach (PublicTempleController::deitiesWithTemples() as $deity) {
             $xml .= self::entry('url', Seo::url('deities/'.$deity->slug), null, 'weekly', '0.7');
@@ -53,32 +58,48 @@ class SitemapController extends Controller
         $temples = Temple::query()->published()
             ->orderBy('id')
             ->skip(($page - 1) * self::PER_FILE)->take(self::PER_FILE)
-            ->with('primaryPhoto')
+            ->with([
+                'primaryPhoto',
+                'photos' => fn ($q) => $q->published()->orderByDesc('is_primary')->orderBy('sort_order'),
+                'translations' => fn ($q) => $q->where('field', 'name')->where('is_reviewed', true),
+            ])
             ->get(['id', 'name', 'slug', 'updated_at', 'is_featured']);
 
         abort_if($temples->isEmpty() && $page > 1, 404);
 
-        // With each temple's cover, so its photo can show in image search.
-        $xml = self::open(images: true);
+        // With each temple's photos, so they can show in image search, and
+        // its pages in other languages, each listing all the versions.
+        $xml = self::open(images: true, languages: true);
         foreach ($temples as $t) {
-            $image = Seo::absolute($t->primaryPhoto?->mediumUrl());
-            $xml .= self::entry('url', Seo::url('temples/'.$t->slug), $t->updated_at, 'weekly', $t->is_featured ? '0.8' : '0.6', $image);
+            $images = $t->photos->map(fn ($ph) => Seo::absolute($ph->mediumUrl() ?? $ph->url()))
+                ->prepend(Seo::absolute($t->primaryPhoto?->mediumUrl()))
+                ->filter()->unique()->take(20)->values()->all();
+            $alternates = SiteLocale::alternates($t, SiteLocale::languagesOf($t));
+
+            foreach ($alternates === [] ? ['en' => Seo::url('temples/'.$t->slug)] : array_diff_key($alternates, ['x-default' => true]) as $code => $loc) {
+                $xml .= self::entry('url', $loc, $t->updated_at, 'weekly', $t->is_featured ? '0.8' : '0.6', $images, $alternates);
+            }
         }
 
         return self::xml($xml.'</urlset>');
     }
 
-    protected static function open(bool $images = false): string
+    protected static function open(bool $images = false, bool $languages = false): string
     {
         return '<?xml version="1.0" encoding="UTF-8"?>'."\n".'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'
-            .($images ? ' xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"' : '').'>'."\n";
+            .($images ? ' xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"' : '')
+            .($languages ? ' xmlns:xhtml="http://www.w3.org/1999/xhtml"' : '').'>'."\n";
     }
 
-    protected static function entry(string $tag, string $loc, mixed $lastmod = null, ?string $freq = null, ?string $priority = null, ?string $image = null): string
+    /**
+     * @param  string|array<int, string>|null  $image
+     * @param  array<string, string>  $alternates  hreflang => URL
+     */
+    protected static function entry(string $tag, string $loc, mixed $lastmod = null, ?string $freq = null, ?string $priority = null, string|array|null $image = null, array $alternates = []): string
     {
         $out = "  <{$tag}><loc>".e($loc).'</loc>';
         if ($lastmod !== null) {
-            $out .= '<lastmod>'.\Illuminate\Support\Carbon::parse($lastmod)->toAtomString().'</lastmod>';
+            $out .= '<lastmod>'.Carbon::parse($lastmod)->toAtomString().'</lastmod>';
         }
         if ($freq !== null) {
             $out .= "<changefreq>{$freq}</changefreq>";
@@ -86,8 +107,11 @@ class SitemapController extends Controller
         if ($priority !== null) {
             $out .= "<priority>{$priority}</priority>";
         }
-        if ($image !== null) {
-            $out .= '<image:image><image:loc>'.e($image).'</image:loc></image:image>';
+        foreach ((array) $image as $img) {
+            $out .= '<image:image><image:loc>'.e($img).'</image:loc></image:image>';
+        }
+        foreach ($alternates as $hreflang => $href) {
+            $out .= '<xhtml:link rel="alternate" hreflang="'.e($hreflang).'" href="'.e($href).'"/>';
         }
 
         return $out."</{$tag}>\n";

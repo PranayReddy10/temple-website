@@ -25,7 +25,14 @@ class TemplesTable
     {
         return $table
             // The cover's row, once for the page rather than once per temple.
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('primaryPhoto'))
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('primaryPhoto')
+                // For the Page column: what the public page still lacks.
+                ->withCount([
+                    'photos as published_photos_count' => fn (Builder $q) => $q->published(),
+                    'timings',
+                    'pujas',
+                    'translations as reviewed_names_count' => fn (Builder $q) => $q->where('field', 'name')->where('is_reviewed', true),
+                ]))
             ->columns([
                 // What devotees see first, at a glance, before opening the
                 // temple: its thumbnail, or "No cover" (Filter: Without a cover).
@@ -49,6 +56,23 @@ class TemplesTable
                         ? str($record->short_description)->limit(70)->toString()
                         : null)
                     ->wrap(),
+
+                // How complete the public page is: what makes it show up when
+                // someone searches the temple's name (Temple::pageChecklist).
+                TextColumn::make('page_score')
+                    ->label('Page')
+                    ->state(fn (Temple $record): int => $record->pageChecklist()['score'])
+                    ->formatStateUsing(fn (int $state): string => $state.'%')
+                    ->badge()
+                    ->color(fn (int $state): string => match (true) {
+                        $state >= 80 => 'success',
+                        $state >= 50 => 'warning',
+                        default => 'danger',
+                    })
+                    ->tooltip(fn (Temple $record): ?string => ($missing = $record->pageChecklist()['missing']) === []
+                        ? 'Complete'
+                        : 'Missing: '.implode(', ', $missing))
+                    ->toggleable(),
 
                 TextColumn::make('deity.name')
                     ->label('Deity')
@@ -154,6 +178,21 @@ class TemplesTable
                     ->query(fn (Builder $query): Builder => $query->where(
                         fn (Builder $q) => $q->whereNull('latitude')->orWhereNull('longitude')
                     ))
+                    ->toggle(),
+
+                Filter::make('without_timings')
+                    ->label('Without timings')
+                    ->query(fn (Builder $query): Builder => $query->whereDoesntHave('timings'))
+                    ->toggle(),
+
+                Filter::make('few_photos')
+                    ->label('Fewer than 3 photos')
+                    ->query(fn (Builder $query): Builder => $query->whereHas('photos', fn (Builder $q) => $q->published(), '<', 3))
+                    ->toggle(),
+
+                Filter::make('without_description')
+                    ->label('Without a description')
+                    ->query(fn (Builder $query): Builder => $query->where(fn (Builder $q) => $q->whereNull('short_description')->orWhere('short_description', '')))
                     ->toggle(),
 
                 Filter::make('without_cover')

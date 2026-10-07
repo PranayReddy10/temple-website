@@ -124,6 +124,11 @@ Route::get('/pay/{payment}/done', [PayController::class, 'done'])->name('pay.don
 Route::get('/temples', [PublicTempleController::class, 'index'])->name('site.temples');
 Route::get('/temples/{slug}', [PublicTempleController::class, 'show'])->name('site.temple');
 Route::get('/states/{slug}', [PublicTempleController::class, 'state'])->name('site.state');
+Route::get('/states/{state}/{district}', [PublicTempleController::class, 'district'])->name('site.district');
+// The same temple page in the apps' other languages (App\Support\SiteLocale).
+Route::get('/{locale}/temples/{slug}', [PublicTempleController::class, 'showLocalized'])
+    ->where('locale', 'te|hi|ta|kn')
+    ->name('site.temple.localized');
 Route::get('/deities/{slug}', [PublicTempleController::class, 'deity'])->name('site.deity');
 // Search Console's "HTML file" check: the file named in Admin → Analytics & SEO.
 Route::get('/google{token}.html', function (string $token) {
