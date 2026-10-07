@@ -76,7 +76,6 @@ class Temple extends Model
         return [
             'official_import' => 'array',
             'official_site_pages' => 'array',
-            'wikipedia_fields' => 'array',
             'official_import_at' => 'datetime',
             'official_import_reviewed_at' => 'datetime',
             'status' => TempleStatus::class,

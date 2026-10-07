@@ -60,7 +60,7 @@ class TemplesTable
                 // How complete the public page is: what makes it show up when
                 // someone searches the temple's name (Temple::pageChecklist).
                 TextColumn::make('page_score')
-                    ->label('Page')
+                    ->label('Page score')
                     ->state(fn (Temple $record): int => $record->pageChecklist()['score'])
                     ->formatStateUsing(fn (int $state): string => $state.'%')
                     ->badge()
@@ -69,9 +69,15 @@ class TemplesTable
                         $state >= 50 => 'warning',
                         default => 'danger',
                     })
+                    // Written out under the score, not only on hover: a
+                    // phone has no hover, and this is the to-do list.
+                    ->description(fn (Temple $record): string => ($missing = $record->pageChecklist()['missing']) === []
+                        ? 'Complete'
+                        : 'Add: '.implode(', ', array_slice($missing, 0, 3)).(count($missing) > 3 ? ' +'.(count($missing) - 3).' more' : ''))
                     ->tooltip(fn (Temple $record): ?string => ($missing = $record->pageChecklist()['missing']) === []
                         ? 'Complete'
                         : 'Missing: '.implode(', ', $missing))
+                    ->wrap()
                     ->toggleable(),
 
                 TextColumn::make('deity.name')

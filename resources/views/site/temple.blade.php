@@ -17,7 +17,7 @@
         'url' => $canonical,
         'image' => $photoUrls->isNotEmpty() ? $photoUrls->all() : $image,
         'telephone' => $temple->contact_phone,
-        'sameAs' => collect([$temple->official_website, $temple->wikipedia_url])->filter()->values()->all() ?: null,
+        'sameAs' => $temple->official_website ? [$temple->official_website] : null,
         'isAccessibleForFree' => true,
         'publicAccess' => true,
         'address' => array_filter([
@@ -232,12 +232,6 @@
             @endif
             @if ($about)
                 <p>{{ $about }}</p>
-                @if ($temple->description_source === 'wikipedia')
-                    <p style="font-size:.85rem;opacity:.75">From <a href="{{ $temple->wikipedia_url }}" rel="noopener">Wikipedia</a>, under <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license noopener">CC BY-SA 4.0</a>.</p>
-                @endif
-            @endif
-            @if ($temple->wikipedia_url && $temple->description_source !== 'wikipedia')
-                <p style="font-size:.9rem"><a href="{{ $temple->wikipedia_url }}" rel="noopener">{{ __('Read about :name on Wikipedia', ['name' => $name]) }}</a></p>
             @endif
 
             @if ($temple->timings->isNotEmpty())
@@ -264,9 +258,6 @@
                 @if ($text)
                     <h2>{{ $heading }}</h2>
                     <p style="white-space:pre-line">{{ $text }}</p>
-                    @if (in_array($field, $temple->wikipedia_fields ?? [], true) && $temple->wikipedia_url)
-                        <p style="font-size:.85rem;opacity:.75">From <a href="{{ $temple->wikipedia_url }}" rel="noopener">Wikipedia</a>, under <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license noopener">CC BY-SA 4.0</a>.</p>
-                    @endif
                 @endif
             @endforeach
 

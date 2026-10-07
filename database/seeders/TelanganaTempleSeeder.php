@@ -20,7 +20,7 @@ use Illuminate\Support\Str;
  * The same honesty rules as TempleSeeder apply, and matter more here because
  * this set is larger and carries timings:
  *
- * - Every record is COMMUNITY level. Where a Wikipedia or UNESCO page exists
+ * - Every record is COMMUNITY level. Where a UNESCO page exists
  *   it is recorded as the source, which is exactly what community level
  *   means — a public reference, not a check against the temple itself.
  * - Coordinates are approximate, good enough to place a marker and no more.
@@ -233,8 +233,6 @@ class TelanganaTempleSeeder extends Seeder
         $a = TimingKind::Aarti;
         $d = TimingKind::Darshan;
 
-        $wiki = fn (string $title): array => ['Wikipedia', 'https://en.wikipedia.org/wiki/'.$title];
-
         return [
             // ===== Famous temples ==========================================
 
@@ -342,7 +340,6 @@ class TelanganaTempleSeeder extends Seeder
                 'summary' => 'Kakatiya temple of 1163 CE with three shrines, to Shiva, Vishnu and Surya, and a monolithic Nandi.',
                 'built' => '1163 CE',
                 'style' => 'Kakatiya',
-                'source' => $wiki('Thousand_Pillar_Temple'),
                 'pujas' => self::shaivaSevas(),
             ],
             [
@@ -353,7 +350,6 @@ class TelanganaTempleSeeder extends Seeder
                 'aliases' => ['Sri Bhadrakali Ammavari Temple' => 'en', 'భద్రకాళి ఆలయం' => 'te'],
                 'summary' => 'Hilltop shrine to Bhadrakali above Bhadrakali lake, between Hanumakonda and Warangal, patronised by the Kakatiyas.',
                 'significance' => 'Sharan Navaratri is the principal festival.',
-                'source' => $wiki('Bhadrakali_Temple'),
                 'timings' => [
                     [$g, null, '05:00', '20:30'],
                 ],
@@ -367,7 +363,6 @@ class TelanganaTempleSeeder extends Seeder
                 'aliases' => ['Visa Balaji Temple' => 'en', 'చిలుకూరు బాలాజీ' => 'te'],
                 'summary' => 'Venkateswara temple near Osman Sagar, known as Visa Balaji. Devotees vow 11 pradakshinas and return for 108 when the wish is fulfilled.',
                 'significance' => 'The temple accepts no hundi offerings and runs no paid or VIP darshan: every devotee joins the same queue.',
-                'source' => $wiki('Chilkur_Balaji_Temple'),
                 'rules' => [
                     'queue' => 'One queue for everyone; there is no special or paid darshan.',
                 ],
@@ -388,7 +383,6 @@ class TelanganaTempleSeeder extends Seeder
                 'summary' => 'White marble Venkateswara temple on Naubat Pahad hill overlooking Hussain Sagar, opened in 1976.',
                 'built' => '1976',
                 'style' => 'Dravidian, Rajasthani and Utkala blend in white marble',
-                'source' => $wiki('Birla_Mandir,_Hyderabad'),
                 'rules' => [
                     'mobile' => 'Mobile phones and cameras are not allowed; deposit them at the counter.',
                     'footwear' => 'To be left at the footwear counter at the foot of the steps.',
@@ -406,7 +400,6 @@ class TelanganaTempleSeeder extends Seeder
                 'aliases' => ['Jogulamba Devi' => 'en', 'జోగులాంబ' => 'te'],
                 'summary' => 'Shrine to Jogulamba near the meeting of the Tungabhadra and Krishna, counted among the eighteen Maha Shakti Peethas.',
                 'significance' => 'The present temple was rebuilt in 2005 on the site of the original, which was destroyed in the 14th century.',
-                'source' => $wiki('Jogulamba_Temple'),
                 'timings' => [
                     [$g, null, '06:00', '20:30'],
                 ],
@@ -476,7 +469,6 @@ class TelanganaTempleSeeder extends Seeder
                 'aliases' => ['Keesaragutta Temple' => 'en', 'కీసరగుట్ట' => 'te'],
                 'summary' => 'Hill shrine where, by tradition, Rama installed a Shiva lingam; hundreds of lingams lie scattered across the hill.',
                 'significance' => 'Maha Shivaratri brings the year\'s largest crowds.',
-                'source' => $wiki('Keesaragutta_Temple'),
                 'pujas' => self::shaivaSevas(),
             ],
             [
@@ -487,7 +479,6 @@ class TelanganaTempleSeeder extends Seeder
                 'aliases' => ['Lashkar Bonalu Temple' => 'en', 'ఉజ్జయిని మహంకాళి' => 'te'],
                 'summary' => 'Mahankali temple in Secunderabad, dating to the early 19th century, and the centre of the Lashkar Bonalu festival.',
                 'significance' => 'Lashkar Bonalu in Ashada (June–July) is one of the largest festivals in Hyderabad.',
-                'source' => $wiki('Ujjaini_Mahankali_Temple'),
                 'pujas' => self::deviSevas(),
             ],
             [
@@ -509,7 +500,6 @@ class TelanganaTempleSeeder extends Seeder
                 'summary' => 'Group of nine 7th–8th century Badami Chalukya Shiva temples on the Tungabhadra, beside the Jogulamba shrine.',
                 'built' => '7th–8th century',
                 'style' => 'Badami Chalukya (Nagara)',
-                'source' => $wiki('Alampur_Navabrahma_Temples'),
                 'pujas' => self::shaivaSevas(),
             ],
 
@@ -522,7 +512,6 @@ class TelanganaTempleSeeder extends Seeder
                 'categories' => [],
                 'aliases' => ['Peddamma Thalli Temple' => 'en', 'పెద్దమ్మ తల్లి' => 'te'],
                 'summary' => 'Temple to Peddamma, the elder mother goddess, a major Bonalu venue in Jubilee Hills.',
-                'source' => $wiki('Peddamma_Temple'),
                 'pujas' => self::deviSevas(),
             ],
             [
