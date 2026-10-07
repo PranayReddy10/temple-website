@@ -37,9 +37,9 @@ class PublicSiteTest extends TestCase
         $this->temple();
 
         $this->get('https://darshansaathi.com/temples/someshwara-kolanupaka')->assertOk()
-            ->assertSee('<title>Sri Someshwara Swamy Temple, Kolanupaka, Telangana: timings, pujas, how to reach', false)
+            ->assertSee('<title>Sri Someshwara Swamy Temple, Kolanupaka: Timings &amp; How to Reach', false)
             ->assertSee('<link rel="canonical" href="https://darshansaathi.com/temples/someshwara-kolanupaka">', false)
-            ->assertSee('"@type":"HinduTemple"', false)
+            ->assertSee('"@type":["HinduTemple","TouristAttraction"]', false)
             ->assertSee('An ancient Shiva temple on the Aler road.')
             ->assertDontSee('noindex');
     }
@@ -90,8 +90,9 @@ class PublicSiteTest extends TestCase
     {
         $shiva = Deity::create(['name' => 'Lord Shiva', 'slug' => 'shiva', 'description' => 'The auspicious one.']);
         $this->temple(['deity_id' => $shiva->id]);
-        $this->temple(['name' => 'Ramappa Temple', 'slug' => 'ramappa', 'city' => 'Palampet', 'deity_id' => $shiva->id]);
-        $this->temple(['name' => 'Yadadri Temple', 'slug' => 'yadadri', 'city' => 'Yadagirigutta']);
+        // Far apart, so they are listed by deity and state rather than as nearby.
+        $this->temple(['name' => 'Ramappa Temple', 'slug' => 'ramappa', 'city' => 'Palampet', 'deity_id' => $shiva->id, 'latitude' => 18.26, 'longitude' => 79.94]);
+        $this->temple(['name' => 'Yadadri Temple', 'slug' => 'yadadri', 'city' => 'Yadagirigutta', 'latitude' => 16.6, 'longitude' => 78.0]);
         Deity::create(['name' => 'Ganesha', 'slug' => 'ganesha']);
 
         $this->get('https://darshansaathi.com/deities/shiva')->assertOk()

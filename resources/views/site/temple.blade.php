@@ -2,15 +2,24 @@
 
 @php
     use App\Support\Seo;
+    use App\Support\TempleSeo;
+    $districtUrl = $temple->state && $temple->district?->slug ? Seo::url('states/'.$temple->state->slug.'/'.$temple->district->slug) : null;
+    // Every photo on the page, for image search and the rich result.
+    $photoUrls = $temple->photos->map(fn ($ph) => Seo::absolute($ph->mediumUrl() ?? $ph->url()))->filter()->unique()->take(10)->values();
     $schema = array_filter([
         '@context' => 'https://schema.org',
-        '@type' => 'HinduTemple',
-        'name' => $temple->name,
+        // A temple is a place of worship and, for most who search it, a place to visit.
+        '@type' => ['HinduTemple', 'TouristAttraction'],
+        '@id' => Seo::url('temples/'.$temple->slug).'#temple',
+        'name' => $name,
+        'alternateName' => collect([$name !== $temple->name ? $temple->name : null])->merge($aliases)->filter()->unique()->values()->all() ?: null,
         'description' => $description,
         'url' => $canonical,
-        'image' => $image,
+        'image' => $photoUrls->isNotEmpty() ? $photoUrls->all() : $image,
         'telephone' => $temple->contact_phone,
-        'sameAs' => $temple->official_website ? [$temple->official_website] : null,
+        'sameAs' => collect([$temple->official_website, $temple->wikipedia_url])->filter()->values()->all() ?: null,
+        'isAccessibleForFree' => true,
+        'publicAccess' => true,
         'address' => array_filter([
             '@type' => 'PostalAddress',
             'streetAddress' => $temple->address,
@@ -20,6 +29,12 @@
             'addressCountry' => 'IN',
         ]),
         'geo' => $temple->hasCoordinates() ? ['@type' => 'GeoCoordinates', 'latitude' => (float) $temple->latitude, 'longitude' => (float) $temple->longitude] : null,
+        'hasMap' => $temple->hasCoordinates() ? 'https://www.google.com/maps/search/?api=1&query='.$temple->latitude.','.$temple->longitude : null,
+        'containedInPlace' => $temple->district ? array_filter([
+            '@type' => 'AdministrativeArea',
+            'name' => $temple->district->name.($temple->state ? ', '.$temple->state->name : ''),
+            'url' => $districtUrl,
+        ]) : null,
         // Opening hours, from the general and darshan timings that give both ends.
         'openingHoursSpecification' => $temple->timings
             ->filter(fn ($t) => in_array($t->kind?->value, ['general', 'darshan'], true) && filled($t->opens_at) && filled($t->closes_at))
@@ -29,15 +44,18 @@
                 'opens' => substr((string) $t->opens_at, 0, 5),
                 'closes' => substr((string) $t->closes_at, 0, 5),
             ])->values()->all() ?: null,
+        'inLanguage' => $locale,
     ]);
+    $crumbList = array_values(array_filter([
+        ['name' => __('Temples'), 'item' => Seo::url('temples')],
+        $temple->state ? ['name' => $temple->state->name, 'item' => Seo::url('states/'.$temple->state->slug)] : null,
+        $districtUrl ? ['name' => $temple->district->name, 'item' => $districtUrl] : null,
+        ['name' => $name, 'item' => $canonical],
+    ]));
     $crumbs = [
         '@context' => 'https://schema.org',
         '@type' => 'BreadcrumbList',
-        'itemListElement' => array_values(array_filter([
-            ['@type' => 'ListItem', 'position' => 1, 'name' => 'Temples', 'item' => Seo::url('temples')],
-            $temple->state ? ['@type' => 'ListItem', 'position' => 2, 'name' => $temple->state->name, 'item' => Seo::url('states/'.$temple->state->slug)] : null,
-            ['@type' => 'ListItem', 'position' => $temple->state ? 3 : 2, 'name' => $temple->name, 'item' => $canonical],
-        ])),
+        'itemListElement' => collect($crumbList)->values()->map(fn ($c, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $c['name'], 'item' => $c['item']])->all(),
     ];
 @endphp
 
@@ -60,9 +78,8 @@
         'location' => ['@type' => 'Place', 'name' => $temple->name, 'address' => collect([$temple->address, $place])->filter()->implode(', ') ?: $temple->name],
         'organizer' => ['@type' => 'Organization', 'name' => $temple->name, 'url' => $canonical],
     ]))->values();
-    if ($aliases->isNotEmpty()) {
-        $schema['alternateName'] = $aliases->all();
-    }
+    // "Sri Rama Temple, Bhadrachalam": how photos are described to image search.
+    $photoName = $name.(TempleSeo::town($temple) && stripos($name, (string) TempleSeo::town($temple)) === false ? ', '.TempleSeo::town($temple) : '');
 @endphp
 
 @push('head')
@@ -129,6 +146,7 @@
         details.q summary { font-weight: 600; cursor: pointer; }
         details.q p { margin: 6px 0 0; }
         .aka { font-size: .9rem; }
+        .langs { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .9rem; margin: 4px 0; }
     </style>
 @endpush
 
@@ -152,44 +170,54 @@
         </script>
     @endisset
     <p class="crumbs">
-        <a href="{{ Seo::url('temples') }}">Temples</a>
-        @if ($temple->state) › <a href="{{ Seo::url('states/'.$temple->state->slug) }}">{{ $temple->state->name }}</a>@endif
-        › {{ $temple->name }}
+        @foreach ($crumbList as $c)
+            @if (! $loop->last)<a href="{{ $c['item'] }}">{{ $c['name'] }}</a> › @else{{ $c['name'] }}@endif
+        @endforeach
     </p>
-    <h1>{{ $temple->name }}</h1>
+    <h1>{{ $name }}</h1>
     <p class="muted">
-        @if ($temple->deity?->slug && $sameDeity->isNotEmpty())<a href="{{ Seo::url('deities/'.$temple->deity->slug) }}">{{ $temple->deity->name }}</a>@else{{ $temple->deity?->name }}@endif
+        @if ($temple->deity?->slug && $sameDeity->isNotEmpty())<a href="{{ Seo::url('deities/'.$temple->deity->slug) }}">{{ $deityName }}</a>@else{{ $deityName }}@endif
         @if ($temple->deity && $place !== '') · @endif{{ $place }}
     </p>
 
-    @if ($aliases->isNotEmpty())<p class="muted aka">Also known as {{ $aliases->implode(', ') }}</p>@endif
+    @if ($aliases->isNotEmpty() || $name !== $temple->name)<p class="muted aka">{{ __('Also known as') }} {{ collect([$name !== $temple->name ? $temple->name : null])->merge($aliases)->filter()->implode(', ') }}</p>@endif
+
+    @if ($alternates !== [])
+        {{-- The page in the other languages it is published in. --}}
+        <p class="langs">
+            @foreach ($alternates as $code => $href)
+                @continue($code === 'x-default')
+                @if ($code === $locale)<b>{{ \App\Support\SiteLocale::native($code) }}</b>@else<a href="{{ $href }}" hreflang="{{ $code }}" lang="{{ $code }}">{{ \App\Support\SiteLocale::native($code) }}</a>@endif
+            @endforeach
+        </p>
+    @endif
 
     {{-- Every button opens this same temple: in the app, on the map, or to share. --}}
     <div class="actions">
-        @if ($bookable)<a class="btn primary" href="{{ $bookLink }}">Book a seva</a>@endif
-        @if ($donateLink)<a class="btn {{ $bookable ? '' : 'primary' }}" href="{{ $donateLink }}">🪔 Donate</a>@endif
-        <a class="btn {{ $bookable || $donateLink ? '' : 'primary' }}" href="{{ $appLink }}">Open in {{ config('brand.name') }}</a>
+        @if ($bookable)<a class="btn primary" href="{{ $bookLink }}">{{ __('Book a seva') }}</a>@endif
+        @if ($donateLink)<a class="btn {{ $bookable ? '' : 'primary' }}" href="{{ $donateLink }}">🪔 {{ __('Donate') }}</a>@endif
+        <a class="btn {{ $bookable || $donateLink ? '' : 'primary' }}" href="{{ $appLink }}">{{ __('Open in :app', ['app' => config('brand.name')]) }}</a>
         @if ($temple->hasCoordinates())
-            <a class="btn" href="https://www.google.com/maps/dir/?api=1&destination={{ $temple->latitude }},{{ $temple->longitude }}" rel="nofollow noopener" target="_blank">Directions</a>
+            <a class="btn" href="https://www.google.com/maps/dir/?api=1&destination={{ $temple->latitude }},{{ $temple->longitude }}" rel="nofollow noopener" target="_blank">{{ __('Directions') }}</a>
         @endif
-        <button type="button" class="btn" id="share" data-url="{{ $canonical }}" data-title="{{ $temple->name }}">Share</button>
+        <button type="button" class="btn" id="share" data-url="{{ $canonical }}" data-title="{{ $name }}">{{ __('Share') }}</button>
     </div>
 
     @if ($todays->isNotEmpty())
         <div class="today">
-            <b>Today ({{ \App\Support\DevotionalClock::now()->format('l') }})</b>
+            <b>{{ __('Today') }} ({{ __(\App\Support\DevotionalClock::now()->format('l')) }})</b>
             @foreach ($todays as $t)<span>{{ $t->label ?: $t->kind?->getLabel() }}: {{ $t->window() }}</span>@endforeach
         </div>
     @endif
     @foreach ($temple->closures as $c)
-        <div class="today" style="background:#fdeceb;border-color:#f3c3be"><b>Closure</b><span>{{ $c->reason ?? 'Closed' }} · {{ $c->starts_on?->format('d M Y') }}@if ($c->ends_on && ! $c->ends_on->equalTo($c->starts_on)) – {{ $c->ends_on->format('d M Y') }}@endif</span></div>
+        <div class="today" style="background:#fdeceb;border-color:#f3c3be"><b>{{ __('Closure') }}</b><span>{{ $c->reason ?? __('Closed') }} · {{ $c->starts_on?->format('d M Y') }}@if ($c->ends_on && ! $c->ends_on->equalTo($c->starts_on)) – {{ $c->ends_on->format('d M Y') }}@endif</span></div>
     @endforeach
 
     @if ($image)
         @php
             $lead = $temple->primaryPhoto ?? $temple->photos->first();
         @endphp
-        <div class="hero"><img src="{{ $image }}" alt="{{ $temple->name }}"></div>
+        <div class="hero"><img src="{{ $image }}" alt="{{ $photoName }}" fetchpriority="high"></div>
         @if ($lead?->credit || $lead?->license)
             {{-- Commons photos may be used only with their photographer and licence beside them. --}}
             <p style="font-size:.8rem;opacity:.7;margin:4px 0 0">Photo: @if ($lead->source_url)<a href="{{ $lead->source_url }}" rel="noopener">{{ $lead->credit ?? 'source' }}</a>@else{{ $lead->credit }}@endif{{ $lead->license ? ', '.$lead->license : '' }}</p>
@@ -198,6 +226,10 @@
 
     <div class="cols">
         <div>
+            @if ($intro !== [] && $locale === 'en')
+                <h2>{{ __('About :name', ['name' => $name]) }}</h2>
+                <p>{{ implode(' ', $intro) }}</p>
+            @endif
             @if ($about)
                 <p>{{ $about }}</p>
                 @if ($temple->description_source === 'wikipedia')
@@ -205,20 +237,20 @@
                 @endif
             @endif
             @if ($temple->wikipedia_url && $temple->description_source !== 'wikipedia')
-                <p style="font-size:.9rem"><a href="{{ $temple->wikipedia_url }}" rel="noopener">Read about {{ $temple->name }} on Wikipedia</a></p>
+                <p style="font-size:.9rem"><a href="{{ $temple->wikipedia_url }}" rel="noopener">{{ __('Read about :name on Wikipedia', ['name' => $name]) }}</a></p>
             @endif
 
             @if ($temple->timings->isNotEmpty())
-                <h2>Darshan timings</h2>
+                <h2>{{ __(':name timings', ['name' => $name]) }}</h2>
                 <table>
                     @foreach (\App\Models\TempleTiming::inReadingOrder($temple->timings) as $t)
-                        <tr><td>{{ $t->label ?: $t->kind?->getLabel() }}</td><td>{{ $t->dayLabel() }}</td><td>{{ $t->window() }}</td></tr>
+                        <tr><td>{{ $t->label ?: __($t->kind?->getLabel() ?? '') }}</td><td>{{ __($t->dayLabel()) }}</td><td>{{ $t->window() }}</td></tr>
                     @endforeach
                 </table>
             @endif
 
             @if ($temple->pujas->isNotEmpty())
-                <h2>Pujas and sevas</h2>
+                <h2>{{ __('Pujas and sevas at :name', ['name' => $name]) }}</h2>
                 @foreach ($temple->pujas as $p)
                     <div class="puja">
                         <b>{{ $p->name }}</b>
@@ -228,7 +260,7 @@
                 @endforeach
             @endif
 
-            @foreach (['significance' => [$significance, 'Significance'], 'history' => [$history, 'History']] as $field => [$text, $heading])
+            @foreach (['significance' => [$significance, __('Significance')], 'history' => [$history, __('History of :name', ['name' => $name])], 'entry_rules' => [$entryRules, __('Entry rules')], 'queue_information' => [$queueInfo, __('Queue and darshan tips')]] as $field => [$text, $heading])
                 @if ($text)
                     <h2>{{ $heading }}</h2>
                     <p style="white-space:pre-line">{{ $text }}</p>
@@ -239,7 +271,7 @@
             @endforeach
 
             @if ($temple->events->isNotEmpty())
-                <h2>Festivals and events</h2>
+                <h2>{{ __('Festivals and events') }}</h2>
                 @foreach ($temple->events as $e)
                     <div class="event">
                         <b>{{ $e->title }}</b>
@@ -263,15 +295,15 @@
             @endphp
 
             @if ($pictures->isNotEmpty())
-                <h2>Photos</h2>
+                <h2>{{ __('Photos of :name', ['name' => $name]) }}</h2>
                 <div class="gallery">
                     @foreach ($pictures as $i => $p)
-                        <button type="button" data-photo="{{ $i }}" aria-label="Open photo {{ $i + 1 }} of {{ $pictures->count() }}">
-                            <img src="{{ Seo::absolute($p['thumb'] ?? $p['full']) }}" alt="{{ $p['caption'] ?: $temple->name }}" loading="lazy">
+                        <button type="button" data-photo="{{ $i }}" aria-label="{{ __('Open photo :n of :total', ['n' => $i + 1, 'total' => $pictures->count()]) }}">
+                            <img src="{{ Seo::absolute($p['thumb'] ?? $p['full']) }}" alt="{{ $p['caption'] ? $p['caption'].' – '.$photoName : $photoName.' – '.__('photo :n', ['n' => $i + 1]) }}" loading="lazy" width="300" height="225">
                         </button>
                     @endforeach
                 </div>
-                <dialog class="lightbox" id="lightbox" aria-label="Photos of {{ $temple->name }}">
+                <dialog class="lightbox" id="lightbox" aria-label="{{ __('Photos of :name', ['name' => $name]) }}">
                     <div class="frame">
                         <span class="count"></span>
                         <button type="button" class="close" aria-label="Close">✕</button>
@@ -285,14 +317,14 @@
                 </dialog>
                 <script type="application/json" id="photos-data">{!! json_encode($pictures->map(fn ($p) => [
                     'src' => Seo::absolute($p['full']),
-                    'caption' => $p['caption'] ?: $temple->name,
+                    'caption' => $p['caption'] ?: $photoName,
                     'credit' => collect([$p['credit'], $p['license']])->filter()->implode(', '),
                     'source' => $p['source'],
                 ])->all(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) !!}</script>
             @endif
 
             @if ($videos->isNotEmpty())
-                <h2>Videos</h2>
+                <h2>{{ __('Videos') }}</h2>
                 <div class="videos">
                     @foreach ($videos as $v)
                         <div class="video">
@@ -315,55 +347,76 @@
 
         <aside>
             <div class="card">
+                <h2 style="margin-top:0;font-size:1.1rem">{{ __('How to reach :name', ['name' => $name]) }}</h2>
                 <dl class="facts">
-                    @if ($temple->address || $place)<dt>Address</dt><dd>{{ collect([$temple->address, $place, $temple->pincode])->filter()->implode(', ') }}</dd>@endif
+                    @if ($temple->address || $place)<dt>{{ __('Address') }}</dt><dd>{{ collect([$temple->address, $place, $temple->pincode])->filter()->implode(', ') }}</dd>@endif
                     @if ($temple->hasCoordinates())
-                        <dt>Directions</dt>
-                        <dd><a href="https://www.google.com/maps/dir/?api=1&destination={{ $temple->latitude }},{{ $temple->longitude }}" rel="nofollow noopener" target="_blank">Open in Google Maps</a></dd>
+                        <dt>{{ __('Directions') }}</dt>
+                        <dd><a href="https://www.google.com/maps/dir/?api=1&destination={{ $temple->latitude }},{{ $temple->longitude }}" rel="nofollow noopener" target="_blank">{{ __('Open in Google Maps') }}</a></dd>
+                        <dt>{{ __('GPS') }}</dt>
+                        <dd>{{ number_format((float) $temple->latitude, 5) }}, {{ number_format((float) $temple->longitude, 5) }}</dd>
                     @endif
-                    @if ($dressCode)<dt>Dress code</dt><dd>{{ $dressCode }}</dd>@endif
-                    @if ($temple->footwear_policy)<dt>Footwear</dt><dd>{{ $temple->footwear_policy }}</dd>@endif
-                    @if ($temple->mobile_policy)<dt>Mobile phones</dt><dd>{{ $temple->mobile_policy }}</dd>@endif
-                    @if ($temple->contact_phone)<dt>Phone</dt><dd><a href="tel:{{ $temple->contact_phone }}">{{ $temple->contact_phone }}</a></dd>@endif
+                    @if ($nearby->isNotEmpty())
+                        <dt>{{ __('Nearest temples') }}</dt>
+                        <dd>@foreach ($nearby->take(3) as $n)<a href="{{ \App\Support\SiteLocale::templeUrl($n, $locale !== 'en' && in_array($locale, \App\Support\SiteLocale::languagesOf($n), true) ? $locale : null) }}">{{ $n->localName($locale) }}</a> ({{ TempleSeo::km((float) $n->distance_km) }})@if (! $loop->last), @endif @endforeach</dd>
+                    @endif
+                    @if ($dressCode)<dt>{{ __('Dress code') }}</dt><dd>{{ $dressCode }}</dd>@endif
+                    @if ($temple->footwear_policy)<dt>{{ __('Footwear') }}</dt><dd>{{ $temple->footwear_policy }}</dd>@endif
+                    @if ($temple->mobile_policy)<dt>{{ __('Mobile phones') }}</dt><dd>{{ $temple->mobile_policy }}</dd>@endif
+                    @if ($temple->contact_phone)<dt>{{ __('Phone') }}</dt><dd><a href="tel:{{ $temple->contact_phone }}">{{ $temple->contact_phone }}</a></dd>@endif
                     @if ($temple->source_name)
                         {{-- OpenStreetMap's licence (ODbL) asks for this credit wherever its data is shown. --}}
-                        <dt>Source</dt><dd>@if ($temple->source_url)<a href="{{ $temple->source_url }}" rel="nofollow noopener" target="_blank">{{ $temple->source_name === 'OpenStreetMap contributors' ? '© OpenStreetMap contributors' : $temple->source_name }}</a>@else{{ $temple->source_name }}@endif</dd>
+                        <dt>{{ __('Source') }}</dt><dd>@if ($temple->source_url)<a href="{{ $temple->source_url }}" rel="nofollow noopener" target="_blank">{{ $temple->source_name === 'OpenStreetMap contributors' ? '© OpenStreetMap contributors' : $temple->source_name }}</a>@else{{ $temple->source_name }}@endif</dd>
                     @endif
-                    @if ($temple->official_website)<dt>Official website</dt><dd><a href="{{ $temple->official_website }}" rel="nofollow noopener" target="_blank">{{ parse_url($temple->official_website, PHP_URL_HOST) ?: $temple->official_website }}</a></dd>@endif
+                    @if ($temple->official_website)<dt>{{ __('Official website') }}</dt><dd><a href="{{ $temple->official_website }}" rel="nofollow noopener" target="_blank">{{ parse_url($temple->official_website, PHP_URL_HOST) ?: $temple->official_website }}</a></dd>@endif
                 </dl>
+                @if ($updatedAt)<p class="muted" style="font-size:.8rem;margin:10px 0 0">{{ __('Updated') }} <time datetime="{{ $updatedAt->toDateString() }}">{{ $updatedAt->format('d M Y') }}</time></p>@endif
             </div>
             <div class="card" style="margin-top:16px">
-                <b>{{ $bookable ? 'Book a seva at '.$temple->name : 'Plan your visit to '.$temple->name }}</b>
-                <p class="muted" style="margin:6px 0 10px">Timings, sevas, festivals and directions in the {{ config('brand.name') }} app{{ $bookable ? ', with booking and payment' : '' }}.</p>
-                <a class="btn primary" href="{{ $bookable ? $bookLink : $appLink }}">{{ $bookable ? 'Book a seva' : 'Open in the app' }}</a>
-                @if ($donateLink)<a class="btn" href="{{ $donateLink }}" style="margin-top:8px">🪔 Donate to the hundi</a>@endif
-                @if ($storeUrl)<a class="btn" href="{{ $storeUrl }}" rel="noopener" style="margin-top:8px">Get the Android app</a>@endif
+                <b>{{ $bookable ? __('Book a seva at :name', ['name' => $name]) : __('Plan your visit to :name', ['name' => $name]) }}</b>
+                <p class="muted" style="margin:6px 0 10px">{{ $bookable ? __('Timings, sevas, festivals and directions in the :app app, with booking and payment.', ['app' => config('brand.name')]) : __('Timings, sevas, festivals and directions in the :app app.', ['app' => config('brand.name')]) }}</p>
+                <a class="btn primary" href="{{ $bookable ? $bookLink : $appLink }}">{{ $bookable ? __('Book a seva') : __('Open in the app') }}</a>
+                @if ($donateLink)<a class="btn" href="{{ $donateLink }}" style="margin-top:8px">🪔 {{ __('Donate to the hundi') }}</a>@endif
+                @if ($storeUrl)<a class="btn" href="{{ $storeUrl }}" rel="noopener" style="margin-top:8px">{{ __('Get the Android app') }}</a>@endif
             </div>
         </aside>
     </div>
 
+    @if ($nearby->isNotEmpty())
+        <h2>{{ __('Temples near :name', ['name' => $name]) }}</h2>
+        <div class="more">
+            @foreach ($nearby as $t)
+                @php($tLocale = $locale !== 'en' && in_array($locale, \App\Support\SiteLocale::languagesOf($t), true) ? $locale : null)
+                <a href="{{ \App\Support\SiteLocale::templeUrl($t, $tLocale) }}">
+                    <div class="ph">@if ($t->primaryPhoto)<img src="{{ Seo::absolute($t->primaryPhoto->mediumUrl() ?? $t->primaryPhoto->thumbnailUrl()) }}" alt="{{ $t->localName($locale) }}" loading="lazy">@else<div class="none" aria-hidden="true">🛕</div>@endif</div>
+                    <div class="txt"><b>{{ $t->localName($locale) }}</b><span>{{ TempleSeo::km((float) $t->distance_km) }}@if ($t->city) · {{ $t->city }}@endif</span></div>
+                </a>
+            @endforeach
+        </div>
+    @endif
+
     @if ($faq !== [])
-        <h2>Questions devotees ask about {{ $temple->name }}</h2>
+        <h2>{{ __('Questions devotees ask about :name', ['name' => $name]) }}</h2>
         @foreach ($faq as $f)
             <details class="q" @if ($loop->first) open @endif><summary>{{ $f['q'] }}</summary><p>{{ $f['a'] }}</p></details>
         @endforeach
     @endif
 
     @foreach ([
-        ['list' => $sameDeity, 'heading' => 'More '.\App\Http\Controllers\PublicTempleController::deityPhrase((string) $temple->deity?->name).' temples', 'all' => $temple->deity?->slug ? Seo::url('deities/'.$temple->deity->slug) : null],
-        ['list' => $sameState->reject(fn ($t) => $sameDeity->contains('id', $t->id)), 'heading' => 'More temples in '.$temple->state?->name, 'all' => $temple->state ? Seo::url('states/'.$temple->state->slug) : null],
+        ['list' => $sameDeity->reject(fn ($t) => $nearby->contains('id', $t->id)), 'heading' => __('More :deity temples', ['deity' => \App\Http\Controllers\PublicTempleController::deityPhrase((string) $deityName)]), 'all' => $temple->deity?->slug ? Seo::url('deities/'.$temple->deity->slug) : null],
+        ['list' => $sameState->reject(fn ($t) => $sameDeity->contains('id', $t->id) || $nearby->contains('id', $t->id)), 'heading' => __('More temples in :place', ['place' => (string) $temple->state?->name]), 'all' => $temple->state ? Seo::url('states/'.$temple->state->slug) : null],
     ] as $group)
         @if ($group['list']->isNotEmpty())
             <h2>{{ $group['heading'] }}</h2>
             <div class="more">
                 @foreach ($group['list'] as $t)
                     <a href="{{ Seo::url('temples/'.$t->slug) }}">
-                        <div class="ph">@if ($t->primaryPhoto)<img src="{{ Seo::absolute($t->primaryPhoto->mediumUrl() ?? $t->primaryPhoto->thumbnailUrl()) }}" alt="{{ $t->name }}" loading="lazy">@else<div class="none" aria-hidden="true">🛕</div>@endif</div>
-                        <div class="txt"><b>{{ $t->name }}</b><span>{{ collect([$t->city, $t->state?->name])->filter()->unique()->implode(', ') }}</span></div>
+                        <div class="ph">@if ($t->primaryPhoto)<img src="{{ Seo::absolute($t->primaryPhoto->mediumUrl() ?? $t->primaryPhoto->thumbnailUrl()) }}" alt="{{ $t->localName($locale) }}" loading="lazy">@else<div class="none" aria-hidden="true">🛕</div>@endif</div>
+                        <div class="txt"><b>{{ $t->localName($locale) }}</b><span>{{ collect([$t->city, $t->state?->name])->filter()->unique()->implode(', ') }}</span></div>
                     </a>
                 @endforeach
             </div>
-            @if ($group['all'])<p><a href="{{ $group['all'] }}">See all →</a></p>@endif
+            @if ($group['all'])<p><a href="{{ $group['all'] }}">{{ __('See all') }} →</a></p>@endif
         @endif
     @endforeach
 

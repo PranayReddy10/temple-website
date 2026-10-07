@@ -40,18 +40,29 @@
 @endpush
 
 @section('content')
-    <p class="crumbs"><a href="{{ \App\Support\Seo::url('/') }}">Home</a> › @if ($state || $deity)<a href="{{ \App\Support\Seo::url('temples') }}">Temples</a> › {{ $state?->name ?? $deity->name }}@else Temples @endif</p>
+    @php($district = $district ?? null)
+    @php($districts = $districts ?? collect())
+    <p class="crumbs"><a href="{{ \App\Support\Seo::url('/') }}">Home</a> › @if ($state || $deity)<a href="{{ \App\Support\Seo::url('temples') }}">Temples</a> › @if ($district)<a href="{{ \App\Support\Seo::url('states/'.$state->slug) }}">{{ $state->name }}</a> › {{ $district->name }}@else{{ $state?->name ?? $deity->name }}@endif @else Temples @endif</p>
     <h1>{{ $heading }}</h1>
     <p class="muted">{{ number_format($temples->total()) }} {{ \Illuminate\Support\Str::plural('temple', $temples->total()) }} with darshan timings, pujas and sevas, visiting rules and directions.</p>
     @if (! empty($intro))<p>{{ $intro }}</p>@endif
 
     {{-- On a state or deity page the search stays within it. --}}
-    <form class="find" action="{{ \App\Support\Seo::url($state ? 'states/'.$state->slug : ($deity ? 'deities/'.$deity->slug : 'temples')) }}" method="get" role="search">
-        <input type="search" name="q" value="{{ $q ?? '' }}" placeholder="{{ $state ? 'Search temples in '.$state->name : ($deity ? 'Search '.\App\Http\Controllers\PublicTempleController::deityPhrase($deity->name).' temples' : 'Search by temple name or town') }}" aria-label="Search temples">
+    <form class="find" action="{{ \App\Support\Seo::url($district ? 'states/'.$state->slug.'/'.$district->slug : ($state ? 'states/'.$state->slug : ($deity ? 'deities/'.$deity->slug : 'temples'))) }}" method="get" role="search">
+        <input type="search" name="q" value="{{ $q ?? '' }}" placeholder="{{ $district ? 'Search temples in '.$district->name : ($state ? 'Search temples in '.$state->name : ($deity ? 'Search '.\App\Http\Controllers\PublicTempleController::deityPhrase($deity->name).' temples' : 'Search by temple name or town')) }}" aria-label="Search temples">
         <button type="submit">Search</button>
     </form>
     @if (($state || $deity) && filled($q ?? null))
         <p class="muted">@if ($temples->total() === 0)No temples here match "{{ $q }}". @endif<a href="{{ \App\Support\Seo::url('temples?q='.urlencode($q)) }}">Search all temples</a></p>
+    @endif
+
+    @if ($districts->isNotEmpty())
+        {{-- A state's districts: "temples in <district>" is how people look. --}}
+        <nav class="states" aria-label="Districts">
+            @foreach ($districts as $d)
+                <a href="{{ \App\Support\Seo::url('states/'.$state->slug.'/'.$d->slug) }}" @class(['on' => $district?->id === $d->id])>{{ $d->name }} ({{ $d->temples_count }})</a>
+            @endforeach
+        </nav>
     @endif
 
     @if ($states->isNotEmpty())

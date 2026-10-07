@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Deity;
+use App\Models\District;
 use App\Models\State;
 use App\Models\Temple;
 use App\Models\TempleTiming;
 use App\Support\DevotionalClock;
 use App\Support\Seo;
+use App\Support\SiteLocale;
 use App\Support\TempleFinder;
+use App\Support\TempleSeo;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -72,6 +75,7 @@ class PublicTempleController extends Controller
             'states' => self::statesWithTemples(),
             'deities' => self::deitiesWithTemples(),
             'state' => $state,
+            'districts' => self::districtsWithTemples($state),
             'deity' => null,
             'q' => $q,
             'noindex' => $q !== '',
@@ -119,9 +123,25 @@ class PublicTempleController extends Controller
 
     public function show(string $slug): View|RedirectResponse
     {
+        return $this->render($slug, null);
+    }
+
+    /**
+     * The same page in Telugu, Hindi, Tamil or Kannada: /te/temples/{slug}.
+     * Only for a temple whose name has a reviewed translation in that
+     * language, so each language version is a real page and never the
+     * English one again under another address.
+     */
+    public function showLocalized(string $locale, string $slug): View|RedirectResponse
+    {
+        return $this->render($slug, $locale);
+    }
+
+    protected function render(string $slug, ?string $locale): View|RedirectResponse
+    {
         $temple = Temple::query()->published()->where('slug', $slug)
             ->with([
-                'deity', 'state', 'district', 'primaryPhoto', 'timings', 'aliases',
+                'deity', 'state', 'district', 'primaryPhoto', 'timings', 'aliases', 'translations', 'deity.translations',
                 'photos' => fn ($q) => $q->published()->orderByDesc('is_primary')->orderBy('sort_order')->limit(30),
                 'media', 'deity.media',
                 'pujas' => fn ($q) => $q->published(),
@@ -134,35 +154,55 @@ class PublicTempleController extends Controller
             // A slug typed by hand or cut short: the temple it clearly means.
             $meant = TempleFinder::closest($slug);
             if ($meant !== null && $meant->slug !== $slug) {
-                return redirect()->to(Seo::url('temples/'.$meant->slug), 301);
+                return redirect()->to(SiteLocale::templeUrl($meant, $locale), 301);
             }
 
             throw new NotFoundHttpException;
         }
 
+        $languages = SiteLocale::languagesOf($temple);
+        if ($locale !== null && ! in_array($locale, $languages, true)) {
+            // Not translated (yet): the English page is the one to read.
+            return redirect()->to(SiteLocale::templeUrl($temple, null), 302);
+        }
+
+        SiteLocale::use($locale);
+        $lang = $locale ?? 'en';
+        $name = $locale !== null ? $temple->localName($locale) : $temple->name;
+        $deityName = $temple->deity?->translate('name', $lang, reviewedOnly: true);
+
         $place = collect([$temple->city, $temple->district?->name, $temple->state?->name])->filter()->unique()->implode(', ');
         $related = fn ($q) => $q->published()->whereKeyNot($temple->id)
-            ->with(['deity:id,name', 'state:id,name', 'primaryPhoto'])
+            ->with(['deity:id,name', 'state:id,name', 'primaryPhoto', 'translations'])
             ->orderByDesc('is_featured')->orderBy('name')->limit(6)
             ->get(['id', 'name', 'slug', 'city', 'deity_id', 'state_id', 'is_featured']);
-        $about = $temple->translate('short_description', null, reviewedOnly: true);
-        $dressCode = $temple->translate('dress_code', null, reviewedOnly: true);
+        $about = $temple->translate('short_description', $lang, reviewedOnly: true);
+        $dressCode = $temple->translate('dress_code', $lang, reviewedOnly: true);
         $today = (int) DevotionalClock::now()->dayOfWeek;
         // A Sat & Sun timing replaces the every-day one of its kind that day.
         $todays = TempleTiming::forDay($temple->timings, $today);
         $bookable = $temple->pujas->contains(fn ($p) => $p->isBookableInApp());
+        $nearby = TempleSeo::nearby($temple);
+        $photoCount = $temple->photos->count();
+        $canonical = SiteLocale::templeUrl($temple, $locale);
 
         return view('site.temple', [
             'temple' => $temple,
+            'name' => $name,
+            'deityName' => $deityName,
             'place' => $place,
             'about' => $about,
-            'history' => $temple->translate('history', null, reviewedOnly: true),
-            'significance' => $temple->translate('significance', null, reviewedOnly: true),
+            'history' => $temple->translate('history', $lang, reviewedOnly: true),
+            'significance' => $temple->translate('significance', $lang, reviewedOnly: true),
+            'entryRules' => $temple->translate('entry_rules', $lang, reviewedOnly: true),
+            'queueInfo' => $temple->translate('queue_information', $lang, reviewedOnly: true),
             'dressCode' => $dressCode,
             'todays' => $todays,
             'bookable' => $bookable,
-            'aliases' => $temple->aliases->pluck('name')->filter()->unique()->reject(fn ($n) => strcasecmp($n, $temple->name) === 0)->values(),
-            'faq' => self::faq($temple, $place, $dressCode, $bookable),
+            'nearby' => $nearby,
+            'intro' => TempleSeo::introduction($temple, $name, $deityName, $nearby),
+            'aliases' => $temple->aliases->pluck('name')->filter()->unique()->reject(fn ($n) => strcasecmp($n, $temple->name) === 0 || $n === $name)->values(),
+            'faq' => $locale === null ? self::faq($temple, $place, $dressCode, $bookable, $nearby) : [],
             'appLink' => Seo::appLink($temple->slug),
             'bookLink' => Seo::appLink($temple->slug, 'book'),
             // Hundi offerings, where the temple takes them and its payout
@@ -170,15 +210,77 @@ class PublicTempleController extends Controller
             'donateLink' => $temple->accepts_donations && $temple->canCollectPayments() ? Seo::appLink($temple->slug, 'donate') : null,
             'storeUrl' => Seo::storeUrl(),
             'ogType' => 'place',
-            'title' => $temple->name.($place !== '' ? ', '.$place : '').': timings, pujas, how to reach',
-            'description' => Str::limit(trim(strip_tags((string) ($about ?: 'Darshan timings, pujas and sevas, dress code and directions for '.$temple->name.($place !== '' ? ' in '.$place : '').'.'))), 158),
-            'canonical' => Seo::url('temples/'.$temple->slug),
+            'locale' => $lang,
+            'alternates' => SiteLocale::alternates($temple, $languages),
+            'title' => $locale === null
+                ? TempleSeo::title($temple, $name)
+                : $name.($temple->city ? ', '.$temple->city : '').': '.__('Timings, Photos & How to Reach'),
+            'description' => $locale === null
+                ? TempleSeo::description($temple, $name, $place, $about, $todays, $photoCount)
+                : Str::limit(trim(strip_tags((string) ($about ?: $name.($place !== '' ? ', '.$place : '')))), 158),
+            'canonical' => $canonical,
+            'updatedAt' => $temple->updated_at,
             'image' => Seo::absolute($temple->primaryPhoto?->mediumUrl() ?? $temple->photos->first()?->mediumUrl()),
             // Links on to more temples: what search engines follow, and what a
             // devotee planning a trip looks at next.
             'sameDeity' => $temple->deity_id ? $related(Temple::query()->where('deity_id', $temple->deity_id)) : collect(),
             'sameState' => $temple->state_id ? $related(Temple::query()->where('state_id', $temple->state_id)) : collect(),
         ]);
+    }
+
+    /**
+     * A district's temples: "Temples in Bhadradri Kothagudem, Telangana",
+     * which is how people look for the temples of a place.
+     */
+    public function district(Request $request, string $stateSlug, string $districtSlug): View
+    {
+        $state = State::query()->where('slug', $stateSlug)->first() ?? throw new NotFoundHttpException;
+        $district = District::query()->where('state_id', $state->id)->where('slug', $districtSlug)->first() ?? throw new NotFoundHttpException;
+        $q = trim((string) $request->query('q'));
+
+        $temples = Temple::query()->published()->where('district_id', $district->id)
+            ->when($q !== '', fn ($query) => $query->search($q))
+            ->with(['deity:id,name', 'state:id,name', 'primaryPhoto'])
+            ->tap(self::cardDetails(...))
+            ->orderByDesc('is_featured')->orderBy('name')
+            ->paginate(48)
+            ->withQueryString();
+
+        if ($temples->total() === 0 && $q === '') {
+            throw new NotFoundHttpException;
+        }
+
+        $towns = Temple::query()->published()->where('district_id', $district->id)
+            ->whereNotNull('city')->distinct()->orderBy('city')->limit(30)->pluck('city');
+
+        return view('site.temples', [
+            'temples' => $temples,
+            'states' => collect(),
+            'deities' => collect(),
+            'districts' => self::districtsWithTemples($state),
+            'state' => $state,
+            'district' => $district,
+            'deity' => null,
+            'q' => $q,
+            'noindex' => $q !== '',
+            'heading' => $q !== '' ? 'Temples in '.$district->name.' matching "'.$q.'"' : 'Temples in '.$district->name.' district, '.$state->name,
+            'intro' => $towns->isNotEmpty() ? 'Temples in '.$towns->take(12)->implode(', ').($towns->count() > 12 ? ' and more' : '').': darshan timings, pujas and sevas, photos and the way there.' : null,
+            'title' => 'Temples in '.$district->name.', '.$state->name.': Timings & How to Reach',
+            'description' => number_format($temples->total()).' '.Str::plural('temple', $temples->total()).' in '.$district->name.' district, '.$state->name.': darshan timings, pujas and sevas, photos, dress code and directions.',
+            'canonical' => Seo::url('states/'.$state->slug.'/'.$district->slug.($temples->currentPage() > 1 ? '?page='.$temples->currentPage() : '')),
+        ]);
+    }
+
+    /** @return Collection<int, District> a state's districts that have published temples */
+    public static function districtsWithTemples(State $state)
+    {
+        return District::query()
+            ->where('state_id', $state->id)
+            ->whereNotNull('slug')
+            ->whereHas('temples', fn ($q) => $q->published())
+            ->withCount(['temples' => fn ($q) => $q->published()])
+            ->orderBy('name')
+            ->get(['id', 'state_id', 'name', 'slug']);
     }
 
     /**
@@ -189,7 +291,7 @@ class PublicTempleController extends Controller
      *
      * @return array<int, array{q: string, a: string}>
      */
-    public static function faq(Temple $temple, string $place, ?string $dressCode, bool $bookable): array
+    public static function faq(Temple $temple, string $place, ?string $dressCode, bool $bookable, ?Collection $nearby = null): array
     {
         $name = $temple->name;
         $faq = [];
@@ -216,6 +318,18 @@ class PublicTempleController extends Controller
 
         if (filled($temple->mobile_policy) || filled($temple->photography_policy)) {
             $faq[] = ['q' => 'Are mobile phones and photography allowed at '.$name.'?', 'a' => collect([$temple->mobile_policy ? 'Mobile phones: '.$temple->mobile_policy : null, $temple->photography_policy ? 'Photography: '.$temple->photography_policy : null])->filter()->implode('. ').'.'];
+        }
+
+        if ($temple->deity !== null) {
+            $faq[] = ['q' => 'Which deity is worshipped at '.$name.'?', 'a' => $name.' is dedicated to '.$temple->deity->name.'.'];
+        }
+
+        if ($temple->events->isNotEmpty()) {
+            $faq[] = ['q' => 'Which festivals and events are coming up at '.$name.'?', 'a' => $temple->events->take(4)->map(fn ($e) => $e->title.' ('.optional($e->nextDate() ?? $e->starts_on)->format('d M Y').')')->implode(', ').'.'];
+        }
+
+        if ($nearby !== null && $nearby->isNotEmpty()) {
+            $faq[] = ['q' => 'Which temples are near '.$name.'?', 'a' => $nearby->take(5)->map(fn (Temple $t) => $t->name.' ('.TempleSeo::km((float) $t->distance_km).' away)')->implode(', ').'.'];
         }
 
         if (filled($temple->contact_phone)) {

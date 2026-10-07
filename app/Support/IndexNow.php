@@ -86,9 +86,9 @@ final class IndexNow
     {
         $temples = Temple::query()->published()
             ->when($since !== null, fn ($q) => $q->where('updated_at', '>', $since))
-            ->with(['state:id,slug', 'deity:id,slug'])
+            ->with(['state:id,slug', 'deity:id,slug', 'district:id,slug', 'translations' => fn ($q) => $q->where('field', 'name')->where('is_reviewed', true)])
             ->orderBy('id')
-            ->get(['id', 'slug', 'state_id', 'deity_id']);
+            ->get(['id', 'slug', 'state_id', 'deity_id', 'district_id']);
 
         $pages = Page::query()->published()
             ->when($since !== null, fn ($q) => $q->where('updated_at', '>', $since))
@@ -96,6 +96,10 @@ final class IndexNow
 
         return collect([Seo::url('temples')])
             ->merge($temples->map(fn (Temple $t): string => Seo::url('temples/'.$t->slug)))
+            // The page in each language it is published in.
+            ->merge($temples->flatMap(fn (Temple $t): array => array_map(fn (string $code): string => SiteLocale::templeUrl($t, $code), SiteLocale::languagesOf($t))))
+            ->merge($temples->filter(fn (Temple $t): bool => $t->state?->slug !== null && $t->district?->slug !== null)
+                ->map(fn (Temple $t): string => Seo::url('states/'.$t->state->slug.'/'.$t->district->slug))->unique())
             ->merge($temples->pluck('state.slug')->filter()->unique()->map(fn (string $s): string => Seo::url('states/'.$s)))
             ->merge($temples->pluck('deity.slug')->filter()->unique()->map(fn (string $s): string => Seo::url('deities/'.$s)))
             ->merge($pages->map(fn (string $s): string => Seo::url($s)))
