@@ -6,6 +6,7 @@ use App\Models\Deity;
 use App\Models\District;
 use App\Models\State;
 use App\Models\Temple;
+use App\Models\TempleCategory;
 use App\Models\TempleTiming;
 use App\Support\DevotionalClock;
 use App\Support\Seo;
@@ -40,6 +41,7 @@ class PublicTempleController extends Controller
             'temples' => $temples,
             'states' => self::statesWithTemples(),
             'deities' => self::deitiesWithTemples(),
+            'tags' => self::tagsWithTemples(),
             'state' => null,
             'deity' => null,
             'q' => $q,
@@ -152,6 +154,7 @@ class PublicTempleController extends Controller
         $temple = Temple::query()->when(! $preview, fn ($q) => $q->published())->where('slug', $slug)
             ->with([
                 'deity', 'state', 'district', 'primaryPhoto', 'timings', 'aliases', 'translations', 'deity.translations',
+                'categories' => fn ($q) => $q->where('is_active', true)->whereNotNull('slug'),
                 'photos' => fn ($q) => $q->published()->orderByDesc('is_primary')->orderBy('sort_order')->limit(30),
                 'media', 'deity.media',
                 'pujas' => fn ($q) => $q->published(),
@@ -211,6 +214,7 @@ class PublicTempleController extends Controller
             'bookable' => $bookable,
             'nearby' => $nearby,
             'intro' => TempleSeo::introduction($temple, $name, $deityName, $nearby),
+            'keywords' => $locale === null ? $temple->searchKeywords() : [],
             'aliases' => $temple->aliases->pluck('name')->filter()->unique()->reject(fn ($n) => strcasecmp($n, $temple->name) === 0 || $n === $name)->values(),
             'faq' => $locale === null ? self::faq($temple, $place, $dressCode, $bookable, $nearby) : [],
             'appLink' => Seo::appLink($temple->slug),
@@ -279,6 +283,73 @@ class PublicTempleController extends Controller
             'description' => number_format($temples->total()).' '.Str::plural('temple', $temples->total()).' in '.$district->name.' district, '.$state->name.': darshan timings, pujas and sevas, photos, dress code and directions.',
             'canonical' => Seo::url('states/'.$state->slug.'/'.$district->slug.($temples->currentPage() > 1 ? '?page='.$temples->currentPage() : '')),
         ]);
+    }
+
+    /**
+     * A tag's temples: "Hill temples", "Jyotirlinga", "Shakti Peetha".
+     * Tags are set on each temple in the admin (Tags, circuits and
+     * categories); only an active tag with published temples has a page.
+     */
+    public function tag(Request $request, string $slug): View
+    {
+        $tag = TempleCategory::query()->where('slug', $slug)->where('is_active', true)->first() ?? throw new NotFoundHttpException;
+        $q = trim((string) $request->query('q'));
+
+        $temples = Temple::query()->published()
+            ->whereHas('categories', fn ($c) => $c->whereKey($tag->getKey()))
+            ->when($q !== '', fn ($query) => $query->search($q))
+            ->with(['deity:id,name', 'state:id,name', 'primaryPhoto'])
+            ->tap(self::cardDetails(...))
+            ->orderByDesc('is_featured')->orderBy('name')
+            ->paginate(48)
+            ->withQueryString();
+
+        if ($temples->total() === 0 && $q === '') {
+            throw new NotFoundHttpException;
+        }
+
+        $heading = self::tagHeading($tag->name);
+
+        return view('site.temples', [
+            'temples' => $temples,
+            'states' => collect(),
+            'deities' => collect(),
+            'tags' => self::tagsWithTemples(),
+            'tag' => $tag,
+            'state' => null,
+            'deity' => null,
+            'q' => $q,
+            'noindex' => $q !== '',
+            'heading' => $q !== '' ? $heading.' matching "'.$q.'"' : $heading,
+            'intro' => filled($tag->description) ? Str::limit(trim(strip_tags((string) $tag->description)), 400) : null,
+            'title' => $heading.': Timings, Photos & How to Reach',
+            'description' => number_format($temples->total()).' '.Str::lower($heading).': darshan timings, pujas and sevas, photos, dress code and directions.',
+            'canonical' => Seo::url('tags/'.$tag->slug.($temples->currentPage() > 1 ? '?page='.$temples->currentPage() : '')),
+        ]);
+    }
+
+    /** "Hill temple" → "Hill temples"; "Jyotirlinga" → "Jyotirlinga temples". */
+    public static function tagHeading(string $name): string
+    {
+        $name = trim($name);
+
+        if (preg_match('/\btemples?$/i', $name)) {
+            return Str::ucfirst(preg_replace('/\btemple$/i', 'temples', $name));
+        }
+
+        return Str::ucfirst($name).' temples';
+    }
+
+    /** @return Collection<int, TempleCategory> active tags that have published temples */
+    public static function tagsWithTemples()
+    {
+        return TempleCategory::query()
+            ->where('is_active', true)
+            ->whereNotNull('slug')
+            ->whereHas('temples', fn ($q) => $q->published())
+            ->withCount(['temples' => fn ($q) => $q->published()])
+            ->orderBy('sort_order')->orderBy('name')
+            ->get(['id', 'name', 'slug']);
     }
 
     /** @return Collection<int, District> a state's districts that have published temples */
