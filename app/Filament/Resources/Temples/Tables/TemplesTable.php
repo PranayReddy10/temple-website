@@ -49,7 +49,9 @@ class TemplesTable
 
                 TextColumn::make('name')
                     ->label('Temple')
-                    ->searchable()
+                    // Word by word, any order, across name, other names,
+                    // town, district and PIN: "swarnagiri bhuvanagiri".
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->search($search))
                     ->sortable()
                     ->weight('medium')
                     ->description(fn (Temple $record): ?string => $record->short_description

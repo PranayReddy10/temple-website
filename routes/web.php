@@ -124,6 +124,12 @@ Route::get('/pay/{payment}/done', [PayController::class, 'done'])->name('pay.don
 Route::get('/temples', [PublicTempleController::class, 'index'])->name('site.temples');
 Route::get('/temples/{slug}', [PublicTempleController::class, 'show'])->name('site.temple');
 Route::get('/states/{slug}', [PublicTempleController::class, 'state'])->name('site.state');
+// A temple's page before it is published, from the admin's Preview page
+// button: a signed link that lasts an hour, never indexed.
+Route::get('/temples/{temple}/preview', [PublicTempleController::class, 'preview'])
+    ->whereNumber('temple')
+    ->middleware('signed')
+    ->name('site.temple.preview');
 Route::get('/states/{state}/{district}', [PublicTempleController::class, 'district'])->name('site.district');
 // The same temple page in the apps' other languages (App\Support\SiteLocale).
 Route::get('/{locale}/temples/{slug}', [PublicTempleController::class, 'showLocalized'])
