@@ -137,9 +137,19 @@ class PublicTempleController extends Controller
         return $this->render($slug, $locale);
     }
 
-    protected function render(string $slug, ?string $locale): View|RedirectResponse
+    /** A temple not yet published, as its page will look (signed link, not indexed). */
+    public function preview(int $temple): View|RedirectResponse
     {
-        $temple = Temple::query()->published()->where('slug', $slug)
+        $slug = Temple::query()->whereKey($temple)->value('slug') ?? throw new NotFoundHttpException;
+
+        $page = $this->render($slug, null, preview: true);
+
+        return $page instanceof View ? $page->with('noindex', true) : $page;
+    }
+
+    protected function render(string $slug, ?string $locale, bool $preview = false): View|RedirectResponse
+    {
+        $temple = Temple::query()->when(! $preview, fn ($q) => $q->published())->where('slug', $slug)
             ->with([
                 'deity', 'state', 'district', 'primaryPhoto', 'timings', 'aliases', 'translations', 'deity.translations',
                 'photos' => fn ($q) => $q->published()->orderByDesc('is_primary')->orderBy('sort_order')->limit(30),

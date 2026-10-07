@@ -22,20 +22,53 @@ final class TempleSeo
     /** Google shows about this many characters of a title. */
     protected const TITLE_MAX = 65;
 
-    /** "Sri Rama Temple, Bhadrachalam: Timings, Photos & How to Reach". */
+    /**
+     * "Sri Rama Temple, Bhadrachalam: Timings, Photos & How to Reach".
+     *
+     * When the full name is too long for that, the temple's short name is
+     * used instead ("Swarnagiri Temple, Bhuvanagiri: Timings, Photos & How
+     * to Reach"): it is what people type, and the full name is the page's
+     * heading anyway.
+     */
     public static function title(Temple $temple, string $name): string
     {
         $town = self::town($temple);
         $suffix = ': Timings, Photos & How to Reach';
-        $named = $town !== null && stripos($name, $town) === false ? $name.', '.$town : $name;
+        $withTown = fn (string $n): string => $town !== null && stripos($n, $town) === false ? $n.', '.$town : $n;
+        $named = $withTown($name);
+        $short = self::shortName($temple, $name);
 
-        foreach ([$named.$suffix, $named.': Timings & How to Reach', $named.' Timings', $name.' Timings'] as $title) {
+        $candidates = [
+            $named.$suffix,
+            $short !== null ? $withTown($short).$suffix : null,
+            $named.': Timings & How to Reach',
+            $short !== null ? $withTown($short).': Timings & How to Reach' : null,
+            $named.' Timings',
+            $name.' Timings',
+        ];
+
+        foreach (array_filter($candidates) as $title) {
             if (mb_strlen($title) <= self::TITLE_MAX) {
                 return $title;
             }
         }
 
         return $name;
+    }
+
+    /**
+     * The shortest English "also known as" name, when it is shorter than
+     * the full one: "Swarnagiri Temple" for "Swarnagiri Sri Venkateswara
+     * Swamy Temple".
+     */
+    public static function shortName(Temple $temple, string $name): ?string
+    {
+        $short = $temple->aliases
+            ->filter(fn ($a): bool => in_array($a->locale, [null, '', 'en'], true) && mb_strlen((string) $a->name) >= 6 && mb_strlen((string) $a->name) < mb_strlen($name))
+            ->sortBy(fn ($a): int => mb_strlen((string) $a->name))
+            ->first();
+
+        return $short?->name;
     }
 
     /**
@@ -81,7 +114,8 @@ final class TempleSeo
             $temple->state?->name,
         ])->filter()->unique()->implode(', ');
 
-        $out[] = $name.' is a Hindu temple'
+        $short = self::shortName($temple, $name);
+        $out[] = $name.($short !== null ? ' (also called '.$short.')' : '').' is a Hindu temple'
             .(filled($deity) ? ' dedicated to '.$deity : '')
             .($where !== '' ? ' in '.$where : '')
             .(filled($temple->pincode) ? ' ('.$temple->pincode.')' : '').'.';

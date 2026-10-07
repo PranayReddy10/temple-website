@@ -348,19 +348,61 @@ class Temple extends Model
      * Match a temple by its own name or any recorded alternate/local name, so
      * searching "Tirupati" finds Sri Venkateswara Swamy Temple.
      */
+    /**
+     * Words people leave out or add at will: "swarnagiri temple bhuvanagiri"
+     * must find "Swarnagiri Sri Venkateswara Swamy Temple". Ignored unless
+     * the search is made of nothing else.
+     */
+    public const SEARCH_FILLER = [
+        'temple', 'temples', 'mandir', 'mandiram', 'gudi', 'alayam', 'devalayam', 'devasthanam', 'kovil', 'koil',
+        'sri', 'shri', 'sree', 'shree', 'the', 'of', 'at', 'in', 'near', 'and',
+    ];
+
+    /**
+     * Search as people type: any words, in any order, each found somewhere
+     * in the temple's name, its other names, town, district, state, address
+     * or PIN, or its name in another language. "swarnagiri bhuvanagiri",
+     * "venkateswara swamy bhongir" and "swarna giri" all find the same temple.
+     */
     public function scopeSearch(Builder $query, ?string $term): Builder
     {
-        $term = trim((string) $term);
+        $words = self::searchWords($term);
 
-        if ($term === '') {
+        if ($words === []) {
             return $query;
         }
 
-        return $query->where(function (Builder $q) use ($term) {
-            $q->where('name', 'like', "%{$term}%")
-                ->orWhere('city', 'like', "%{$term}%")
-                ->orWhereHas('aliases', fn (Builder $a) => $a->where('name', 'like', "%{$term}%"));
-        });
+        foreach ($words as $word) {
+            $like = '%'.$word.'%';
+
+            $query->where(function (Builder $q) use ($like) {
+                $q->where('temples.name', 'like', $like)
+                    // "swarnagiri" typed as "swarna giri", or the other way round.
+                    ->orWhereRaw("REPLACE(temples.name, ' ', '') like ?", [str_replace(' ', '', $like)])
+                    ->orWhere('temples.city', 'like', $like)
+                    ->orWhere('temples.address', 'like', $like)
+                    ->orWhere('temples.pincode', 'like', $like)
+                    ->orWhereHas('district', fn (Builder $d) => $d->where('name', 'like', $like))
+                    ->orWhereHas('state', fn (Builder $st) => $st->where('name', 'like', $like))
+                    ->orWhereHas('aliases', fn (Builder $a) => $a->where('name', 'like', $like))
+                    ->orWhereHas('translations', fn (Builder $t) => $t->where('field', 'name')->where('value', 'like', $like));
+            });
+        }
+
+        return $query;
+    }
+
+    /** @return array<int, string> the words of a search worth matching */
+    public static function searchWords(?string $term): array
+    {
+        // LIKE's wildcards and escape character are dropped, not escaped:
+        // MySQL and SQLite escape differently, and no name needs them.
+        $clean = str_replace(['%', '_', '\\'], ' ', mb_strtolower(trim((string) $term)));
+        $all = preg_split('/[\s,.\-\/()]+/u', $clean, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $all = array_values(array_unique(array_filter($all, fn (string $w): bool => mb_strlen($w) >= 2 || is_numeric($w))));
+        $meaningful = array_values(array_diff($all, self::SEARCH_FILLER));
+
+        return array_slice($meaningful !== [] ? $meaningful : $all, 0, 8);
     }
 
     /**

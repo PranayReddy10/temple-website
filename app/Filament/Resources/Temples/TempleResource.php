@@ -62,6 +62,16 @@ class TempleResource extends Resource
         return ['name', 'city'];
     }
 
+    /**
+     * The panel's search box finds temples the way devotees type them:
+     * word by word, in any order, across name, other names, town, district
+     * and PIN (Temple::scopeSearch), not only by the start of the name.
+     */
+    protected static function applyGlobalSearchAttributeConstraints(Builder $query, string $search): void
+    {
+        $query->search($search);
+    }
+
     public static function getGlobalSearchResultDetails($record): array
     {
         return [
