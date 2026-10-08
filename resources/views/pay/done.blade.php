@@ -26,7 +26,7 @@
     {{-- Paid from the website: back to it, which shows this result. The
          tab the website opened closes if the browser allows; otherwise it
          goes back to the website itself. --}}
-    @php($back = rtrim((string) config('brand.website'), '/').'/?payment='.$payment->uuid)
+    @php($back = \App\Support\Seo::url('account/payments/'.$payment->uuid))
     @if ($paid || $failed)
         <p style="margin-top:18px"><a class="button" href="{{ $back }}">Return to {{ config('brand.name') }}</a></p>
         @if (($payment->meta['client'] ?? null) === 'web')

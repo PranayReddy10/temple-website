@@ -1,0 +1,46 @@
+# darshansaathi.com: the devotees' website.
+#
+# Copy this file to public_html/.htaccess (beside the laravel/ folder).
+# Every page of the website (the home page, the temple, state and deity
+# pages, the policy pages, the sitemap) is rendered by the Laravel project
+# in public_html/laravel, which also answers as temple.darshansaathi.com
+# (document root laravel/public). Nothing else in public_html is served.
+
+# Hostinger drops a placeholder (default.php / index.php) into a new site's
+# public_html; never open it.
+DirectoryIndex disabled
+Options -Indexes
+
+# Any address that is not found shows the site's own 404 page.
+ErrorDocument 404 /laravel/public/index.php
+
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json application/xml image/svg+xml
+</IfModule>
+
+RewriteEngine On
+
+# One address per page: www.darshansaathi.com moves to darshansaathi.com,
+# so search engines do not split a temple's ranking between two copies.
+RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L]
+
+# Nothing of the Laravel project is reachable by its folder name.
+RewriteCond %{THE_REQUEST} \s/+laravel(/|\s|\?) [NC]
+RewriteRule ^ - [R=404,L]
+
+# The admin panel, temple portal, API and QR pages live on
+# temple.darshansaathi.com; one address each.
+RewriteRule ^(admin|temple|api|livewire|pay|bookings|passport|qr)(/.*)?$ https://temple.darshansaathi.com/$1$2 [R=301,L]
+
+# Addresses ending in / move to the same address without it.
+RewriteCond %{REQUEST_URI} ^/(.+)/$
+RewriteRule ^ /%1 [R=301,L]
+
+# The Laravel project's own files, as they are: the icon, the share card,
+# the logo, the stylesheets, and the temple photos in storage/ (an address
+# with no file there goes on to Laravel, which answers it or 404s).
+RewriteRule ^(favicon\.(png|ico)|og\.png|(icons|brand|css|js|fonts|storage)/.+)$ laravel/public/$1 [L]
+
+# Every other address is a page: Laravel renders it.
+RewriteRule ^ laravel/public/index.php [L,QSA]

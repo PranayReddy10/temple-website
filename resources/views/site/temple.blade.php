@@ -196,7 +196,13 @@
     <div class="actions">
         @if ($bookable)<a class="btn primary" href="{{ $bookLink }}">{{ __('Book a seva') }}</a>@endif
         @if ($donateLink)<a class="btn {{ $bookable ? '' : 'primary' }}" href="{{ $donateLink }}">🪔 {{ __('Donate') }}</a>@endif
-        <a class="btn {{ $bookable || $donateLink ? '' : 'primary' }}" href="{{ $appLink }}">{{ __('Open in :app', ['app' => config('brand.name')]) }}</a>
+        <a class="btn {{ $bookable || $donateLink ? '' : 'primary' }}" href="{{ $appLink }}" data-intent="{{ Seo::appIntent($temple->slug) }}">{{ __('Open in :app', ['app' => config('brand.name')]) }}</a>
+        @if (! $temple->pujas->isEmpty() && ! $bookable)<a class="btn" href="{{ Seo::url('temples/'.$temple->slug.'/sevas') }}">{{ __('Sevas & fees') }}</a>@endif
+        @if (auth('devotee_web')->check())
+            <form method="post" action="{{ Seo::url('temples/'.$temple->slug.'/save') }}" style="display:inline">@csrf<button class="btn" type="submit">{{ ($saved ?? false) ? '♥ '.__('Saved') : '♡ '.__('Save') }}</button></form>
+        @else
+            <a class="btn" href="{{ Seo::url('login').'?'.http_build_query(['next' => $canonical]) }}" rel="nofollow">♡ {{ __('Save') }}</a>
+        @endif
         @if ($temple->hasCoordinates())
             <a class="btn" href="https://www.google.com/maps/dir/?api=1&destination={{ $temple->latitude }},{{ $temple->longitude }}" rel="nofollow noopener" target="_blank">{{ __('Directions') }}</a>
         @endif
@@ -366,7 +372,7 @@
             <div class="card" style="margin-top:16px">
                 <b>{{ $bookable ? __('Book a seva at :name', ['name' => $name]) : __('Plan your visit to :name', ['name' => $name]) }}</b>
                 <p class="muted" style="margin:6px 0 10px">{{ $bookable ? __('Timings, sevas, festivals and directions in the :app app, with booking and payment.', ['app' => config('brand.name')]) : __('Timings, sevas, festivals and directions in the :app app.', ['app' => config('brand.name')]) }}</p>
-                <a class="btn primary" href="{{ $bookable ? $bookLink : $appLink }}">{{ $bookable ? __('Book a seva') : __('Open in the app') }}</a>
+                <a class="btn primary" href="{{ $bookable ? $bookLink : $appLink }}" @unless ($bookable) data-intent="{{ Seo::appIntent($temple->slug) }}" @endunless>{{ $bookable ? __('Book a seva') : __('Open in the app') }}</a>
                 @if ($donateLink)<a class="btn" href="{{ $donateLink }}" style="margin-top:8px">🪔 {{ __('Donate to the hundi') }}</a>@endif
                 @if ($storeUrl)<a class="btn" href="{{ $storeUrl }}" rel="noopener" style="margin-top:8px">{{ __('Get the Android app') }}</a>@endif
             </div>

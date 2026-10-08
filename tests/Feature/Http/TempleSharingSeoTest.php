@@ -52,9 +52,11 @@ class TempleSharingSeoTest extends TestCase
         $this->temple();
 
         $this->get('https://darshansaathi.com/temples/sri-rama-bhadrachalam')->assertOk()
-            // Book and open: this temple, not the app's home.
-            ->assertSee('href="https://darshansaathi.com/?temple=sri-rama-bhadrachalam&amp;action=book"', false)
-            ->assertSee('href="https://darshansaathi.com/?temple=sri-rama-bhadrachalam"', false)
+            // Book on the website itself; open this temple in the installed
+            // app (Android), else the home page's Get the app section.
+            ->assertSee('href="https://darshansaathi.com/temples/sri-rama-bhadrachalam/sevas"', false)
+            ->assertSee('href="https://darshansaathi.com/#app"', false)
+            ->assertSee('data-intent="intent://darshansaathi.com/temples/sri-rama-bhadrachalam#Intent;scheme=https;', false)
             ->assertSee('Book a seva')
             ->assertSee('id="share"', false)
             // Today's timings, the FAQ and its structured data.
