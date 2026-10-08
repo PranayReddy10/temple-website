@@ -40,10 +40,10 @@
         <script async src="https://www.googletagmanager.com/gtag/js?id={{ $ga }}"></script>
         <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config',@json($ga));</script>
     @endif
-    @stack('head')
     <style>
         :root { --saffron: {{ config('brand.colors.saffron.hex') }}; --kumkum: {{ config('brand.colors.kumkum.hex') }}; --sandal: {{ config('brand.colors.sandal.hex') }}; --deep: {{ config('brand.colors.deep.hex') }}; --gold: {{ config('brand.colors.gold.hex') }}; --muted: #7a6a60; --line: #e7dccb; }
         * { box-sizing: border-box; }
+        [hidden] { display: none !important; }
         body { margin: 0; background: var(--sandal); color: var(--deep); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; line-height: 1.55; }
         a { color: var(--kumkum); }
         header.top { background: var(--deep); color: #fff; border-bottom: 3px solid var(--gold); position: sticky; top: 0; z-index: 10; }
@@ -55,6 +55,8 @@
         nav.menu a:not(.cta) { opacity: .88; padding: 4px 0; border-bottom: 2px solid transparent; }
         nav.menu a:not(.cta):hover, nav.menu a.on { opacity: 1; border-bottom-color: var(--gold); }
         @media (max-width: 560px) { nav.menu a.wide { display: none; } .brand { font-size: 1.1rem; } }
+        html.ios .android-app { display: none !important; }
+        html:not(.ios) .ios-only { display: none !important; }
         .cta { background: var(--saffron); color: #fff !important; border-radius: 999px; padding: 8px 16px; font-weight: 600; font-size: .9rem; white-space: nowrap; }
         .wrap { max-width: 1080px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
         main { padding-top: 20px; padding-bottom: 40px; }
@@ -74,10 +76,30 @@
         footer.bottom .note { border-top: 1px solid rgba(255,255,255,.12); margin-top: 24px; padding-top: 16px; font-size: .8rem; opacity: .8; }
         @media (max-width: 720px) { footer.bottom .cols { grid-template-columns: 1fr 1fr; } footer.bottom .cols > div:first-child { grid-column: 1 / -1; } }
         img { max-width: 100%; }
+        .flash { background: #eef7ea; border: 1px solid #b9dcae; color: #23511a; border-radius: 12px; padding: 10px 14px; margin: 16px auto 0; max-width: 1048px; }
+        .form { display: grid; gap: 14px; }
+        .form label { display: grid; gap: 4px; font-weight: 600; font-size: .92rem; }
+        .form label small, .form .hint { font-weight: 400; color: var(--muted); font-size: .82rem; }
+        .form input:not([type=checkbox]):not([type=radio]), .form select, .form textarea { font: inherit; font-weight: 400; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--deep); width: 100%; }
+        .form input:focus, .form select:focus, .form textarea:focus { outline: 2px solid var(--saffron); outline-offset: 0; border-color: var(--saffron); }
+        .form .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        @media (max-width: 560px) { .form .row { grid-template-columns: 1fr; } }
+        .form .check { display: flex; gap: 8px; align-items: center; font-weight: 400; }
+        .err { color: #a3162c; font-size: .85rem; font-weight: 600; }
+        .errors { background: #fdecee; border: 1px solid #f2b8c0; color: #8a1426; border-radius: 12px; padding: 10px 14px; }
+        .btn { display: inline-block; text-align: center; font: inherit; font-weight: 600; text-decoration: none; padding: 11px 20px; border-radius: 999px; border: 1px solid var(--line); background: #fffdf9; color: var(--deep); cursor: pointer; }
+        .btn.primary { background: var(--kumkum); border-color: var(--kumkum); color: #fff; }
+        .btn.saffron { background: var(--saffron); border-color: var(--saffron); color: #fff; }
+        .btn.block { display: block; width: 100%; }
+        .btn:disabled { opacity: .55; cursor: not-allowed; }
+        .narrow { max-width: 460px; margin: 24px auto; }
+        .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .85rem; margin: 6px 0; }
+        .or::before, .or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
         form.find { display: flex; gap: 8px; margin: 12px 0 16px; max-width: 560px; }
         form.find input { flex: 1; min-width: 0; font: inherit; padding: 10px 14px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--deep); }
         form.find button { font: inherit; font-weight: 600; background: var(--kumkum); color: #fff; border: 0; border-radius: 999px; padding: 10px 18px; cursor: pointer; }
     </style>
+    @stack('head')
     {{-- Verification tags and the code pasted under Analytics & SEO, on every page. --}}
     {!! \App\Support\Seo::headExtras() !!}
 </head>
@@ -96,11 +118,17 @@
             <a href="{{ \App\Support\Seo::url('temples') }}" @class(['on' => request()->is('temples', 'temples/*', '*/temples/*')])>{{ __('Temples') }}</a>
             <a href="{{ \App\Support\Seo::url('/') }}#states" class="wide">{{ __('States') }}</a>
             <a href="{{ \App\Support\Seo::url('/') }}#deities" class="wide">{{ __('Deities') }}</a>
-            <a class="cta" href="{{ $appLink ?? ($storeUrl ?? \App\Support\Seo::url('/').'#app') }}" @isset($appIntent) data-intent="{{ $appIntent }}" @endisset>{{ __('Get the app') }}</a>
+            @if (auth('devotee_web')->check())
+                <a href="{{ \App\Support\Seo::url('account') }}" @class(['on' => request()->is('account', 'account/*')])>{{ __('My account') }}</a>
+            @else
+                <a href="{{ \App\Support\Seo::url('login') }}" @class(['on' => request()->is('login', 'register')])>{{ __('Sign in') }}</a>
+            @endif
+            <a class="cta android-app" href="{{ $appLink ?? ($storeUrl ?? \App\Support\Seo::url('/').'#app') }}" @isset($appIntent) data-intent="{{ $appIntent }}" @endisset>{{ __('Get the app') }}</a>
         </nav>
     </div>
 </header>
 <main class="wrap">
+    @if (session('status'))<p class="flash" role="status">{{ session('status') }}</p>@endif
     @yield('content')
 </main>
 <footer class="bottom">
@@ -134,6 +162,11 @@
     // On Android, app buttons open the installed app on this temple (the
     // store, or the Get the app section, when it is not installed).
     if (/Android/i.test(navigator.userAgent)) document.querySelectorAll('a[data-intent]').forEach(function (a) { a.href = a.dataset.intent; });
+    // iPhone and iPad: there is no app yet, and everything works here, so
+    // the Play Store prompts give way to the website's own.
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+        document.documentElement.classList.add('ios');
+    }
 </script>
 </body>
 </html>

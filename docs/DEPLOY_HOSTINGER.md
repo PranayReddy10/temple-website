@@ -70,6 +70,27 @@ temple.darshansaathi.com. The same pages on
 temple.darshansaathi.com carry `noindex` and a canonical link to the
 website's copy.
 
+**Devotees on the website.** Everything the Android app does for a devotee
+also works on darshansaathi.com, for iPhone users (until there is an iOS
+app) and anyone without the app: sign up and sign in (email or phone and
+password, or Google; forgot password by email code), book a seva
+(`/temples/{slug}/sevas`), give to the hundi (`/temples/{slug}/donate`),
+join a temple's event, save temples, and **My account** with bookings and
+tickets (with the QR code the counter scans), offerings, saved temples,
+the temple passport, the profile and account deletion. The accounts are the
+same as the app's. Payment goes through the same checkout pages as the app
+(on temple.darshansaathi.com), which send the devotee back to the website.
+
+For the website's **Continue with Google** button: in Google Cloud Console
+→ Credentials, open the **Web** OAuth client (its id is the one under
+Admin → App → Sign-in methods → Google server/web client id) and add
+`https://darshansaathi.com` under *Authorised JavaScript origins*. The
+button shows once Google sign-in is switched on there.
+
+The sevas and hundi pages are public and listed in the sitemap, so "book
+seva at <temple>" and "donate to <temple>" searches find them; the account
+and booking-form pages are `noindex` and disallowed in robots.txt.
+
 **Policy pages.** Privacy policy, terms and conditions, refund and
 cancellation, shipping and delivery, account deletion, about, contact,
 community guidelines and disclaimer are created by `php artisan migrate`

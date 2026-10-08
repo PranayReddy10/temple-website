@@ -8,11 +8,11 @@ use App\Models\Devotee;
 use App\Support\Auth\IdTokenVerifier;
 use App\Support\Auth\InvalidIdToken;
 use App\Support\Auth\KeysUnavailable;
+use App\Support\Auth\SocialAccounts;
 use App\Support\LoginRecorder;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -34,13 +34,7 @@ class SocialAuthController extends Controller
 
         $this->ensureEnabled('auth_google_enabled', 'Google');
 
-        $audiences = [
-            ...$this->ids(setting('auth_google_client_ids')),
-            (string) setting('auth_google_server_client_id'),
-            (string) setting('auth_google_ios_client_id'),
-        ];
-
-        $claims = $this->verified($request, 'google', fn () => IdTokenVerifier::verify($validated['id_token'], IdTokenVerifier::GOOGLE, $audiences));
+        $claims = $this->verified($request, 'google', fn () => IdTokenVerifier::verify($validated['id_token'], IdTokenVerifier::GOOGLE, SocialAccounts::googleAudiences()));
 
         return $this->signIn($request, 'google_id', $claims, $claims['name'] ?? null);
     }
@@ -73,41 +67,8 @@ class SocialAuthController extends Controller
     /** @param  array<string, mixed>  $claims */
     protected function signIn(Request $request, string $column, array $claims, ?string $name): JsonResponse
     {
-        $subject = (string) $claims['sub'];
         $email = is_string($claims['email'] ?? null) ? Str::lower($claims['email']) : null;
-        // Apple sends "true" as a string; Google as a boolean.
-        $emailVerified = $email !== null && filter_var($claims['email_verified'] ?? false, FILTER_VALIDATE_BOOL);
-
-        [$devotee, $created] = DB::transaction(function () use ($column, $subject, $email, $emailVerified, $name): array {
-            $devotee = Devotee::withTrashed()->where($column, $subject)->first();
-
-            if ($devotee === null && $emailVerified) {
-                // The provider vouches for this address. An account that
-                // already proved it is the same person's; one that never did
-                // may have been opened by someone else with this address, so
-                // the provider-verified owner takes it over and whatever
-                // password and sign-ins it had stop working.
-                $devotee = Devotee::withTrashed()->where('email', $email)->first();
-                if ($devotee !== null && $devotee->email_verified_at === null) {
-                    $devotee->forceFill(['password' => null])->save();
-                    $devotee->tokens()->delete();
-                }
-                $devotee?->forceFill([$column => $subject, 'email_verified_at' => $devotee->email_verified_at ?? now()])->save();
-            }
-
-            if ($devotee !== null) {
-                return [$devotee, false];
-            }
-
-            $devotee = new Devotee([
-                'name' => filled($name) ? $name : ($email !== null ? Str::before($email, '@') : 'Devotee'),
-                // An unverified address is not taken: it may be someone else's.
-                'email' => $emailVerified && ! Devotee::withTrashed()->where('email', $email)->exists() ? $email : null,
-            ]);
-            $devotee->forceFill([$column => $subject, 'email_verified_at' => $emailVerified ? now() : null])->save();
-
-            return [$devotee, true];
-        });
+        [$devotee, $created] = SocialAccounts::resolve($column, $claims, $name);
 
         if ($devotee->trashed() || ! $devotee->is_active) {
             LoginRecorder::failure('devotee', $email ?? $column, 'inactive_account', $request);
@@ -151,6 +112,6 @@ class SocialAuthController extends Controller
     /** @return array<int, string> */
     protected function ids(mixed $value): array
     {
-        return array_values(array_filter(array_map('trim', preg_split('/[\s,]+/', (string) $value) ?: [])));
+        return SocialAccounts::ids($value);
     }
 }

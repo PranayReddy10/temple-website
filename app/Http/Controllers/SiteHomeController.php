@@ -21,10 +21,23 @@ class SiteHomeController extends Controller
     public function __invoke(Request $request): View|RedirectResponse
     {
         // Links made for the old web app (?temple=<slug>&action=book) and
-        // shared before it was retired: the temple's page.
+        // shared before it was retired: the temple's page, its sevas or its
+        // hundi.
         $slug = (string) $request->query('temple');
         if (preg_match('/^[a-z0-9]+(-[a-z0-9]+)*$/', $slug) === 1) {
-            return redirect()->to(Seo::url('temples/'.$slug), 301);
+            $page = match ($request->query('action')) {
+                'book' => '/sevas',
+                'donate' => '/donate',
+                default => '',
+            };
+
+            return redirect()->to(Seo::url('temples/'.$slug.$page), 301);
+        }
+
+        // A payment's result page from before the website had accounts.
+        $payment = (string) $request->query('payment');
+        if (preg_match('/^[0-9a-f-]{36}$/', $payment) === 1) {
+            return redirect()->to(Seo::url('account/payments/'.$payment));
         }
 
         $today = DevotionalClock::now();

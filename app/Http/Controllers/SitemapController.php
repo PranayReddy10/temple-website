@@ -62,8 +62,10 @@ class SitemapController extends Controller
                 'primaryPhoto',
                 'photos' => fn ($q) => $q->published()->orderByDesc('is_primary')->orderBy('sort_order'),
                 'translations' => fn ($q) => $q->where('field', 'name')->where('is_reviewed', true),
+                'payoutAccount',
             ])
-            ->get(['id', 'name', 'slug', 'updated_at', 'is_featured']);
+            ->withCount(['pujas' => fn ($q) => $q->published()])
+            ->get(['id', 'name', 'slug', 'updated_at', 'is_featured', 'accepts_donations']);
 
         abort_if($temples->isEmpty() && $page > 1, 404);
 
@@ -78,6 +80,13 @@ class SitemapController extends Controller
 
             foreach ($alternates === [] ? ['en' => Seo::url('temples/'.$t->slug)] : array_diff_key($alternates, ['x-default' => true]) as $code => $loc) {
                 $xml .= self::entry('url', $loc, $t->updated_at, 'weekly', $t->is_featured ? '0.8' : '0.6', $images, $alternates);
+            }
+            // Its sevas with their fees, and its online hundi.
+            if ($t->pujas_count > 0) {
+                $xml .= self::entry('url', Seo::url('temples/'.$t->slug.'/sevas'), $t->updated_at, 'weekly', '0.5');
+            }
+            if ($t->accepts_donations && $t->canCollectPayments()) {
+                $xml .= self::entry('url', Seo::url('temples/'.$t->slug.'/donate'), $t->updated_at, 'monthly', '0.4');
             }
         }
 

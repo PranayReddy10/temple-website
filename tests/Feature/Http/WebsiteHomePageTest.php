@@ -55,7 +55,9 @@ class WebsiteHomePageTest extends TestCase
 
     public function test_old_web_app_links_open_the_temple_page(): void
     {
-        $this->get(self::SITE.'/?temple=chilkur&action=book')->assertRedirect(self::SITE.'/temples/chilkur')->assertStatus(301);
+        $this->get(self::SITE.'/?temple=chilkur')->assertRedirect(self::SITE.'/temples/chilkur')->assertStatus(301);
+        $this->get(self::SITE.'/?temple=chilkur&action=book')->assertRedirect(self::SITE.'/temples/chilkur/sevas');
+        $this->get(self::SITE.'/?temple=chilkur&action=donate')->assertRedirect(self::SITE.'/temples/chilkur/donate');
         $this->get(self::SITE.'/index.html')->assertRedirect('/')->assertStatus(301);
     }
 

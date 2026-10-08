@@ -214,10 +214,12 @@ class PublicTempleController extends Controller
             'aliases' => $temple->aliases->pluck('name')->filter()->unique()->reject(fn ($n) => strcasecmp($n, $temple->name) === 0 || $n === $name)->values(),
             'faq' => $locale === null ? self::faq($temple, $place, $dressCode, $bookable, $nearby) : [],
             'appLink' => Seo::appLink($temple->slug),
-            'bookLink' => Seo::appLink($temple->slug, 'book'),
+            // Booking and the hundi happen on the website itself.
+            'bookLink' => Seo::url('temples/'.$temple->slug.'/sevas'),
             // Hundi offerings, where the temple takes them and its payout
             // account is verified: the same rule as the app.
-            'donateLink' => $temple->accepts_donations && $temple->canCollectPayments() ? Seo::appLink($temple->slug, 'donate') : null,
+            'donateLink' => $temple->accepts_donations && $temple->canCollectPayments() ? Seo::url('temples/'.$temple->slug.'/donate') : null,
+            'saved' => ($devotee = auth('devotee_web')->user()) !== null && $devotee->savedTemples()->whereKey($temple->getKey())->exists(),
             'storeUrl' => Seo::storeUrl(),
             'ogType' => 'place',
             'locale' => $lang,

@@ -50,6 +50,16 @@ return [
         ],
 
         /*
+         * The same devotees signed in on the website (darshansaathi.com),
+         * where a browser session stands in for the app's token: for iPhone
+         * users until there is an iOS app, and anyone without the app.
+         */
+        'devotee_web' => [
+            'driver' => 'session',
+            'provider' => 'devotees',
+        ],
+
+        /*
          * The temple trust app: temple teams on the users table, with Sanctum
          * tokens. A token belongs to the model it was issued to, so a devotee
          * token is refused here and a trust token on the devotee guard.

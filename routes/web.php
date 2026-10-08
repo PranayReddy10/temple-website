@@ -10,6 +10,9 @@ use App\Http\Controllers\PassportPageController;
 use App\Http\Controllers\PayController;
 use App\Http\Controllers\PublicTempleController;
 use App\Http\Controllers\PwaController;
+use App\Http\Controllers\Site\AccountController as SiteAccount;
+use App\Http\Controllers\Site\AuthController as SiteAuth;
+use App\Http\Controllers\Site\BookingController as SiteBooking;
 use App\Http\Controllers\SiteHomeController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\TempleCheckinController;
@@ -39,7 +42,7 @@ Route::get('/index.html', fn () => redirect('/', 301));
 // (temple.darshansaathi.com's own is the static public/robots.txt, which
 // the web server answers before this route is reached.)
 Route::get('/robots.txt', fn (Request $request) => response(Seo::onWebsite($request)
-    ? "User-agent: *\nAllow: /\nDisallow: /temples/*/preview\n\nSitemap: ".Seo::url('sitemap.xml')."\n"
+    ? "User-agent: *\nAllow: /\nDisallow: /temples/*/preview\nDisallow: /temples/*/sevas/*/book\nDisallow: /account\n\nSitemap: ".Seo::url('sitemap.xml')."\n"
     : (string) file_get_contents(public_path('robots.txt')), 200, ['Content-Type' => 'text/plain; charset=utf-8']));
 
 // The website was a Flutter web app until it became these pages. A browser
@@ -184,6 +187,58 @@ Route::get('/media-preview', MediaPreviewController::class)
 Route::get('/storage/{path}', MediaFileController::class)
     ->where('path', '.*')
     ->name('media.file');
+
+/*
+|--------------------------------------------------------------------------
+| Devotees on the website
+|--------------------------------------------------------------------------
+|
+| Signing in, booking sevas, the online hundi, event tickets and the
+| devotee's own pages, for everyone without the Android app (iPhone users
+| above all). The same accounts and services as the app's API. See
+| App\Http\Controllers\Site.
+|
+*/
+Route::get('/login', [SiteAuth::class, 'showLogin'])->name('site.login');
+Route::post('/login', [SiteAuth::class, 'login'])->middleware('throttle:10,1');
+// Posted by Google's button from accounts.google.com (see SiteAuth::google).
+Route::post('/login/google', [SiteAuth::class, 'google'])->middleware('throttle:10,1')->name('site.login.google');
+Route::get('/register', [SiteAuth::class, 'showRegister'])->name('site.register');
+Route::post('/register', [SiteAuth::class, 'register'])->middleware('throttle:6,1');
+Route::post('/logout', [SiteAuth::class, 'logout'])->name('site.logout');
+Route::get('/forgot-password', [SiteAuth::class, 'showForgot'])->name('site.password.forgot');
+Route::post('/forgot-password', [SiteAuth::class, 'forgot'])->middleware('throttle:3,1');
+Route::get('/reset-password', [SiteAuth::class, 'showReset'])->name('site.password.reset');
+Route::post('/reset-password', [SiteAuth::class, 'reset'])->middleware('throttle:10,1');
+
+// What a temple offers and its hundi: public pages, for search engines too.
+Route::get('/temples/{slug}/sevas', [SiteBooking::class, 'sevas'])->where('slug', '[a-z0-9-]+')->name('site.sevas');
+Route::get('/temples/{slug}/sevas/{puja}/slots', [SiteBooking::class, 'slots'])->where('slug', '[a-z0-9-]+')->whereNumber('puja')->middleware('throttle:60,1');
+Route::get('/temples/{slug}/donate', [SiteBooking::class, 'donate'])->where('slug', '[a-z0-9-]+')->name('site.donate');
+
+Route::middleware('devotee.web')->group(function (): void {
+    Route::get('/temples/{slug}/sevas/{puja}/book', [SiteBooking::class, 'book'])->where('slug', '[a-z0-9-]+')->whereNumber('puja')->name('site.book');
+    Route::post('/temples/{slug}/sevas/{puja}/book', [SiteBooking::class, 'storeBooking'])->where('slug', '[a-z0-9-]+')->whereNumber('puja')->middleware('throttle:20,1');
+    Route::post('/temples/{slug}/donate', [SiteBooking::class, 'storeDonation'])->where('slug', '[a-z0-9-]+')->middleware('throttle:20,1');
+    Route::post('/temples/{slug}/save', [SiteAccount::class, 'toggleSaved'])->where('slug', '[a-z0-9-]+')->middleware('throttle:60,1')->name('site.save');
+    Route::post('/events/{event}/join', [SiteBooking::class, 'storeEvent'])->whereNumber('event')->middleware('throttle:20,1')->name('site.event.join');
+
+    Route::get('/account', [SiteAccount::class, 'index'])->name('site.account');
+    Route::get('/account/bookings', [SiteAccount::class, 'bookings'])->name('site.account.bookings');
+    Route::get('/account/bookings/{reference}', [SiteAccount::class, 'booking'])->where('reference', '[A-Za-z0-9-]+')->name('site.account.booking');
+    Route::post('/account/bookings/{reference}/pay', [SiteAccount::class, 'payBooking'])->where('reference', '[A-Za-z0-9-]+')->middleware('throttle:20,1');
+    Route::post('/account/bookings/{reference}/cancel', [SiteAccount::class, 'cancelBooking'])->where('reference', '[A-Za-z0-9-]+')->middleware('throttle:20,1');
+    Route::get('/account/tickets/{reference}', [SiteAccount::class, 'ticket'])->where('reference', '[A-Za-z0-9-]+')->name('site.account.ticket');
+    Route::get('/account/donations', [SiteAccount::class, 'donations'])->name('site.account.donations');
+    Route::get('/account/saved', [SiteAccount::class, 'saved'])->name('site.account.saved');
+    Route::get('/account/passport', [SiteAccount::class, 'passport'])->name('site.account.passport');
+    Route::get('/account/profile', [SiteAccount::class, 'profile'])->name('site.account.profile');
+    Route::post('/account/profile', [SiteAccount::class, 'updateProfile']);
+    Route::post('/account/password', [SiteAccount::class, 'updatePassword'])->middleware('throttle:10,1');
+    Route::post('/account/delete', [SiteAccount::class, 'destroy'])->middleware('throttle:5,1');
+    // Where the checkout pages send a website payment back to.
+    Route::get('/account/payments/{uuid}', [SiteBooking::class, 'returned'])->where('uuid', '[0-9a-f-]{36}')->name('site.payment.returned');
+});
 
 // Policy and information pages (privacy, terms, refunds …), edited in
 // Admin → Website → Pages. Last of all, so a page can never take over an

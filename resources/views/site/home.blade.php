@@ -182,14 +182,19 @@
 
         <section class="app" id="app">
             <div>
-                <h2>{{ __('Get the :app app', ['app' => config('brand.name')]) }}</h2>
-                <p>{{ __('Book sevas, give to the hundi, check in for passport stamps and get festival reminders, in English, Telugu, Hindi, Tamil and Kannada.') }}</p>
+                <h2 class="android-app">{{ __('Get the :app app', ['app' => config('brand.name')]) }}</h2>
+                <h2 class="ios-only">{{ __('On iPhone? Everything works right here') }}</h2>
+                <p class="ios-only">{{ __('Sign in on this website to book sevas, give to the hundi, buy event tickets and keep your temple passport. The iPhone app is on its way.') }}</p>
+                <p class="android-app">{{ __('Book sevas, give to the hundi, check in for passport stamps and get festival reminders, in English, Telugu, Hindi, Tamil and Kannada.') }}</p>
             </div>
-            @if ($storeUrl)
-                <a class="btn" href="{{ $storeUrl }}" rel="noopener">{{ __('Get it on Google Play') }}</a>
-            @else
-                <span class="btn">{{ __('Coming soon to Google Play') }}</span>
-            @endif
+            <div class="android-app">
+                @if ($storeUrl)
+                    <a class="btn" href="{{ $storeUrl }}" rel="noopener">{{ __('Get it on Google Play') }}</a>
+                @else
+                    <span class="btn">{{ __('Coming soon to Google Play') }}</span>
+                @endif
+            </div>
+            <a class="btn ios-only" href="{{ Seo::url(auth('devotee_web')->check() ? 'account' : 'register') }}">{{ auth('devotee_web')->check() ? __('My account') : __('Create a free account') }}</a>
         </section>
 
         @if ($more->isNotEmpty())
