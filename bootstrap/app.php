@@ -46,6 +46,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // is checked there instead (Site\AuthController::google).
         $middleware->validateCsrfTokens(except: ['pay/*', 'login/google']);
 
+        // Google's sign-in script sets g_csrf_token itself, in the clear;
+        // decrypting it like Laravel's own cookies would read it as empty
+        // and refuse every Google sign-in on the website.
+        $middleware->encryptCookies(except: ['g_csrf_token']);
+
         /*
          * Behind Cloudflare or any TLS-terminating proxy, the origin sees a
          * plain HTTP request carrying X-Forwarded-Proto: https. Untrusted,

@@ -129,7 +129,7 @@ class WebsiteDevoteeTest extends TestCase
         $response->assertRedirect(self::SITE.'/account/bookings/'.$booking->reference);
 
         $this->get(self::SITE.'/account/bookings/'.$booking->reference)->assertOk()
-            ->assertSee('Free darshan')->assertSee('class="qr"', false)->assertSee('Show this at the temple counter');
+            ->assertSee('Free darshan')->assertSee('class="qr"', false)->assertSee('Show this at the temple counter')->assertSee('Download ticket')->assertSee('https://wa.me/?text=', false);
         $this->get(self::SITE.'/account/bookings')->assertOk()->assertSee('Free darshan');
 
         // Someone else's booking is not there for another devotee.
