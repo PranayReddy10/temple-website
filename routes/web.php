@@ -10,10 +10,10 @@ use App\Http\Controllers\PassportPageController;
 use App\Http\Controllers\PayController;
 use App\Http\Controllers\PublicTempleController;
 use App\Http\Controllers\PwaController;
+use App\Http\Controllers\SiteHomeController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\TempleCheckinController;
 use App\Http\Controllers\TempleQrPrintController;
-use App\Http\Controllers\WebAppHomeController;
 use App\Models\Temple;
 use App\Support\AppLinks;
 use App\Support\IndexNow;
@@ -24,19 +24,35 @@ use Illuminate\Support\Facades\Route;
 // temple.darshansaathi.com itself: what this server is, and the way in for
 // staff and temples. Devotees are pointed at the website and the app.
 Route::get('/', function (Request $request) {
-    // darshansaathi.com/: the web app, with the site's verification tags and
-    // pasted code (see WebAppHomeController).
+    // darshansaathi.com/: the website's home page (SiteHomeController).
     if (Seo::onWebsite($request)) {
-        return app(WebAppHomeController::class)();
+        return app(SiteHomeController::class)($request);
     }
 
     return view('home', [
         'temples' => Temple::query()->where('status', TempleStatus::Published)->count(),
     ]);
 })->name('home');
-Route::get('/index.html', fn (Request $request) => Seo::onWebsite($request)
-    ? app(WebAppHomeController::class)()
-    : redirect('/'));
+Route::get('/index.html', fn () => redirect('/', 301));
+
+// darshansaathi.com/robots.txt: the website is open to search engines.
+// (temple.darshansaathi.com's own is the static public/robots.txt, which
+// the web server answers before this route is reached.)
+Route::get('/robots.txt', fn (Request $request) => response(Seo::onWebsite($request)
+    ? "User-agent: *\nAllow: /\nDisallow: /temples/*/preview\n\nSitemap: ".Seo::url('sitemap.xml')."\n"
+    : (string) file_get_contents(public_path('robots.txt')), 200, ['Content-Type' => 'text/plain; charset=utf-8']));
+
+// The website was a Flutter web app until it became these pages. A browser
+// that kept that app's service worker asks for it again; this one removes
+// itself and reloads its pages, so nobody stays on the old cached app.
+Route::get('/flutter_service_worker.js', fn () => response(
+    "self.addEventListener('install',function(){self.skipWaiting();});\n"
+    ."self.addEventListener('activate',function(e){e.waitUntil(self.registration.unregister()"
+    .".then(function(){return self.clients.matchAll({type:'window'});})"
+    .".then(function(cs){cs.forEach(function(c){c.navigate(c.url);});}));});\n",
+    200,
+    ['Content-Type' => 'text/javascript; charset=utf-8', 'Cache-Control' => 'no-cache'],
+));
 
 /*
 |--------------------------------------------------------------------------

@@ -22,9 +22,11 @@ the minimum PHP version documented here.
 domains/darshansaathi.com/public_html/
 ├── laravel/            ← this whole project (app, vendor, .env, public …)
 │   └── public/         ← temple.darshansaathi.com serves only this
-├── .htaccess           ← from the web build: hides /laravel from darshansaathi.com
-├── index.html, main.dart.js, assets/ …   ← darshansaathi.com (Flutter web build)
+└── .htaccess           ← deploy/website.htaccess: darshansaathi.com, rendered by laravel/
 ```
+
+Nothing else belongs in `public_html`. The website is HTML rendered by
+Laravel, page by page; there is no separate web build any more.
 
 | Address | Document root |
 |---|---|
@@ -36,23 +38,35 @@ domains/darshansaathi.com/public_html/
 2. hPanel → *Domains → Subdomains*: create `temple`, tick **Custom folder
    for subdomain**, and enter `laravel/public`.
 3. hPanel → *Security → SSL*: install for both addresses.
-4. Build the website (`cd temple-app && flutter build web --release`) and
-   upload the contents of `build/web/` into `public_html`, **including
-   `.htaccess`**, and without deleting `laravel/`.
+4. Copy the website's `.htaccess` into place:
+   `cp ~/domains/darshansaathi.com/public_html/laravel/deploy/website.htaccess ~/domains/darshansaathi.com/public_html/.htaccess`.
+
+**Moving off the Flutter web build.** If `public_html` still holds the old
+Flutter build, copy the new `.htaccess` as in step 4, then delete the
+build's files from `public_html` (keep `laravel/` and `.htaccess`):
+`index.html`, `main.dart.js`, `flutter.js`, `flutter_bootstrap.js`,
+`flutter_service_worker.js`, `version.json`, `manifest.json`,
+`favicon.png`, `og.png`, and the folders `assets/`, `canvaskit/` and
+`icons/`. The new `.htaccess` already stops them being served, so this is
+only tidying. Browsers that kept the old app's service worker are sent one
+that removes itself (Laravel serves `/flutter_service_worker.js`), and old
+`darshansaathi.com/?temple=…` links go to that temple's page.
 
 Two `.htaccess` files keep the project private: `laravel/.htaccess` denies
-everything, and the web build's `.htaccess` returns 404 for `/laravel` on
+everything, and the website's `.htaccess` returns 404 for `/laravel` on
 darshansaathi.com. `laravel/public/.htaccess` grants access again for the one
 folder that is meant to be served. Check afterwards that
 `https://darshansaathi.com/laravel/.env` answers 403 or 404.
 
-**Search engines.** The Flutter site is a blank page to them, so the temple
-directory (`/temples`), each temple (`/temples/{slug}`), each state
-(`/states/{slug}`), each deity (`/deities/{slug}`) and the sitemap
-(`/sitemap.xml`, with each temple's cover photo) are rendered by Laravel.
-The web build's `.htaccess` hands exactly those paths, `/storage` for their
-photos and `google*.html` for Search Console, to `laravel/public/index.php`,
-so they answer on darshansaathi.com. The same pages on
+**Search engines.** Every page of darshansaathi.com is HTML rendered by
+Laravel: the home page, the temple directory (`/temples`), each temple
+(`/temples/{slug}`), each state (`/states/{slug}`), each deity
+(`/deities/{slug}`), the policy pages and the sitemap (`/sitemap.xml`, with
+each temple's cover photo). The website's `.htaccess` hands every address
+to `laravel/public/index.php`, except the project's own files (`/storage`
+photos, `/icons`, `favicon.png`, `og.png`), which it serves from
+`laravel/public`. `/admin`, `/temple`, `/api` and the QR pages move to
+temple.darshansaathi.com. The same pages on
 temple.darshansaathi.com carry `noindex` and a canonical link to the
 website's copy.
 
@@ -60,8 +74,7 @@ website's copy.
 cancellation, shipping and delivery, account deletion, about, contact,
 community guidelines and disclaimer are created by `php artisan migrate`
 with default text, and edited in Admin → **Website → Pages** (super admins).
-They answer at `darshansaathi.com/{address}`: the web build's `.htaccess`
-sends any one-word address that is not a file to Laravel. Fill in
+They answer at `darshansaathi.com/{address}`. Fill in
 Admin → Website → **Business details** (business name, address, Grievance
 Officer, city for disputes): the pages show them wherever they say
 `{business}`, `{address}`, `{grievance_officer}` or `{courts}`; `{email}` is
@@ -93,7 +106,7 @@ Push setup), open *Project settings → Integrations → Google Analytics* and
 link it. Add a **Web** app to the project and copy its `apiKey`, `appId` and
 `measurementId` into Admin → App → **Analytics & SEO**, then switch on
 *Collect usage analytics*. The Android and iOS apps report with the Push
-setup ids; the web app and these temple pages report to the web stream.
+setup ids; the website reports to the web stream.
 Screens, temple views, searches, sign-ins, bookings and payments are
 recorded; no names, emails or phone numbers. Mention analytics in the
 privacy policy and in Play Console's *Data safety* form.
@@ -107,8 +120,7 @@ Play app-signing SHA-1), Sign in with Apple (the new bundle id under
 Sign-In), and the payment gateways' app whitelisting (Cashfree, PhonePe,
 Razorpay).
 
-The web build calls the API on `temple.darshansaathi.com`; Laravel's
-default CORS settings already allow that for `/api/*`.
+The apps call the API on `temple.darshansaathi.com`.
 
 ---
 
@@ -442,10 +454,7 @@ change, not an app release.
 
 ## Search Console tag and code for every page
 
-`darshansaathi.com/` is served by Laravel from the web build's own
-`public_html/index.html` (the web build's `.htaccess` sends `/` here), so the
-Google/Bing verification tags and anything pasted under **Admin → Website →
-Analytics & SEO → Code for every page** reach the home page as well as the
-temple pages. If the build is somewhere else, set `WEB_APP_INDEX` in `.env`
-to the full path of its `index.html`. Upload the web build with its
-`.htaccess` for this to take effect.
+Every page of darshansaathi.com, the home page included, is rendered by
+Laravel, so the Google/Bing verification tags and anything pasted under
+**Admin → Website → Analytics & SEO → Code for every page** reach all of
+them.

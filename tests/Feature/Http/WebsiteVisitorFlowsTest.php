@@ -57,7 +57,7 @@ class WebsiteVisitorFlowsTest extends TestCase
 
         $this->get(self::SITE.'/temples/chilkur')->assertOk()
             ->assertSee('🪔 Donate')
-            ->assertSee(self::SITE.'/?temple=chilkur&amp;action=donate', false);
+            ->assertSee('intent://darshansaathi.com/temples/chilkur?action=donate#Intent', false);
         $this->get(self::SITE.'/temples/birla-mandir')->assertOk()->assertDontSee('🪔 Donate');
         $this->get(self::SITE.'/temples/sanghi')->assertOk()->assertDontSee('🪔 Donate');
     }

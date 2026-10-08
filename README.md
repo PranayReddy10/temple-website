@@ -4,7 +4,8 @@ Laravel backend, Filament admin panel and public web for the temple pilgrimage
 platform (**Darshan Saathi**). This server runs at
 **temple.darshansaathi.com** (admin panel at `/admin`, temple portal at
 `/temple`, API at `/api/v1`); **darshansaathi.com** is the devotees' website,
-the Flutter app's web build.
+HTML pages rendered by this same application (home page, temple directory,
+temple, state and deity pages, policy pages).
 
 The companion Flutter app lives in [`temple-app`](https://github.com/PranayReddy10/temple-app).
 
@@ -65,7 +66,7 @@ Three audiences, three entry points. Only the first exists today.
 | --- | --- | --- | --- | --- |
 | Staff — super admin, editors | `/admin` | Session | `users` | ✅ Built |
 | Temple authority — trust, temple office | `/temple` and the Temple Trust app | Session / Sanctum token (`trust` guard) | `users`, scoped by `temple_user` | ✅ Built |
-| Devotees — app and web | Flutter app | Sanctum token | `devotees` (separate table) | ✅ Built |
+| Devotees — app | Flutter app (Android, iOS) | Sanctum token | `devotees` (separate table) | ✅ Built |
 
 Devotees get their own table on purpose: they are expected in the millions
 against a few hundred staff, they will sign in by OTP or a social provider
