@@ -75,9 +75,12 @@ also works on darshansaathi.com, for iPhone users (until there is an iOS
 app) and anyone without the app: sign up and sign in (email or phone and
 password, or Google; forgot password by email code), book a seva
 (`/temples/{slug}/sevas`), give to the hundi (`/temples/{slug}/donate`),
-join a temple's event, save temples, and **My account** with bookings and
-tickets (with the QR code the counter scans), offerings, saved temples,
-the temple passport, the profile and account deletion. The accounts are the
+join a temple's event, save temples, write reviews (moderated as in the
+app), plan yatras (temples by day, shortest order, the route in Google
+Maps, shared on WhatsApp), and **My account** with bookings and tickets
+(with the QR code the counter scans, downloadable as an image and shared
+to WhatsApp), offerings, saved temples, the temple passport, the profile
+and account deletion. The accounts are the
 same as the app's. Payment goes through the same checkout pages as the app
 (on temple.darshansaathi.com), which send the devotee back to the website.
 

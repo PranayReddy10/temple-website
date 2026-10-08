@@ -1,32 +1,33 @@
 @extends('site.layout')
 
-@php($u = \App\Support\Seo::class)
+@php
+    $u = \App\Support\Seo::class;
+    $t = [
+        'kind' => __('Seva booking'),
+        'title' => $booking->puja?->name ?? __('Seva'),
+        'temple' => $booking->temple ? \App\Http\Controllers\Site\BookingController::named($booking->temple) : '',
+        'when' => (string) $booking->booked_for?->format('D, j M Y'),
+        'slot' => $booking->slotLabel(),
+        'people' => $booking->people,
+        'name' => (string) $booking->devotee_name,
+        'amount' => $booking->amountLabel(),
+        'reference' => $booking->reference,
+        'url' => $booking->qrUrl(),
+        'extra' => collect([$booking->gotram ? __('Gotram').': '.$booking->gotram : null, $booking->nakshatram ? __('Nakshatram').': '.$booking->nakshatram : null])->filter()->implode(' · ') ?: null,
+    ];
+    $extra = array_filter([__('Gotram') => $booking->gotram, __('Nakshatram') => $booking->nakshatram]);
+@endphp
 
 @section('content')
     <div class="acct">
         @include('site.account._nav')
         <div>
             <p class="crumbs"><a href="{{ $u::url('account/bookings') }}">{{ __('Bookings') }}</a> › {{ $booking->reference }}</p>
-            <h1>{{ $booking->puja?->name }}</h1>
             @include('site.auth._errors')
-            <div class="card" style="display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start">
-                <div>
-                    <p style="margin:0"><span class="pill {{ $booking->status->value }}">{{ $booking->status->getLabel() }}</span></p>
-                    <p><b>{{ $booking->temple?->name }}</b>{{ $booking->temple?->city ? ', '.$booking->temple->city : '' }}</p>
-                    <p>📅 {{ $booking->booked_for?->format('l, j F Y') }}@if ($booking->slotLabel())<br>🕰️ {{ $booking->slotLabel() }}@endif</p>
-                    <p>👥 {{ $booking->people }} · {{ $booking->devotee_name }}@if ($booking->gotram) · {{ __('Gotram') }}: {{ $booking->gotram }}@endif @if ($booking->nakshatram) · {{ $booking->nakshatram }}@endif</p>
-                    <p>💳 {{ $booking->amountLabel() }}</p>
-                    <p class="muted" style="font-size:.85rem">{{ __('Reference') }} {{ $booking->reference }}</p>
-                </div>
-                @if ($qr)
-                    <div style="text-align:center">
-                        <div class="qr" style="width:200px;max-width:42vw;background:#fff;border-radius:12px;padding:6px">{!! $qr !!}</div>
-                        <small class="muted">{{ __('Show this at the temple counter') }}</small>
-                    </div>
-                @endif
-            </div>
-            @if ($booking->puja?->booking_instructions && $booking->isLive())<p class="card">{{ strip_tags($booking->puja->booking_instructions) }}</p>@endif
-            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px">
+            @include('site.account._ticket_card', ['status' => $booking->status])
+            @if ($qr)@include('site.account._ticket_share')@endif
+            @if ($booking->puja?->booking_instructions && $booking->isLive())<p class="card" style="margin-top:16px">ℹ️ {{ strip_tags($booking->puja->booking_instructions) }}</p>@endif
+            <div class="ticket-share">
                 @if ($booking->status === \App\Enums\BookingStatus::PendingPayment)
                     <form method="post" action="{{ $u::url('account/bookings/'.$booking->reference.'/pay') }}">@csrf<button class="btn primary" type="submit">{{ __('Pay now') }}</button></form>
                 @endif

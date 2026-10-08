@@ -1,27 +1,31 @@
 @extends('site.layout')
 
+@php
+    $t = [
+        'kind' => __('Event ticket'),
+        'title' => $ticket->event?->title ?? __('Event'),
+        'temple' => $ticket->temple ? \App\Http\Controllers\Site\BookingController::named($ticket->temple) : '',
+        'when' => (string) $ticket->occurs_on?->format('D, j M Y'),
+        'slot' => null,
+        'people' => $ticket->people,
+        'name' => (string) $ticket->devotee_name,
+        'amount' => $ticket->amountLabel(),
+        'reference' => $ticket->reference,
+        'url' => $ticket->qrUrl(),
+        'extra' => null,
+    ];
+@endphp
+
 @section('content')
     <div class="acct">
         @include('site.account._nav')
         <div>
             <p class="crumbs"><a href="{{ \App\Support\Seo::url('account/bookings') }}">{{ __('Bookings') }}</a> › {{ $ticket->reference }}</p>
-            <h1>{{ $ticket->event?->title }}</h1>
-            <div class="card" style="display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start">
-                <div>
-                    <p style="margin:0"><span class="pill {{ $ticket->status->value }}">{{ $ticket->status->getLabel() }}</span></p>
-                    <p><b>{{ $ticket->temple?->name }}</b></p>
-                    <p>📅 {{ $ticket->occurs_on?->format('l, j F Y') }}</p>
-                    <p>👥 {{ $ticket->people }} · {{ $ticket->devotee_name }}</p>
-                    <p>💳 {{ $ticket->amountLabel() }}</p>
-                    <p class="muted" style="font-size:.85rem">{{ __('Reference') }} {{ $ticket->reference }}</p>
-                </div>
-                @if ($qr)
-                    <div style="text-align:center">
-                        <div class="qr" style="width:200px;max-width:42vw;background:#fff;border-radius:12px;padding:6px">{!! $qr !!}</div>
-                        <small class="muted">{{ __('Show this at the temple') }}</small>
-                    </div>
-                @endif
-            </div>
+            @include('site.account._ticket_card', ['status' => $ticket->status])
+            @if ($qr)@include('site.account._ticket_share')@endif
+            @if ($ticket->temple && $ticket->temple->hasCoordinates())
+                <div class="ticket-share"><a class="btn" href="https://www.google.com/maps/dir/?api=1&destination={{ $ticket->temple->latitude }},{{ $ticket->temple->longitude }}" target="_blank" rel="noopener">🧭 {{ __('Directions') }}</a></div>
+            @endif
         </div>
     </div>
 @endsection

@@ -92,6 +92,8 @@ class AuthController extends Controller
     {
         $cookie = (string) $request->cookie('g_csrf_token');
         if ($cookie === '' || ! hash_equals($cookie, (string) $request->input('g_csrf_token'))) {
+            LoginRecorder::failure('devotee', 'google', 'google_csrf_mismatch', $request);
+
             return redirect()->to(Seo::url('login'))->withErrors(['identifier' => 'The Google sign-in could not be confirmed. Please try again.']);
         }
 

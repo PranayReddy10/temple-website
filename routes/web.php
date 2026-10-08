@@ -13,6 +13,8 @@ use App\Http\Controllers\PwaController;
 use App\Http\Controllers\Site\AccountController as SiteAccount;
 use App\Http\Controllers\Site\AuthController as SiteAuth;
 use App\Http\Controllers\Site\BookingController as SiteBooking;
+use App\Http\Controllers\Site\ReviewController as SiteReview;
+use App\Http\Controllers\Site\YatraController as SiteYatra;
 use App\Http\Controllers\SiteHomeController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\TempleCheckinController;
@@ -236,6 +238,19 @@ Route::middleware('devotee.web')->group(function (): void {
     Route::post('/account/profile', [SiteAccount::class, 'updateProfile']);
     Route::post('/account/password', [SiteAccount::class, 'updatePassword'])->middleware('throttle:10,1');
     Route::post('/account/delete', [SiteAccount::class, 'destroy'])->middleware('throttle:5,1');
+    Route::post('/temples/{slug}/reviews', [SiteReview::class, 'store'])->where('slug', '[a-z0-9-]+')->middleware('throttle:10,1')->name('site.review');
+    Route::post('/temples/{slug}/reviews/delete', [SiteReview::class, 'destroy'])->where('slug', '[a-z0-9-]+')->middleware('throttle:10,1');
+    // The yatra planner (Site\YatraController).
+    Route::get('/account/yatras', [SiteYatra::class, 'index'])->name('site.yatras');
+    Route::post('/account/yatras', [SiteYatra::class, 'store'])->middleware('throttle:30,1');
+    Route::get('/account/yatras/{yatra}', [SiteYatra::class, 'show'])->whereNumber('yatra')->name('site.yatra');
+    Route::post('/account/yatras/{yatra}', [SiteYatra::class, 'update'])->whereNumber('yatra');
+    Route::post('/account/yatras/{yatra}/delete', [SiteYatra::class, 'destroy'])->whereNumber('yatra');
+    Route::post('/account/yatras/{yatra}/optimise', [SiteYatra::class, 'optimise'])->whereNumber('yatra');
+    Route::post('/account/yatras/{yatra}/stops', [SiteYatra::class, 'addStop'])->whereNumber('yatra')->middleware('throttle:60,1');
+    Route::post('/account/yatras/{yatra}/stops/{stop}/move', [SiteYatra::class, 'moveStop'])->whereNumber(['yatra', 'stop']);
+    Route::post('/account/yatras/{yatra}/stops/{stop}/remove', [SiteYatra::class, 'removeStop'])->whereNumber(['yatra', 'stop']);
+    Route::post('/temples/{slug}/yatra', [SiteYatra::class, 'addFromTemple'])->where('slug', '[a-z0-9-]+')->middleware('throttle:60,1')->name('site.temple.yatra');
     // Where the checkout pages send a website payment back to.
     Route::get('/account/payments/{uuid}', [SiteBooking::class, 'returned'])->where('uuid', '[0-9a-f-]{36}')->name('site.payment.returned');
 });
