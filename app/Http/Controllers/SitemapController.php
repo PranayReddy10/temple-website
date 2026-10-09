@@ -43,6 +43,9 @@ class SitemapController extends Controller
                 $xml .= self::entry('url', Seo::url('states/'.$state->slug.'/'.$district->slug), null, 'weekly', '0.6');
             }
         }
+        foreach (PublicTempleController::tagsWithTemples() as $tag) {
+            $xml .= self::entry('url', Seo::url('tags/'.$tag->slug), null, 'weekly', '0.6');
+        }
         foreach (PublicTempleController::deitiesWithTemples() as $deity) {
             $xml .= self::entry('url', Seo::url('deities/'.$deity->slug), null, 'weekly', '0.7');
         }

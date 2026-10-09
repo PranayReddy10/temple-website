@@ -157,6 +157,7 @@ Route::get('/{locale}/temples/{slug}', [PublicTempleController::class, 'showLoca
     ->where('locale', 'te|hi|ta|kn')
     ->name('site.temple.localized');
 Route::get('/deities/{slug}', [PublicTempleController::class, 'deity'])->name('site.deity');
+Route::get('/tags/{slug}', [PublicTempleController::class, 'tag'])->name('site.tag');
 // Search Console's "HTML file" check: the file named in Admin → Analytics & SEO.
 Route::get('/google{token}.html', function (string $token) {
     $file = 'google'.$token.'.html';

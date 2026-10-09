@@ -86,7 +86,7 @@ final class IndexNow
     {
         $temples = Temple::query()->published()
             ->when($since !== null, fn ($q) => $q->where('updated_at', '>', $since))
-            ->with(['state:id,slug', 'deity:id,slug', 'district:id,slug', 'translations' => fn ($q) => $q->where('field', 'name')->where('is_reviewed', true)])
+            ->with(['state:id,slug', 'deity:id,slug', 'district:id,slug', 'categories' => fn ($q) => $q->where('is_active', true)->whereNotNull('slug'), 'translations' => fn ($q) => $q->where('field', 'name')->where('is_reviewed', true)])
             ->orderBy('id')
             ->get(['id', 'slug', 'state_id', 'deity_id', 'district_id']);
 
@@ -101,6 +101,7 @@ final class IndexNow
             ->merge($temples->filter(fn (Temple $t): bool => $t->state?->slug !== null && $t->district?->slug !== null)
                 ->map(fn (Temple $t): string => Seo::url('states/'.$t->state->slug.'/'.$t->district->slug))->unique())
             ->merge($temples->pluck('state.slug')->filter()->unique()->map(fn (string $s): string => Seo::url('states/'.$s)))
+            ->merge($temples->flatMap(fn (Temple $t) => $t->categories->pluck('slug'))->unique()->map(fn (string $s): string => Seo::url('tags/'.$s)))
             ->merge($temples->pluck('deity.slug')->filter()->unique()->map(fn (string $s): string => Seo::url('deities/'.$s)))
             ->merge($pages->map(fn (string $s): string => Seo::url($s)))
             ->values()

@@ -146,6 +146,8 @@
         details.q summary { font-weight: 600; cursor: pointer; }
         details.q p { margin: 6px 0 0; }
         .aka { font-size: .9rem; }
+        .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+        .tags a { background: #fffdf9; border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: .82rem; text-decoration: none; color: var(--deep); }
         .langs { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .9rem; margin: 4px 0; }
         @media (max-width: 560px) {
             .actions { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -210,6 +212,15 @@
     </p>
 
     @if ($aliases->isNotEmpty() || $name !== $temple->name)<p class="muted aka">{{ __('Also known as') }} {{ collect([$name !== $temple->name ? $temple->name : null])->merge($aliases)->filter()->implode(', ') }}</p>@endif
+    @if ($keywords !== [])<p class="muted aka">{{ __('Also searched as') }} {{ implode(', ', $keywords) }}</p>@endif
+    @if ($temple->categories->isNotEmpty())
+        {{-- Tags: each has its own page of temples. --}}
+        <p class="tags">
+            @foreach ($temple->categories as $cat)
+                <a href="{{ Seo::url('tags/'.$cat->slug) }}">{{ $cat->name }}</a>
+            @endforeach
+        </p>
+    @endif
 
     @if ($alternates !== [])
         {{-- The page in the other languages it is published in. --}}

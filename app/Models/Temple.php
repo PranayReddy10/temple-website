@@ -65,7 +65,7 @@ class Temple extends Model
         'mantra', 'mantra_transliteration', 'mantra_media_id',
         'architecture_style', 'built_period',
         'dress_code', 'photography_policy', 'mobile_policy', 'footwear_policy',
-        'entry_rules', 'queue_information',
+        'entry_rules', 'queue_information', 'search_keywords',
         'official_website', 'contact_phone', 'contact_email',
         'verification_status', 'source_name', 'source_url', 'last_verified_at',
         'status', 'is_featured', 'accepts_donations', 'published_at', 'created_by', 'updated_by',
@@ -360,8 +360,8 @@ class Temple extends Model
 
     /**
      * Search as people type: any words, in any order, each found somewhere
-     * in the temple's name, its other names, town, district, state, address
-     * or PIN, or its name in another language. "swarnagiri bhuvanagiri",
+     * in the temple's name, its other names, search keywords, town, district,
+     * state, address or PIN, or its name in another language. "swarnagiri bhuvanagiri",
      * "venkateswara swamy bhongir" and "swarna giri" all find the same temple.
      */
     public function scopeSearch(Builder $query, ?string $term): Builder
@@ -380,6 +380,7 @@ class Temple extends Model
                     // "swarnagiri" typed as "swarna giri", or the other way round.
                     ->orWhereRaw("REPLACE(temples.name, ' ', '') like ?", [str_replace(' ', '', $like)])
                     ->orWhere('temples.city', 'like', $like)
+                    ->orWhere('temples.search_keywords', 'like', $like)
                     ->orWhere('temples.address', 'like', $like)
                     ->orWhere('temples.pincode', 'like', $like)
                     ->orWhereHas('district', fn (Builder $d) => $d->where('name', 'like', $like))
@@ -478,6 +479,16 @@ class Temple extends Model
         return $own->concat($deity)
             ->when($publishedOnly, fn ($all) => $all->filter->is_published)
             ->values();
+    }
+
+    /**
+     * The search keywords entered in the admin, as a list.
+     *
+     * @return array<int, string>
+     */
+    public function searchKeywords(): array
+    {
+        return array_values(array_unique(array_filter(array_map('trim', explode(',', (string) $this->search_keywords)))));
     }
 
     /**
