@@ -64,8 +64,21 @@ class ReviewController extends Controller
             throw new NotFoundHttpException();
         }
 
+        $validated = $request->validate(self::rules());
+        [$review, $created] = self::saveFor($request->user(), $temple, $validated);
+
+        return (new ReviewResource($review->load(['temple:id,slug,name,city', 'temple.primaryPhoto', 'devotee:id,name,avatar_path,avatar_disk,home_state_id'])))
+            ->response()
+            ->setStatusCode($created ? 201 : 200);
+    }
+
+    /** On unless an admin has switched it off under Settings → Features. */
+    /** @return array<string, array<int, string>> what a devotee may say about a visit */
+    public static function rules(): array
+    {
         $rating = ['nullable', 'integer', 'min:1', 'max:5'];
-        $validated = $request->validate([
+
+        return [
             'visited_on' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:'.DevotionalClock::latestDateAnywhere()],
             'visit_id' => ['nullable', 'integer'],
             'queue_rating' => $rating,
@@ -75,8 +88,19 @@ class ReviewController extends Controller
             'accuracy_rating' => $rating,
             'wait_minutes' => ['nullable', 'integer', 'min:0', 'max:1440'],
             'body' => ['nullable', 'string', 'max:3000'],
-        ]);
+        ];
+    }
 
+    /**
+     * The devotee's account of a temple, new or replacing their earlier one
+     * (one per devotee and temple), awaiting moderation when that is on.
+     * Shared by the app's API and the website.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array{0: TempleReview, 1: bool} the review, and whether it is new
+     */
+    public static function saveFor(\App\Models\Devotee $devotee, Temple $temple, array $validated): array
+    {
         $said = collect($validated)->only([...array_keys(TempleReview::DIMENSIONS), 'wait_minutes', 'body'])->filter(fn ($v) => $v !== null && $v !== '');
 
         if ($said->isEmpty()) {
@@ -86,7 +110,7 @@ class ReviewController extends Controller
         $visit = null;
         if (! empty($validated['visit_id'])) {
             $visit = DevoteeVisit::query()->whereKey($validated['visit_id'])
-                ->where('devotee_id', $request->user()->getKey())
+                ->where('devotee_id', $devotee->getKey())
                 ->where('temple_id', $temple->getKey())
                 ->first() ?? throw new NotFoundHttpException();
         }
@@ -97,10 +121,10 @@ class ReviewController extends Controller
         // while reviews need approval, sends it back for review), whatever day it is about, rather than
         // stacking a second one under the same name.
         $review = TempleReview::query()
-            ->where('devotee_id', $request->user()->getKey())
+            ->where('devotee_id', $devotee->getKey())
             ->where('temple_id', $temple->getKey())
             ->first() ?? new TempleReview([
-                'devotee_id' => $request->user()->getKey(),
+                'devotee_id' => $devotee->getKey(),
                 'temple_id' => $temple->getKey(),
             ]);
         $created = ! $review->exists;
@@ -118,12 +142,9 @@ class ReviewController extends Controller
         $review->moderation_note = null;
         $review->save();
 
-        return (new ReviewResource($review->load(['temple:id,slug,name,city', 'temple.primaryPhoto', 'devotee:id,name,avatar_path,avatar_disk,home_state_id'])))
-            ->response()
-            ->setStatusCode($created ? 201 : 200);
+        return [$review, $created];
     }
 
-    /** On unless an admin has switched it off under Settings → Features. */
     public static function requiresApproval(): bool
     {
         return (bool) Setting::get('reviews_require_approval', '1');

@@ -15,28 +15,16 @@ use Tests\TestCase;
 
 /**
  * Search Console's tag, and any code pasted for every page, reach the home
- * page (the web app's own index.html) as well as the temple pages.
+ * page as well as the temple pages.
  */
 class SiteVerificationTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected string $index;
-
     protected function setUp(): void
     {
         parent::setUp();
-        @mkdir($dir = sys_get_temp_dir().'/ds-web-'.uniqid());
-        $this->index = $dir.'/index.html';
-        file_put_contents($this->index, '<!DOCTYPE html><html><head><title>Darshan Saathi</title></head><body class="app"><div id="loading"></div></body></html>');
-        config(['brand.website' => 'https://darshansaathi.com', 'brand.web_app_index' => $this->index]);
-    }
-
-    protected function tearDown(): void
-    {
-        @unlink($this->index);
-        @rmdir(dirname($this->index));
-        parent::tearDown();
+        config(['brand.website' => 'https://darshansaathi.com']);
     }
 
     public function test_the_whole_tag_or_just_its_code_can_be_pasted(): void
@@ -52,13 +40,12 @@ class SiteVerificationTest extends TestCase
         Setting::set('custom_head_html', '<script>window.gtmLoaded=true</script>');
         Setting::set('custom_body_html', '<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TEST"></iframe></noscript>');
 
-        $html = $this->get('https://darshansaathi.com/')->assertOk()->assertHeader('Cache-Control', 'no-cache, private')->getContent();
+        $html = $this->get('https://darshansaathi.com/')->assertOk()->getContent();
 
         $this->assertStringContainsString('<meta name="google-site-verification" content="Rw4lRHdZkhGcPDaVxQ2EjgP0_UUctb_qQ4sGIdvgG7Y">', $html);
         $this->assertLessThan(strpos($html, '</head>'), strpos($html, 'google-site-verification'));
-        $this->assertStringContainsString("<body class=\"app\">\n<noscript><iframe src=\"https://www.googletagmanager.com/ns.html?id=GTM-TEST\">", $html);
+        $this->assertStringContainsString("<body>\n    <noscript><iframe src=\"https://www.googletagmanager.com/ns.html?id=GTM-TEST\">", $html);
         $this->assertStringContainsString('<script>window.gtmLoaded=true</script>', $html);
-        $this->assertStringContainsString('<div id="loading">', $html);
 
         // The same on the temple pages.
         Temple::create(['name' => 'Sri Rama Temple', 'slug' => 'sri-rama', 'status' => TempleStatus::Published, 'published_at' => now()]);
@@ -70,7 +57,7 @@ class SiteVerificationTest extends TestCase
 
     public function test_the_admin_host_keeps_its_own_landing_page(): void
     {
-        $this->get('https://temple.darshansaathi.com/')->assertOk()->assertDontSee('id="loading"', false);
+        $this->get('https://temple.darshansaathi.com/')->assertOk()->assertSee('Temple portal')->assertDontSee('Popular temples');
     }
 
     public function test_super_admins_save_the_tag_and_the_code_from_the_panel(): void

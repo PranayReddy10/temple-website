@@ -3,7 +3,6 @@
 namespace Tests\Feature\Seo;
 
 use App\Enums\TempleStatus;
-use App\Http\Controllers\WebAppHomeController;
 use App\Models\Deity;
 use App\Models\District;
 use App\Models\State;
@@ -172,12 +171,11 @@ class TemplePagesSeoTest extends TestCase
     {
         $this->temple(['is_featured' => true]);
 
-        $html = WebAppHomeController::withDirectoryLinks('<html><body><main id="seo"><h1>Darshan Saathi</h1></main><div>app</div></body></html>');
-
-        $this->assertStringContainsString('<a href="https://darshansaathi.com/temples/bhadrachalam">Sri Sita Ramachandra Swamy Temple, Bhadrachalam</a>', $html);
-        $this->assertStringContainsString('<a href="https://darshansaathi.com/states/telangana">Temples in Telangana (1)</a>', $html);
-        $this->assertLessThan(strpos($html, '<div>app</div>'), strpos($html, 'states/telangana'), 'inside the search engines\' text');
-        $this->assertSame('<p>no seo block</p>', WebAppHomeController::withDirectoryLinks('<p>no seo block</p>'));
+        $this->get('https://darshansaathi.com/')->assertOk()
+            ->assertSee('href="https://darshansaathi.com/temples/bhadrachalam"', false)
+            ->assertSee('Sri Sita Ramachandra Swamy Temple')
+            ->assertSee('href="https://darshansaathi.com/states/telangana"', false)
+            ->assertSee('"@type":"SearchAction"', false);
     }
 
     public function test_the_page_checklist_says_what_a_temple_page_still_needs(): void

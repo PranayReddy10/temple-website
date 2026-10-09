@@ -7,6 +7,7 @@ use App\Models\District;
 use App\Models\State;
 use App\Models\Temple;
 use App\Models\TempleCategory;
+use App\Models\TempleReview;
 use App\Models\TempleTiming;
 use App\Support\DevotionalClock;
 use App\Support\Seo;
@@ -218,10 +219,19 @@ class PublicTempleController extends Controller
             'aliases' => $temple->aliases->pluck('name')->filter()->unique()->reject(fn ($n) => strcasecmp($n, $temple->name) === 0 || $n === $name)->values(),
             'faq' => $locale === null ? self::faq($temple, $place, $dressCode, $bookable, $nearby) : [],
             'appLink' => Seo::appLink($temple->slug),
-            'bookLink' => Seo::appLink($temple->slug, 'book'),
+            // Booking and the hundi happen on the website itself.
+            'bookLink' => Seo::url('temples/'.$temple->slug.'/sevas'),
             // Hundi offerings, where the temple takes them and its payout
             // account is verified: the same rule as the app.
-            'donateLink' => $temple->accepts_donations && $temple->canCollectPayments() ? Seo::appLink($temple->slug, 'donate') : null,
+            'donateLink' => $temple->accepts_donations && $temple->canCollectPayments() ? Seo::url('temples/'.$temple->slug.'/donate') : null,
+            'saved' => ($devotee = auth('devotee_web')->user()) !== null && $devotee->savedTemples()->whereKey($temple->getKey())->exists(),
+            // What devotees say: the summary per dimension, the latest
+            // accounts, and the signed-in devotee's own (even while pending).
+            'reviewSummary' => TempleReview::summaryFor($temple),
+            'reviews' => $temple->reviews()->approved()->with(['devotee:id,name,home_state_id', 'devotee.homeState:id,name'])->latest()->limit(10)->get(),
+            'myReview' => $devotee?->reviews()->where('temple_id', $temple->getKey())->first(),
+            // The devotee's yatras, for "Add to yatra".
+            'yatras' => $devotee?->yatras()->latest()->limit(20)->get(['id', 'title']) ?? collect(),
             'storeUrl' => Seo::storeUrl(),
             'ogType' => 'place',
             'locale' => $lang,

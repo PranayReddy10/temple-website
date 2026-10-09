@@ -22,7 +22,7 @@ use Illuminate\Support\HtmlString;
  * Google Analytics (through Firebase) and Google Search Console.
  *
  * The Android and iOS apps report with the Firebase ids already saved under
- * Push setup; the website (the Flutter web app and the temple pages) reports
+ * Push setup; the website (every page of darshansaathi.com) reports
  * to the web stream whose ids are entered here. Nothing is sent until
  * "Collect usage analytics" is on.
  */
@@ -63,8 +63,8 @@ class ManageAnalytics extends SettingsPage
                     Toggle::make('analytics_enabled')->label('Collect usage analytics')
                         ->helperText('Covers the Android and iOS apps and the website. Say so in the privacy policy.'),
                 ]),
-            Section::make('Website (web app)')
-                ->description('Firebase console → Project settings → General → Add app → Web. Copy the apiKey, appId and measurementId from its config. The measurement id is also used on the temple pages, so the whole of the website reports to one stream.')
+            Section::make('Website')
+                ->description('Firebase console → Project settings → General → Add app → Web. Copy the apiKey, appId and measurementId from its config. The measurement id is used on every page of darshansaathi.com, so the whole website reports to one stream.')
                 ->columns(2)
                 ->schema([
                     TextInput::make('firebase_web_api_key')->label('Web API key'),

@@ -31,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'throttle' => ThrottlePerRoute::class,
             'temple.team' => ActAsTempleTeam::class,
             'super.admin' => EnsureSuperAdmin::class,
+            'devotee.web' => \App\Http\Middleware\DevoteeSignedIn::class,
         ]);
 
         // Every API response is in some language, so the decision belongs to
@@ -40,8 +41,15 @@ return Application::configure(basePath: dirname(__DIR__))
         // Gateways POST the devotee back to these pages from their own
         // domain (PayU always, Razorpay's handler form too), which a CSRF
         // token cannot survive. Each return is checked with the gateway
-        // itself instead.
-        $middleware->validateCsrfTokens(except: ['pay/*']);
+        // itself instead. Google's sign-in button posts to login/google
+        // from accounts.google.com too; Google's own g_csrf_token cookie
+        // is checked there instead (Site\AuthController::google).
+        $middleware->validateCsrfTokens(except: ['pay/*', 'login/google']);
+
+        // Google's sign-in script sets g_csrf_token itself, in the clear;
+        // decrypting it like Laravel's own cookies would read it as empty
+        // and refuse every Google sign-in on the website.
+        $middleware->encryptCookies(except: ['g_csrf_token']);
 
         /*
          * Behind Cloudflare or any TLS-terminating proxy, the origin sees a

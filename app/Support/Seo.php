@@ -7,13 +7,11 @@ use Illuminate\Http\Request;
 /**
  * Addresses for the public, indexable pages.
  *
- * The devotees' website (darshansaathi.com) is a Flutter build, which search
- * engines read as an empty page. The temple and state pages are therefore
- * rendered here, and darshansaathi.com's .htaccess hands /temples, /states,
- * /sitemap*.xml and /storage to this application. The same pages also answer
- * on temple.darshansaathi.com; there they point search engines at the
+ * The devotees' website (darshansaathi.com) is rendered entirely by this
+ * application: darshansaathi.com's .htaccess (deploy/website.htaccess) hands
+ * every address to it. The same pages also answer on
+ * temple.darshansaathi.com; there they point search engines at the
  * website's copy and ask not to be indexed, so nothing is listed twice.
- * /deities and Search Console's google*.html check are routed here too.
  */
 final class Seo
 {
@@ -39,15 +37,23 @@ final class Seo
     }
 
     /**
-     * The devotee app opened on a temple, from a website page.
-     *
-     * On the web the app reads ?temple= when it starts and goes straight to
-     * that temple (and to its sevas with action=book), so "Book" or "Open in
-     * the app" never drops a devotee on the home screen to search again.
+     * Where "Open in the app", "Book a seva" and "Donate" go from a website
+     * page: the app's store page, or the home page's Get the app section
+     * when no store link is set. On Android the page swaps in appIntent(),
+     * which opens the installed app on this temple instead.
      */
     public static function appLink(string $slug, ?string $action = null): string
     {
-        return self::url('/').'?'.http_build_query(array_filter(['temple' => $slug, 'action' => $action]));
+        return self::storeUrl() ?? self::url('/').'#app';
+    }
+
+    /** The installed Android app opened on a temple (and its sevas or hundi with an action). */
+    public static function appIntent(string $slug, ?string $action = null): string
+    {
+        return AppLinks::androidIntent(
+            self::url('temples/'.$slug).($action !== null ? '?'.http_build_query(['action' => $action]) : ''),
+            self::appLink($slug, $action),
+        );
     }
 
     /** The app's store page, from Administration → App control, if set. */

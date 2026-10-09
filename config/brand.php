@@ -15,20 +15,11 @@ return [
     // Where the QR codes point (passport, booking and temple check-in
     // pages), so it must be this server: temple.darshansaathi.com, which
     // also serves the admin panel and the API. darshansaathi.com itself is
-    // the devotees' website (the app's web build).
+    // the devotees' website, rendered by this same application.
     'url' => env('BRAND_URL', env('APP_URL', 'http://localhost')),
 
-    // The devotees' website (the app's web build), linked from this
-    // server's home page.
+    // The devotees' website, linked from this server's home page.
     'website' => env('BRAND_WEBSITE', 'https://darshansaathi.com'),
-
-    /*
-     * The web app's index.html (the Flutter build in public_html), which
-     * darshansaathi.com/ is served from with the verification tags and the
-     * pasted code added. On Hostinger Laravel sits in public_html/laravel,
-     * so the build is one folder up.
-     */
-    'web_app_index' => env('WEB_APP_INDEX', base_path('../index.html')),
 
     // The calendar the devotional day follows. The server clock stays UTC;
     // "today's deity" is decided in this zone. See App\Support\DevotionalClock.

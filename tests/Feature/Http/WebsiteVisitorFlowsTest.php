@@ -57,7 +57,9 @@ class WebsiteVisitorFlowsTest extends TestCase
 
         $this->get(self::SITE.'/temples/chilkur')->assertOk()
             ->assertSee('🪔 Donate')
-            ->assertSee(self::SITE.'/?temple=chilkur&amp;action=donate', false);
+            ->assertSee('href="'.self::SITE.'/temples/chilkur/donate"', false);
+        $this->get(self::SITE.'/temples/chilkur/donate')->assertOk()->assertSee('Donate online to Chilkur Balaji Temple');
+        $this->get(self::SITE.'/temples/birla-mandir/donate')->assertNotFound();
         $this->get(self::SITE.'/temples/birla-mandir')->assertOk()->assertDontSee('🪔 Donate');
         $this->get(self::SITE.'/temples/sanghi')->assertOk()->assertDontSee('🪔 Donate');
     }
@@ -111,7 +113,7 @@ class WebsiteVisitorFlowsTest extends TestCase
         $app = Payment::create(['devotee_id' => $devotee->id, 'purpose' => Payment::DONATION, 'gateway' => 'razorpay', 'amount_paise' => 50100, 'status' => Payment::FAILED]);
 
         $this->get(route('pay.done', $web))->assertOk()
-            ->assertSee(self::SITE.'/?payment='.$web->uuid, false)
+            ->assertSee(self::SITE.'/account/payments/'.$web->uuid, false)
             ->assertSee('location.replace', false);
 
         // From the phone app's browser tab: the app shows the result itself.

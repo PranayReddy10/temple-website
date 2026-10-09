@@ -149,6 +149,39 @@
         .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
         .tags a { background: #fffdf9; border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: .82rem; text-decoration: none; color: var(--deep); }
         .langs { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .9rem; margin: 4px 0; }
+        @media (max-width: 560px) {
+            .actions { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+            .actions > .btn, .actions > form, .actions > details, .actions form .btn, .actions details summary { width: 100%; justify-content: center; text-align: center; }
+            .actions details.add-yatra .pop { min-width: 0; width: calc(200% + 8px); }
+        }
+        details.add-yatra { position: relative; display: inline-block; }
+        details.add-yatra summary { list-style: none; }
+        details.add-yatra summary::-webkit-details-marker { display: none; }
+        details.add-yatra .pop { position: absolute; z-index: 5; top: calc(100% + 6px); left: 0; min-width: 240px; background: #fffdf9; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 10px 30px rgba(62,39,35,.15); padding: 6px; }
+        details.add-yatra .pop button { display: block; width: 100%; text-align: left; font: inherit; background: none; border: 0; padding: 10px 12px; border-radius: 10px; cursor: pointer; color: var(--deep); }
+        details.add-yatra .pop button:hover { background: #f5ead6; }
+        .reviews .rsum { display: grid; grid-template-columns: 140px 1fr; gap: 18px; align-items: center; }
+        .reviews .rcount b { font-family: Georgia, serif; font-size: 2rem; color: var(--kumkum); }
+        .reviews .bars { display: grid; gap: 6px; }
+        .reviews .bar { display: grid; grid-template-columns: minmax(0, 170px) 1fr 32px; gap: 10px; align-items: center; font-size: .88rem; }
+        .reviews .bar i { height: 8px; background: #efe3cf; border-radius: 99px; overflow: hidden; }
+        .reviews .bar em { display: block; height: 100%; background: linear-gradient(90deg, var(--saffron), var(--kumkum)); }
+        .reviews .rlist { display: grid; gap: 10px; margin-top: 12px; }
+        .reviews .review header { font-size: .92rem; }
+        .reviews .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+        .reviews .chip { font-size: .78rem; background: #f5ead6; border-radius: 999px; padding: 3px 10px; }
+        .reviews .chip b { color: #c98a10; letter-spacing: 1px; } .reviews .chip .off { color: #dccfb8; }
+        .reviews .review p { margin: 6px 0 0; }
+        .reviews .reply { background: #f8efe0; border-left: 3px solid var(--saffron); padding: 8px 12px; border-radius: 8px; font-size: .9rem; }
+        .reviews .write { margin-top: 14px; }
+        .reviews .write summary { cursor: pointer; display: flex; gap: 8px; align-items: center; }
+        .stars-in { border: 0; padding: 0; margin: 0; display: flex; flex-direction: row-reverse; justify-content: flex-end; align-items: center; gap: 2px; flex-wrap: wrap; }
+        .stars-in legend { width: 100%; font-weight: 600; font-size: .92rem; margin-bottom: 2px; padding: 0; }
+        .stars-in input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+        .stars-in label { font-size: 1.8rem; line-height: 1; color: #dccfb8; cursor: pointer; display: inline; font-weight: 400; }
+        .stars-in input:checked ~ label, .stars-in label:hover, .stars-in label:hover ~ label { color: #e0a313; }
+        .stars-in input:focus-visible + label { outline: 2px solid var(--saffron); border-radius: 4px; }
+        @media (max-width: 560px) { .reviews .rsum { grid-template-columns: 1fr; } .reviews .bar { grid-template-columns: minmax(0, 1fr) 90px 28px; } }
     </style>
 @endpush
 
@@ -161,15 +194,11 @@
                 <b>Genuine {{ config('brand.name') }} code of {{ $temple->name }}</b>
                 <p>Check in with the app to collect a verified stamp in your Passport.</p>
                 <div class="actions" style="margin:8px 0 0">
-                    <a class="btn primary" id="scan-open" href="{{ $scan['storeUrl'] ?? $scan['appLink'] }}" data-intent="{{ $scan['intent'] }}">Open the app to check in</a>
-                    @if ($scan['storeUrl'])<a class="btn" href="{{ $scan['storeUrl'] }}" rel="noopener">Get it on Google Play</a>@endif
+                    {{-- Android: opens the app when installed, the Play Store when not. --}}
+                    <a class="btn primary" href="{{ $scan['storeUrl'] ?? $scan['appLink'] }}" data-intent="{{ $scan['intent'] }}">Open the app to check in</a>
                 </div>
             </div>
         </div>
-        <script>
-            // Android opens the app when installed, the Play Store when not.
-            (function () { var a = document.getElementById('scan-open'); if (a && /Android/i.test(navigator.userAgent)) a.href = a.dataset.intent; })();
-        </script>
     @endisset
     <p class="crumbs">
         @foreach ($crumbList as $c)
@@ -207,7 +236,25 @@
     <div class="actions">
         @if ($bookable)<a class="btn primary" href="{{ $bookLink }}">{{ __('Book a seva') }}</a>@endif
         @if ($donateLink)<a class="btn {{ $bookable ? '' : 'primary' }}" href="{{ $donateLink }}">🪔 {{ __('Donate') }}</a>@endif
-        <a class="btn {{ $bookable || $donateLink ? '' : 'primary' }}" href="{{ $appLink }}">{{ __('Open in :app', ['app' => config('brand.name')]) }}</a>
+        @if (! $temple->pujas->isEmpty() && ! $bookable)<a class="btn" href="{{ Seo::url('temples/'.$temple->slug.'/sevas') }}">{{ __('Sevas & fees') }}</a>@endif
+        @if (auth('devotee_web')->check())
+            <form method="post" action="{{ Seo::url('temples/'.$temple->slug.'/save') }}" style="display:inline">@csrf<button class="btn" type="submit">{{ ($saved ?? false) ? '♥ '.__('Saved') : '♡ '.__('Save') }}</button></form>
+        @else
+            <a class="btn" href="{{ Seo::url('login').'?'.http_build_query(['next' => $canonical]) }}" rel="nofollow">♡ {{ __('Save') }}</a>
+        @endif
+        @if (auth('devotee_web')->check())
+            <details class="add-yatra">
+                <summary class="btn">🧭 {{ __('Add to yatra') }}</summary>
+                <div class="pop">
+                    @foreach ($yatras ?? [] as $y)
+                        <form method="post" action="{{ Seo::url('temples/'.$temple->slug.'/yatra') }}">@csrf<input type="hidden" name="yatra" value="{{ $y->id }}"><button type="submit">{{ $y->title }}</button></form>
+                    @endforeach
+                    <form method="post" action="{{ Seo::url('account/yatras') }}">@csrf<input type="hidden" name="temple" value="{{ $temple->slug }}"><input type="hidden" name="title" value="{{ __('Yatra to :place', ['place' => $temple->city ?: $temple->name]) }}"><button type="submit"><b>＋ {{ __('New yatra') }}</b></button></form>
+                </div>
+            </details>
+        @else
+            <a class="btn" href="{{ Seo::url('login').'?'.http_build_query(['next' => $canonical]) }}" rel="nofollow">🧭 {{ __('Add to yatra') }}</a>
+        @endif
         @if ($temple->hasCoordinates())
             <a class="btn" href="https://www.google.com/maps/dir/?api=1&destination={{ $temple->latitude }},{{ $temple->longitude }}" rel="nofollow noopener" target="_blank">{{ __('Directions') }}</a>
         @endif
@@ -345,6 +392,8 @@
                     @endforeach
                 </div>
             @endif
+
+            @include('site._reviews')
         </div>
 
         <aside>
@@ -377,9 +426,10 @@
             <div class="card" style="margin-top:16px">
                 <b>{{ $bookable ? __('Book a seva at :name', ['name' => $name]) : __('Plan your visit to :name', ['name' => $name]) }}</b>
                 <p class="muted" style="margin:6px 0 10px">{{ $bookable ? __('Timings, sevas, festivals and directions in the :app app, with booking and payment.', ['app' => config('brand.name')]) : __('Timings, sevas, festivals and directions in the :app app.', ['app' => config('brand.name')]) }}</p>
-                <a class="btn primary" href="{{ $bookable ? $bookLink : $appLink }}">{{ $bookable ? __('Book a seva') : __('Open in the app') }}</a>
+                @if ($bookable)<a class="btn primary" href="{{ $bookLink }}">{{ __('Book a seva') }}</a>@endif
                 @if ($donateLink)<a class="btn" href="{{ $donateLink }}" style="margin-top:8px">🪔 {{ __('Donate to the hundi') }}</a>@endif
-                @if ($storeUrl)<a class="btn" href="{{ $storeUrl }}" rel="noopener" style="margin-top:8px">{{ __('Get the Android app') }}</a>@endif
+                {{-- One app button: on Android it opens this temple in the installed app (the Play Store when it is not installed); elsewhere the Play Store. Hidden on iPhone, where the website is the app for now. --}}
+                <a class="btn android-app {{ $bookable || $donateLink ? '' : 'primary' }}" href="{{ $appLink }}" data-intent="{{ Seo::appIntent($temple->slug) }}" rel="noopener" style="margin-top:8px">📱 {{ __('Open in the Android app') }}</a>
             </div>
         </aside>
     </div>

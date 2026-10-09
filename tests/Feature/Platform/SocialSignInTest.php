@@ -170,4 +170,25 @@ class SocialSignInTest extends TestCase
 
         $this->getJson('/api/v1/app/config')->assertJsonPath('data.auth.password', false)->assertJsonPath('data.auth.google.enabled', true);
     }
+
+    public function test_the_websites_google_button_signs_in(): void
+    {
+        config(['brand.website' => 'https://darshansaathi.com']);
+        $token = $this->google();
+
+        // Posted by Google from accounts.google.com, with the double-submit
+        // cookie its script set on the page (in the clear, not Laravel's).
+        $this->withUnencryptedCookie('g_csrf_token', 'abc123')
+            ->post('https://darshansaathi.com/login/google', ['credential' => $token, 'g_csrf_token' => 'abc123'])
+            ->assertRedirect('https://darshansaathi.com/account');
+        $this->assertAuthenticated('devotee_web');
+        $this->assertSame('meera@example.com', Devotee::sole()->email);
+
+        // Without the matching cookie: refused.
+        auth('devotee_web')->logout();
+        $this->withUnencryptedCookie('g_csrf_token', 'other')
+            ->post('https://darshansaathi.com/login/google', ['credential' => $token, 'g_csrf_token' => 'abc123'])
+            ->assertRedirect('https://darshansaathi.com/login');
+        $this->assertGuest('devotee_web');
+    }
 }

@@ -19,7 +19,7 @@
     <meta property="og:title" content="{{ $title }}">
     <meta property="og:description" content="{{ $description }}">
     <meta property="og:url" content="{{ $canonical }}">
-    {{-- The temple's own photo, else the brand's share card (web/og.png in the app's web build). --}}
+    {{-- The temple's own photo, else the brand's share card (public/og.png). --}}
     @php($shareImage = ! empty($image) ? $image : \App\Support\Seo::url('og.png'))
     <meta property="og:image" content="{{ $shareImage }}">
     <meta property="og:image:alt" content="{{ $title }}">
@@ -33,23 +33,44 @@
     <meta name="twitter:description" content="{{ $description }}">
     <meta name="twitter:image" content="{{ $shareImage }}">
     <link rel="icon" href="{{ \App\Support\Seo::url('favicon.png') }}">
-    <link rel="apple-touch-icon" href="{{ \App\Support\Seo::url('icons/Icon-192.png') }}">
+    <link rel="apple-touch-icon" href="{{ \App\Support\Seo::url('icons/apple-touch-icon.png') }}">
     @php($ga = \App\Support\Seo::measurementId())
     @if ($ga && \App\Support\Seo::onWebsite(request()))
-        {{-- The same stream as the web app, so a visit that starts here and goes on in the app is one visit. --}}
+        {{-- The website's stream under Admin → Analytics & SEO. --}}
         <script async src="https://www.googletagmanager.com/gtag/js?id={{ $ga }}"></script>
         <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config',@json($ga));</script>
     @endif
-    @stack('head')
     <style>
-        :root { --saffron: {{ config('brand.colors.saffron.hex') }}; --kumkum: {{ config('brand.colors.kumkum.hex') }}; --sandal: {{ config('brand.colors.sandal.hex') }}; --deep: {{ config('brand.colors.deep.hex') }}; --muted: #7a6a60; --line: #e7dccb; }
+        :root { --saffron: {{ config('brand.colors.saffron.hex') }}; --kumkum: {{ config('brand.colors.kumkum.hex') }}; --sandal: {{ config('brand.colors.sandal.hex') }}; --deep: {{ config('brand.colors.deep.hex') }}; --gold: {{ config('brand.colors.gold.hex') }}; --muted: #7a6a60; --line: #e7dccb; }
         * { box-sizing: border-box; }
+        [hidden] { display: none !important; }
+        html, body { overflow-x: clip; }
         body { margin: 0; background: var(--sandal); color: var(--deep); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; line-height: 1.55; }
         a { color: var(--kumkum); }
-        header.top { background: var(--deep); color: #fff; }
-        header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; padding-bottom: 12px; }
+        header.top { background: var(--deep); color: #fff; border-bottom: 3px solid var(--gold); position: sticky; top: 0; z-index: 20; box-shadow: 0 2px 12px rgba(0,0,0,.18); }
+        header.top .wrap { display: flex; align-items: center; gap: 12px; padding-top: 10px; padding-bottom: 10px; }
         header.top a { color: #fff; text-decoration: none; }
-        .brand { font-family: Georgia, 'Noto Serif', serif; font-size: 1.25rem; font-weight: 700; }
+        .brand { font-family: Georgia, 'Noto Serif', serif; font-size: 1.25rem; font-weight: 700; display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; margin-right: auto; min-width: 0; }
+        .brand .mark { width: 34px; height: 34px; flex: none; display: inline-block; }
+        nav.menu { display: flex; align-items: center; gap: 4px 20px; font-size: .95rem; }
+        nav.menu a { opacity: .9; padding: 4px 0; border-bottom: 2px solid transparent; white-space: nowrap; }
+        nav.menu a:hover, nav.menu a.on { opacity: 1; border-bottom-color: var(--gold); }
+        .burger { display: none; flex: none; width: 42px; height: 38px; border: 1px solid rgba(255,255,255,.25); border-radius: 10px; background: transparent; cursor: pointer; padding: 9px 10px; flex-direction: column; justify-content: space-between; }
+        .burger span { display: block; height: 2px; background: #fff; border-radius: 2px; transition: transform .2s, opacity .2s; }
+        html.menu-open .burger span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+        html.menu-open .burger span:nth-child(2) { opacity: 0; }
+        html.menu-open .burger span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+        @media (max-width: 820px) {
+            .burger { display: flex; }
+            nav.menu { display: none; position: absolute; left: 0; right: 0; top: 100%; background: var(--deep); flex-direction: column; align-items: stretch; gap: 0; padding: 6px 16px 14px; border-bottom: 3px solid var(--gold); }
+            html.menu-open nav.menu { display: flex; }
+            nav.menu a { padding: 12px 4px; border-bottom: 1px solid rgba(255,255,255,.1); font-size: 1.02rem; }
+            nav.menu a.on { border-bottom-color: rgba(255,255,255,.1); color: var(--gold); }
+            .cta { padding: 7px 12px !important; font-size: .82rem !important; }
+        }
+        @media (max-width: 400px) { .brand { font-size: 1.02rem; gap: 7px; } .brand .mark { width: 28px; height: 28px; } }
+        html.ios .android-app { display: none !important; }
+        html:not(.ios) .ios-only { display: none !important; }
         .cta { background: var(--saffron); color: #fff !important; border-radius: 999px; padding: 8px 16px; font-weight: 600; font-size: .9rem; white-space: nowrap; }
         .wrap { max-width: 1080px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
         main { padding-top: 20px; padding-bottom: 40px; }
@@ -59,45 +80,110 @@
         .crumbs { font-size: .85rem; color: var(--muted); }
         .crumbs a { color: var(--muted); }
         .card { background: #fffdf9; border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
-        footer.bottom { border-top: 1px solid var(--line); padding: 24px 0 40px; font-size: .85rem; color: var(--muted); }
+        footer.bottom { background: #2e1d1a; color: #d9c9b6; border-top: 3px solid var(--gold); padding: 32px 0 28px; font-size: .9rem; }
+        footer.bottom a { color: #f3e6d3; text-decoration: none; }
+        footer.bottom a:hover { text-decoration: underline; }
+        footer.bottom .cols { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 24px; }
+        footer.bottom .cols > div, footer.bottom .cols > nav { display: flex; flex-direction: column; gap: 6px; }
+        footer.bottom b { color: #fff; font-family: Georgia, 'Noto Serif', serif; font-size: 1.05rem; margin-bottom: 4px; }
+        footer.bottom p { margin: 0 0 6px; }
+        footer.bottom .note { border-top: 1px solid rgba(255,255,255,.12); margin-top: 24px; padding-top: 16px; font-size: .8rem; opacity: .8; }
+        @media (max-width: 720px) { footer.bottom .cols { grid-template-columns: 1fr 1fr; } footer.bottom .cols > div:first-child { grid-column: 1 / -1; } }
         img { max-width: 100%; }
-        nav.legal { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 8px 0; }
-        nav.legal a { color: var(--muted); }
+        .flash { background: #eef7ea; border: 1px solid #b9dcae; color: #23511a; border-radius: 12px; padding: 10px 14px; margin: 16px auto 0; max-width: 1048px; }
+        .form { display: grid; gap: 14px; }
+        .form label { display: grid; gap: 4px; font-weight: 600; font-size: .92rem; }
+        .form label small, .form .hint { font-weight: 400; color: var(--muted); font-size: .82rem; }
+        .form input:not([type=checkbox]):not([type=radio]), .form select, .form textarea { font: inherit; font-weight: 400; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--deep); width: 100%; }
+        .form input:focus, .form select:focus, .form textarea:focus { outline: 2px solid var(--saffron); outline-offset: 0; border-color: var(--saffron); }
+        .form .row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+        .form > *, .form label { min-width: 0; }
+        @media (max-width: 560px) { .form .row { grid-template-columns: 1fr; } }
+        .form .check { display: flex; gap: 8px; align-items: center; font-weight: 400; }
+        .err { color: #a3162c; font-size: .85rem; font-weight: 600; }
+        .errors { background: #fdecee; border: 1px solid #f2b8c0; color: #8a1426; border-radius: 12px; padding: 10px 14px; }
+        .btn { display: inline-block; text-align: center; font: inherit; font-weight: 600; text-decoration: none; padding: 11px 20px; border-radius: 999px; border: 1px solid var(--line); background: #fffdf9; color: var(--deep); cursor: pointer; }
+        .btn.primary { background: var(--kumkum); border-color: var(--kumkum); color: #fff; }
+        .btn.saffron { background: var(--saffron); border-color: var(--saffron); color: #fff; }
+        .btn.block { display: block; width: 100%; }
+        .btn:disabled { opacity: .55; cursor: not-allowed; }
+        .narrow { max-width: 460px; margin: 24px auto; }
+        .g-wrap { display: flex; justify-content: center; min-height: 44px; width: 100%; overflow: hidden; }
+        .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .85rem; margin: 6px 0; }
+        .or::before, .or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
         form.find { display: flex; gap: 8px; margin: 12px 0 16px; max-width: 560px; }
         form.find input { flex: 1; min-width: 0; font: inherit; padding: 10px 14px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--deep); }
         form.find button { font: inherit; font-weight: 600; background: var(--kumkum); color: #fff; border: 0; border-radius: 999px; padding: 10px 18px; cursor: pointer; }
     </style>
+    @stack('head')
     {{-- Verification tags and the code pasted under Analytics & SEO, on every page. --}}
     {!! \App\Support\Seo::headExtras() !!}
 </head>
 <body>
     {!! \App\Support\Seo::bodyExtras() !!}
+@php($storeUrl = \App\Support\Seo::storeUrl())
+@php($footerPages = rescue(fn () => \App\Models\Page::footer(), collect(), report: false))
 <header class="top">
     <div class="wrap">
-        <a class="brand" href="{{ \App\Support\Seo::url('/') }}" style="display:inline-flex;align-items:center;gap:10px">
-            {{-- Inline: these pages are also served on darshansaathi.com, where /brand is not this app's. --}}
-            <span style="width:34px;height:34px;display:inline-block">{!! file_get_contents(public_path('brand/logo-mark-light.svg')) !!}</span>
-            {{ config('brand.name') }}
+        <a class="brand" href="{{ \App\Support\Seo::url('/') }}">
+            {{-- Inline, so the header never waits on another request. --}}
+            <span class="mark">{!! file_get_contents(public_path('brand/logo-mark-light.svg')) !!}</span>
+            <span>{{ config('brand.name') }}</span>
         </a>
-        <a class="cta" href="{{ $appLink ?? \App\Support\Seo::url('/') }}">{{ __('Open the app') }}</a>
+        <nav class="menu" id="site-menu" aria-label="Main">
+            <a href="{{ \App\Support\Seo::url('temples') }}" @class(['on' => request()->is('temples', 'temples/*', '*/temples/*', 'states/*', 'deities/*')])>🛕 {{ __('Temples') }}</a>
+            <a href="{{ \App\Support\Seo::url('account/yatras') }}" @class(['on' => request()->is('account/yatras*')])>🧭 {{ __('Yatra planner') }}</a>
+            @if (auth('devotee_web')->check())
+                <a href="{{ \App\Support\Seo::url('account/bookings') }}" @class(['on' => request()->is('account/bookings*', 'account/tickets*')])>🎟️ {{ __('My bookings') }}</a>
+                <a href="{{ \App\Support\Seo::url('account') }}" @class(['on' => request()->is('account', 'account/profile', 'account/saved', 'account/passport', 'account/donations')])>👤 {{ auth('devotee_web')->user()->name ? \Illuminate\Support\Str::before(auth('devotee_web')->user()->name, ' ') : __('My account') }}</a>
+            @else
+                <a href="{{ \App\Support\Seo::url('login') }}" @class(['on' => request()->is('login', 'register', 'forgot-password', 'reset-password')])>👤 {{ __('Sign in') }}</a>
+            @endif
+        </nav>
+        <a class="cta android-app" href="{{ $appLink ?? ($storeUrl ?? \App\Support\Seo::url('/').'#app') }}" @isset($appIntent) data-intent="{{ $appIntent }}" @endisset>{{ __('Get the app') }}</a>
+        <button class="burger" type="button" aria-controls="site-menu" aria-expanded="false" aria-label="{{ __('Menu') }}" onclick="var o=document.documentElement.classList.toggle('menu-open');this.setAttribute('aria-expanded',o)"><span></span><span></span><span></span></button>
     </div>
 </header>
 <main class="wrap">
+    @if (session('status'))<p class="flash" role="status">{{ session('status') }}</p>@endif
     @yield('content')
 </main>
 <footer class="bottom">
     <div class="wrap">
-        <p><a href="{{ \App\Support\Seo::url('temples') }}">{{ __('All temples') }}</a> · {{ config('brand.tagline') }} · <a href="mailto:{{ setting('support_email', 'brand.support_email') }}">{{ setting('support_email', 'brand.support_email') }}</a></p>
-        @php($footerPages = rescue(fn () => \App\Models\Page::footer(), collect(), report: false))
-        @if ($footerPages->isNotEmpty())
-            <nav class="legal" aria-label="Policies">
-                @foreach ($footerPages as $fp)
-                    <a href="{{ \App\Support\Seo::url($fp->slug) }}">{{ $fp->title }}</a>
-                @endforeach
-            </nav>
-        @endif
-        <p>{{ __('Timings and rules change; confirm with the temple before travelling.') }}</p>
+        <div class="cols">
+            <div>
+                <b class="brand-sm">{{ config('brand.name') }}</b>
+                <p>{{ config('brand.tagline') }}. {{ __('Darshan timings, pujas and sevas, dress code and directions for temples across India.') }}</p>
+                <p><a href="mailto:{{ setting('support_email', 'brand.support_email') }}">{{ setting('support_email', 'brand.support_email') }}</a></p>
+            </div>
+            <div>
+                <b>{{ __('Explore') }}</b>
+                <a href="{{ \App\Support\Seo::url('temples') }}">{{ __('All temples') }}</a>
+                <a href="{{ \App\Support\Seo::url('/') }}#states">{{ __('Temples by state') }}</a>
+                <a href="{{ \App\Support\Seo::url('/') }}#deities">{{ __('Temples by deity') }}</a>
+                <a href="{{ $storeUrl ?? \App\Support\Seo::url('/').'#app' }}">{{ __('Get the app') }}</a>
+            </div>
+            @if ($footerPages->isNotEmpty())
+                <nav class="legal" aria-label="Policies">
+                    <b>{{ __('About') }}</b>
+                    @foreach ($footerPages as $fp)
+                        <a href="{{ \App\Support\Seo::url($fp->slug) }}">{{ $fp->title }}</a>
+                    @endforeach
+                </nav>
+            @endif
+        </div>
+        <p class="note">{{ __('Timings and rules change; confirm with the temple before travelling.') }} · © {{ now()->year }} {{ config('brand.name') }}</p>
     </div>
 </footer>
+<script>
+    // On Android, app buttons open the installed app on this temple (the
+    // store, or the Get the app section, when it is not installed).
+    if (/Android/i.test(navigator.userAgent)) document.querySelectorAll('a[data-intent]').forEach(function (a) { a.href = a.dataset.intent; });
+    // iPhone and iPad: there is no app yet, and everything works here, so
+    // the Play Store prompts give way to the website's own.
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+        document.documentElement.classList.add('ios');
+    }
+</script>
 </body>
 </html>
