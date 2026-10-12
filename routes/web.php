@@ -2,6 +2,7 @@
 
 use App\Enums\TempleStatus;
 use App\Http\Controllers\BookingPageController;
+use App\Http\Controllers\FestivalPageController;
 use App\Http\Controllers\KycDocumentController;
 use App\Http\Controllers\MediaFileController;
 use App\Http\Controllers\MediaPreviewController;
@@ -160,6 +161,11 @@ Route::get('/{locale}/temples/{slug}', [PublicTempleController::class, 'showLoca
     ->where('locale', 'te|hi|ta|kn')
     ->name('site.temple.localized');
 Route::get('/deities/{slug}', [PublicTempleController::class, 'deity'])->name('site.deity');
+// The festival and vrat calendar (FestivalPageController).
+Route::get('/festivals', [FestivalPageController::class, 'index'])->name('site.festivals');
+Route::get('/festivals/{group}', [FestivalPageController::class, 'group'])->whereIn('group', array_keys(FestivalPageController::GROUPS))->name('site.festivals.group');
+Route::get('/festivals/{year}/{month}', [FestivalPageController::class, 'month'])->where(['year' => '20[0-9]{2}', 'month' => '[a-z]+'])->name('site.festivals.month');
+Route::get('/festivals/{slug}', [FestivalPageController::class, 'show'])->where('slug', '[a-z0-9-]+')->name('site.festival');
 Route::get('/tags/{slug}', [PublicTempleController::class, 'tag'])->name('site.tag');
 // Search Console's "HTML file" check: the file named in Admin → Analytics & SEO.
 Route::get('/google{token}.html', function (string $token) {

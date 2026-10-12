@@ -157,17 +157,17 @@
         @endif
 
         @if ($festivals->isNotEmpty())
-            <div class="title"><h2>{{ __('Festivals ahead') }}</h2></div>
+            <div class="title"><h2>{{ __('Festivals ahead') }}</h2><a class="all" href="{{ Seo::url('festivals') }}">{{ __('Festival calendar') }} →</a></div>
             <div class="fests">
                 @foreach ($festivals as $f)
-                    <div class="card fest">
+                    <a class="card fest" href="{{ \App\Http\Controllers\FestivalPageController::url($f) }}" style="text-decoration:none;color:inherit">
                         <div class="date"><b>{{ $f->starts_on->format('j') }}</b><small>{{ $f->starts_on->format('M') }}</small></div>
                         <div>
                             <b>{{ $f->name }}</b>
                             <p>{{ $f->starts_on->format('l') }}@if ($f->ends_on && ! $f->ends_on->isSameDay($f->starts_on)) – {{ $f->ends_on->format('j M') }}@endif @if ($f->tithi) · {{ $f->tithi }}@endif</p>
                             @if ($f->description)<p>{{ Str::limit(strip_tags($f->description), 110) }}</p>@endif
                         </div>
-                    </div>
+                    </a>
                 @endforeach
             </div>
         @endif

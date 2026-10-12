@@ -325,6 +325,10 @@
                 @endif
             @endforeach
 
+            @if (($deityFestivals ?? collect())->isNotEmpty())
+                <h2>{{ __('Festivals of :deity', ['deity' => $deityName ?? $temple->deity?->name]) }}</h2>
+                <p>@foreach ($deityFestivals as $f)<a href="{{ \App\Http\Controllers\FestivalPageController::url($f) }}">{{ $f->name }}</a> – {{ $f->starts_on->format('j M Y') }}@if (! $loop->last) · @endif@endforeach</p>
+            @endif
             @if ($temple->events->isNotEmpty())
                 <h2>{{ __('Festivals and events') }}</h2>
                 @foreach ($temple->events as $e)
