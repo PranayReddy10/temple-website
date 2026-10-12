@@ -35,8 +35,15 @@
     <meta name="twitter:title" content="{{ $title }}">
     <meta name="twitter:description" content="{{ $description }}">
     <meta name="twitter:image" content="{{ $shareImage }}">
-    <link rel="icon" href="{{ \App\Support\Seo::url('favicon.png') }}">
-    <link rel="apple-touch-icon" href="{{ \App\Support\Seo::url('icons/apple-touch-icon.png') }}">
+    {{-- The tab icon, carried in the page itself so it shows whatever the server does with icon files;
+         then the files search engines and phones fetch (Google wants a multiple of 48 px). --}}
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,{{ rawurlencode(file_get_contents(public_path('brand/logo-icon.svg'))) }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ \App\Support\Seo::url('icons/icon-192.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ \App\Support\Seo::url('icons/favicon-32.png') }}">
+    <link rel="shortcut icon" href="{{ \App\Support\Seo::url('favicon.ico') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ \App\Support\Seo::url('icons/apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ \App\Support\Seo::url('site.webmanifest') }}">
+    <meta name="theme-color" content="{{ config('brand.colors.deep.hex') }}">
     @php($ga = \App\Support\Seo::measurementId())
     @if ($ga && \App\Support\Seo::onWebsite(request()))
         {{-- The website's stream under Admin → Analytics & SEO. --}}

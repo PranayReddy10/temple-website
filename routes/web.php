@@ -42,6 +42,31 @@ Route::get('/', function (Request $request) {
 })->name('home');
 Route::get('/index.html', fn () => redirect('/', 301));
 
+// The site's icons. The web server sends these files itself; these routes
+// answer only when a request for one reaches Laravel instead (an older
+// .htaccess, a host that rewrites everything), so the icon never goes
+// missing from browser tabs and search results.
+Route::get('/{file}', function (string $file) {
+    $path = public_path(str_starts_with($file, 'icons') ? $file : basename($file));
+    abort_unless(is_file($path), 404);
+
+    return response()->file($path, ['Cache-Control' => 'public, max-age=604800']);
+})->where('file', 'favicon\.(ico|png)|icons/(apple-touch-icon|favicon-32|icon-192|icon-512|icon-maskable-512)\.png');
+// The website as an installable app on Android: name, colours, icons.
+Route::get('/site.webmanifest', fn () => response()->json([
+    'name' => config('brand.name'),
+    'short_name' => config('brand.name'),
+    'start_url' => '/',
+    'display' => 'standalone',
+    'background_color' => config('brand.colors.sandal.hex'),
+    'theme_color' => config('brand.colors.deep.hex'),
+    'icons' => [
+        ['src' => '/icons/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png'],
+        ['src' => '/icons/icon-512.png', 'sizes' => '512x512', 'type' => 'image/png'],
+        ['src' => '/icons/icon-maskable-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
+    ],
+], 200, ['Content-Type' => 'application/manifest+json', 'Cache-Control' => 'public, max-age=86400']));
+
 // darshansaathi.com/robots.txt: the website is open to search engines.
 // (temple.darshansaathi.com's own is the static public/robots.txt, which
 // the web server answers before this route is reached.)
