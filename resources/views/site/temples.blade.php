@@ -16,7 +16,14 @@
     ];
 @endphp
 
+@php
+    $crumbLd = collect([['Home', \App\Support\Seo::url('/')]])
+        ->when($state || $deity, fn ($c) => $c->push(['Temples', \App\Support\Seo::url('temples')]))
+        ->when(($district ?? null) !== null, fn ($c) => $c->push([$state->name, \App\Support\Seo::url('states/'.$state->slug)]))
+        ->push([$heading, $canonical]);
+@endphp
 @push('head')
+    <script type="application/ld+json">{!! json_encode(['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => $crumbLd->values()->map(fn ($c, $i) => ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $c[0], 'item' => $c[1]])->all()], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) !!}</script>
     @if (empty($noindex) && $temples->isNotEmpty())<script type="application/ld+json">{!! json_encode($itemList, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) !!}</script>@endif
     @if ($temples->previousPageUrl())<link rel="prev" href="{{ $temples->previousPageUrl() }}">@endif
     @if ($temples->nextPageUrl())<link rel="next" href="{{ $temples->nextPageUrl() }}">@endif
@@ -48,6 +55,11 @@
     <h1>{{ $heading }}</h1>
     <p class="muted">{{ number_format($temples->total()) }} {{ \Illuminate\Support\Str::plural('temple', $temples->total()) }} with darshan timings, pujas and sevas, visiting rules and directions.</p>
     @if (! empty($intro))<p>{{ $intro }}</p>@endif
+    @if (! empty($festivals) && $festivals->isNotEmpty())
+        <p class="muted" style="margin:8px 0 0">🪔 {{ __('Festivals') }}:
+            @foreach ($festivals as $f)<a href="{{ \App\Http\Controllers\FestivalPageController::url($f) }}">{{ $f->name }}</a> ({{ $f->starts_on->format('j M') }})@if (! $loop->last), @endif@endforeach
+        </p>
+    @endif
 
     {{-- On a state or deity page the search stays within it. --}}
     <form class="find" action="{{ \App\Support\Seo::url($tag ? 'tags/'.$tag->slug : ($district ? 'states/'.$state->slug.'/'.$district->slug : ($state ? 'states/'.$state->slug : ($deity ? 'deities/'.$deity->slug : 'temples')))) }}" method="get" role="search">

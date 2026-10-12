@@ -135,6 +135,7 @@
         </a>
         <nav class="menu" id="site-menu" aria-label="Main">
             <a href="{{ \App\Support\Seo::url('temples') }}" @class(['on' => request()->is('temples', 'temples/*', '*/temples/*', 'states/*', 'deities/*')])>🛕 {{ __('Temples') }}</a>
+            <a href="{{ \App\Support\Seo::url('festivals') }}" @class(['on' => request()->is('festivals', 'festivals/*')])>🪔 {{ __('Festivals') }}</a>
             <a href="{{ \App\Support\Seo::url('account/yatras') }}" @class(['on' => request()->is('account/yatras*')])>🧭 {{ __('Yatra planner') }}</a>
             @if (auth('devotee_web')->check())
                 <a href="{{ \App\Support\Seo::url('account/bookings') }}" @class(['on' => request()->is('account/bookings*', 'account/tickets*')])>🎟️ {{ __('My bookings') }}</a>
@@ -164,6 +165,8 @@
                 <a href="{{ \App\Support\Seo::url('temples') }}">{{ __('All temples') }}</a>
                 <a href="{{ \App\Support\Seo::url('/') }}#states">{{ __('Temples by state') }}</a>
                 <a href="{{ \App\Support\Seo::url('/') }}#deities">{{ __('Temples by deity') }}</a>
+                <a href="{{ \App\Support\Seo::url('festivals') }}">{{ __('Festival calendar') }}</a>
+                <a href="{{ \App\Support\Seo::url('festivals/ekadashi') }}">{{ __('Ekadashi dates') }}</a>
                 <a href="{{ $storeUrl ?? \App\Support\Seo::url('/').'#app' }}">{{ __('Get the app') }}</a>
             </div>
             @if ($footerPages->isNotEmpty())

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Festival;
 use App\Models\Page;
 use App\Models\Temple;
 use App\Support\Seo;
@@ -48,6 +49,17 @@ class SitemapController extends Controller
         }
         foreach (PublicTempleController::deitiesWithTemples() as $deity) {
             $xml .= self::entry('url', Seo::url('deities/'.$deity->slug), null, 'weekly', '0.7');
+        }
+        // The festival calendar: the index, each festival, each month, each kind of vrat.
+        $xml .= self::entry('url', Seo::url('festivals'), null, 'weekly', '0.8');
+        foreach (array_keys(FestivalPageController::GROUPS) as $group) {
+            $xml .= self::entry('url', Seo::url('festivals/'.$group), null, 'monthly', '0.7');
+        }
+        foreach (Festival::query()->published()->selectRaw('slug, max(updated_at) as updated_at, max(is_major) as is_major')->groupBy('slug')->get() as $f) {
+            $xml .= self::entry('url', Seo::url('festivals/'.$f->slug), $f->updated_at, 'monthly', $f->is_major ? '0.7' : '0.5');
+        }
+        foreach (FestivalPageController::monthPaths() as $path) {
+            $xml .= self::entry('url', Seo::url('festivals/'.$path), null, 'monthly', '0.5');
         }
         foreach (Page::query()->published()->orderBy('sort_order')->get(['slug', 'updated_at']) as $page) {
             $xml .= self::entry('url', Seo::url($page->slug), $page->updated_at, 'yearly', '0.3');
