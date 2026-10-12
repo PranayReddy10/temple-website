@@ -88,7 +88,7 @@
     <div class="grid">
         @foreach ($temples as $t)
             <a class="tile" href="{{ \App\Support\Seo::url('temples/'.$t->slug) }}">
-                <div class="ph">@if ($t->primaryPhoto)<img src="{{ \App\Support\Seo::absolute($t->primaryPhoto->thumbnailUrl()) }}" alt="{{ $t->name }}" loading="lazy">@endif</div>
+                <div class="ph">@if ($t->primaryPhoto)<img src="{{ \App\Support\Seo::absolute($t->primaryPhoto->thumbnailUrl()) }}" alt="{{ $t->name }}" loading="lazy">@elseif ($t->deity?->imageUrl())<img src="{{ \App\Support\Seo::absolute($t->deity->imageUrl()) }}" alt="{{ $t->deity->name }} – {{ $t->name }}" loading="lazy" style="object-fit:contain;background:#3E2723">@endif</div>
                 <div class="tx">
                     <b>{{ $t->name }}</b>
                     <span>{{ collect([$t->deity?->name, $t->city, $t->state?->name])->filter()->implode(' · ') }}</span>

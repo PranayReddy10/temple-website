@@ -32,7 +32,7 @@ class PublicTempleController extends Controller
         $q = trim((string) $request->query('q'));
         $temples = Temple::query()->published()
             ->when($q !== '', fn ($query) => $query->search($q))
-            ->with(['deity:id,name', 'state:id,name', 'primaryPhoto'])
+            ->with(['deity:id,name,image_disk,image_path', 'state:id,name', 'primaryPhoto'])
             ->tap(self::cardDetails(...))
             ->orderByDesc('is_featured')->orderBy('name')
             ->paginate(48)->withQueryString();
@@ -61,7 +61,7 @@ class PublicTempleController extends Controller
 
         $temples = Temple::query()->published()->where('state_id', $state->id)
             ->when($q !== '', fn ($query) => $query->search($q))
-            ->with(['deity:id,name', 'state:id,name', 'primaryPhoto'])
+            ->with(['deity:id,name,image_disk,image_path', 'state:id,name', 'primaryPhoto'])
             ->tap(self::cardDetails(...))
             ->orderByDesc('is_featured')->orderBy('name')
             ->paginate(48)
@@ -94,7 +94,7 @@ class PublicTempleController extends Controller
 
         $temples = Temple::query()->published()->where('deity_id', $deity->id)
             ->when($q !== '', fn ($query) => $query->search($q))
-            ->with(['deity:id,name', 'state:id,name', 'primaryPhoto'])
+            ->with(['deity:id,name,image_disk,image_path', 'state:id,name', 'primaryPhoto'])
             ->tap(self::cardDetails(...))
             ->orderByDesc('is_featured')->orderBy('name')
             ->paginate(48)
@@ -196,6 +196,8 @@ class PublicTempleController extends Controller
         $nearby = TempleSeo::nearby($temple);
         $photoCount = $temple->photos->count();
         $canonical = SiteLocale::templeUrl($temple, $locale);
+        $photo = Seo::absolute($temple->primaryPhoto?->mediumUrl() ?? $temple->photos->first()?->mediumUrl());
+        $deityImage = $photo === null ? Seo::absolute($temple->deity?->imageUrl()) : null;
 
         return view('site.temple', [
             'temple' => $temple,
@@ -240,7 +242,12 @@ class PublicTempleController extends Controller
                 : Str::limit(trim(strip_tags((string) ($about ?: $name.($place !== '' ? ', '.$place : '')))), 158),
             'canonical' => $canonical,
             'updatedAt' => $temple->updated_at,
-            'image' => Seo::absolute($temple->primaryPhoto?->mediumUrl() ?? $temple->photos->first()?->mediumUrl()),
+            // The temple's own photo; else its deity's painting; else a card
+            // made for it, so search results and shares always have an image
+            // of this temple rather than none.
+            'image' => $photo ?? $deityImage ?? Seo::url('temples/'.$temple->slug.'/card.png'),
+            'heroImage' => $photo ?? $deityImage,
+            'heroIsDeity' => $photo === null && $deityImage !== null,
             // Links on to more temples: what search engines follow, and what a
             // devotee planning a trip looks at next.
             'sameDeity' => $temple->deity_id ? $related(Temple::query()->where('deity_id', $temple->deity_id)) : collect(),
@@ -260,7 +267,7 @@ class PublicTempleController extends Controller
 
         $temples = Temple::query()->published()->where('district_id', $district->id)
             ->when($q !== '', fn ($query) => $query->search($q))
-            ->with(['deity:id,name', 'state:id,name', 'primaryPhoto'])
+            ->with(['deity:id,name,image_disk,image_path', 'state:id,name', 'primaryPhoto'])
             ->tap(self::cardDetails(...))
             ->orderByDesc('is_featured')->orderBy('name')
             ->paginate(48)

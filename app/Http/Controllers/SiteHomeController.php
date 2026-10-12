@@ -43,7 +43,7 @@ class SiteHomeController extends Controller
         $today = DevotionalClock::now();
 
         $popular = Temple::query()->published()
-            ->with(['deity:id,name', 'state:id,name', 'primaryPhoto'])
+            ->with(['deity:id,name,image_disk,image_path', 'state:id,name', 'primaryPhoto'])
             ->tap(PublicTempleController::cardDetails(...))
             ->orderByDesc('is_featured')->orderByDesc('published_at')
             ->limit(8)->get();
