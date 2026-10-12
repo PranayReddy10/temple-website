@@ -7,8 +7,11 @@ use App\Support\Locales;
 use App\Support\Translation\AutoTranslateFailed;
 use App\Support\Translation\AutoTranslator;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -25,6 +28,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -173,7 +177,48 @@ class TranslationsRelationManager extends RelationManager
                             ->required(),
                     ])
                     ->action(fn (array $data) => $this->translateMissing((array) $data['locales'])),
+                // Every draft at once, after reading them: auto-translate fills
+                // a dozen fields per language, and ticking each was the chore.
+                Action::make('reviewAll')
+                    ->label('Mark all reviewed')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->visible(fn (): bool => (Auth::user()?->canPublish() ?? false)
+                        && $this->getOwnerRecord()->translations()->where('is_reviewed', false)->exists())
+                    ->modalHeading('Mark all waiting translations reviewed')
+                    ->modalDescription('Devotees reading these languages will see them from now on. Read them first: a wrong deity name or dress code is worse than English.')
+                    ->schema([
+                        Select::make('locales')
+                            ->label('Languages')
+                            ->helperText('Leave empty for every language.')
+                            ->options(fn (): array => $this->getOwnerRecord()->translations()->where('is_reviewed', false)
+                                ->pluck('locale')->unique()->mapWithKeys(fn (string $l) => [$l => Locales::options()[$l] ?? $l])->all())
+                            ->multiple(),
+                    ])
+                    ->action(function (array $data): void {
+                        $count = $this->markReviewed($this->getOwnerRecord()->translations()->where('is_reviewed', false)
+                            ->when(filled($data['locales'] ?? null), fn ($q) => $q->whereIn('locale', (array) $data['locales']))
+                            ->get());
+                        Notification::make()->title($count.' '.str('translation')->plural($count).' marked reviewed')->success()->send();
+                    }),
                 CreateAction::make()->label('Add a translation'),
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    BulkAction::make('reviewSelected')
+                        ->label('Mark selected reviewed')
+                        ->icon('heroicon-o-check-badge')
+                        ->color('success')
+                        ->visible(fn (): bool => Auth::user()?->canPublish() ?? false)
+                        ->requiresConfirmation()
+                        ->modalDescription('Devotees reading these languages will see the selected translations from now on.')
+                        ->deselectRecordsAfterCompletion()
+                        ->action(function (Collection $records): void {
+                            $count = $this->markReviewed($records);
+                            Notification::make()->title($count.' '.str('translation')->plural($count).' marked reviewed')->success()->send();
+                        }),
+                    DeleteBulkAction::make(),
+                ]),
             ])
             ->recordActions([
                 Action::make('review')
@@ -184,10 +229,7 @@ class TranslationsRelationManager extends RelationManager
                         && (Auth::user()?->canPublish() ?? false))
                     ->requiresConfirmation()
                     ->modalDescription('Devotees reading this language will see it from now on.')
-                    ->action(fn (Translation $record) => $record->update([
-                        'is_reviewed' => true,
-                        'reviewed_by' => Auth::id(),
-                    ])),
+                    ->action(fn (Translation $record) => $this->markReviewed(collect([$record]))),
 
                 EditAction::make(),
                 DeleteAction::make(),
@@ -267,6 +309,27 @@ class TranslationsRelationManager extends RelationManager
             ->body($done > 0 ? 'They wait under "Waiting for review" until someone reads them.' : null)
             ->success()
             ->send();
+    }
+
+    /**
+     * Serve these translations to devotees, recording who reviewed them.
+     * One save each, so the temple counts as changed (sitemap, IndexNow).
+     *
+     * @param  Collection<int, Translation>  $records
+     */
+    public function markReviewed(Collection $records): int
+    {
+        abort_unless(Auth::user()?->canPublish() ?? false, 403);
+
+        $count = 0;
+        foreach ($records as $record) {
+            if (! $record->is_reviewed) {
+                $record->update(['is_reviewed' => true, 'reviewed_by' => Auth::id()]);
+                $count++;
+            }
+        }
+
+        return $count;
     }
 
     protected function baseValue(mixed $field): ?string
