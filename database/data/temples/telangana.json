@@ -1,0 +1,2660 @@
+[
+    {
+        "name": "Yadadri Lakshmi Narasimha Temple",
+        "deity": "narasimha",
+        "famous": true,
+        "district": "Yadadri Bhuvanagiri",
+        "city": "Yadagirigutta",
+        "address": "Yadagiri Hill, Yadagirigutta, Yadadri Bhuvanagiri",
+        "pincode": "508115",
+        "lat": 17.5886,
+        "lng": 78.9442,
+        "categories": [
+            "hill-temple",
+            "cave-temple"
+        ],
+        "aliases": {
+            "Yadagirigutta Temple": "en",
+            "Sri Lakshmi Narasimha Swamy Temple, Yadagirigutta": "en",
+            "Yadadri Temple": "en",
+            "యాదగిరిగుట్ట శ్రీ లక్ష్మీనరసింహ స్వామి ఆలయం": "te"
+        },
+        "summary": "Hilltop cave shrine of Lakshmi Narasimha near Bhuvanagiri, rebuilt in black granite and reopened in March 2022; one of Telangana's busiest pilgrim centres.",
+        "history": "Tradition holds that the sage Yada, son of Rishyasringa, performed penance on this hill and was granted darshan of Narasimha, who remained here in several forms inside a cave. The cave shrine is several centuries old and was expanded over time. Between 2016 and March 2022 the Yadadri Temple Development Authority rebuilt and greatly enlarged the complex using Krishna shila black stone and lime mortar instead of cement. The town was renamed Yadadri in 2014; in November 2025 the state government restored the older name Yadagirigutta.",
+        "significance": "Devotees come to seek relief from illness, troubles and evil influences, and the deity is popularly regarded as a healer. The annual Brahmotsavam in Phalguna (February–March) is the main festival, along with Narasimha Jayanti in Vaisakha (April–May). Sudarshana Narasimha Homam, Nitya Kalyanam and Satyanarayana Swamy Vratam are among the most-booked rituals. Many pilgrims stay on the hill and take part in giri pradakshina.",
+        "architecture_style": "Dravidian (Kakatiya-influenced, rebuilt 2016–2022)",
+        "built_period": null,
+        "website": "https://yadagiriguttatemple.telangana.gov.in/",
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": "Traditional dress (dhoti/white lungi with uttariyam for men; saree or churidar with chunni for women) is mandatory for arjitha sevas, Nitya Kalyanam, Sudarshana Homam, Vratam and VIP darshan since June 2024; general queue is exempt",
+            "photography": null,
+            "mobile": null,
+            "footwear": null,
+            "entry": null,
+            "queue": "Free general (dharma) darshan and paid special/VIP darshan queues; weekends and holidays are crowded"
+        },
+        "timings": [
+            {
+                "kind": "general",
+                "label": null,
+                "opens": "04:00",
+                "closes": "21:30",
+                "days": null
+            },
+            {
+                "kind": "general",
+                "label": "Afternoon break",
+                "opens": "15:00",
+                "closes": "16:00",
+                "days": null
+            },
+            {
+                "kind": "aarti",
+                "label": "Suprabhatam",
+                "opens": "04:00",
+                "closes": "04:30",
+                "days": null
+            },
+            {
+                "kind": "aarti",
+                "label": "Nijabhishekam",
+                "opens": "05:30",
+                "closes": "06:30",
+                "days": null
+            }
+        ],
+        "timings_source": "https://blog.yatradham.org/yadadri-temple-timings-online-booking/",
+        "pujas": [
+            {
+                "name": "Suprabhatam",
+                "description": "Early-morning hymn to wake the deity.",
+                "starts_at": "04:00",
+                "duration_minutes": 30,
+                "schedule_note": "Daily",
+                "is_free": false
+            },
+            {
+                "name": "Nijabhishekam",
+                "description": "Ritual bath of the main deity.",
+                "starts_at": "05:30",
+                "duration_minutes": 60,
+                "schedule_note": "Daily",
+                "is_free": false
+            },
+            {
+                "name": "Sahasranamarchana",
+                "description": "Worship with the thousand names of the deity.",
+                "starts_at": "06:30",
+                "duration_minutes": 45,
+                "schedule_note": "Daily",
+                "is_free": false
+            },
+            {
+                "name": "Sudarshana Narasimha Homam",
+                "description": "Fire ritual to Sudarshana and Narasimha, performed for devotees.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Daily",
+                "is_free": false
+            },
+            {
+                "name": "Nitya Kalyanotsavam",
+                "description": "Daily celestial wedding of Lakshmi and Narasimha.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Daily",
+                "is_free": false
+            },
+            {
+                "name": "Satyanarayana Swamy Vratam",
+                "description": "Vratam performed by families at the temple's vratam halls.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Daily",
+                "is_free": false
+            }
+        ],
+        "nearest": {
+            "railway": "Raigir, about 6 km; Bhongir, about 13 km",
+            "airport": "Rajiv Gandhi International Airport, Hyderabad, about 100 km",
+            "bus": "Yadagirigutta bus station"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Sri_Lakshmi_Narasimha_Swamy_Temple,_Yadagirigutta"
+            },
+            {
+                "name": "The News Minute (name restored)",
+                "url": "https://thenewsminute.com/telangana/telangana-cm-revanth-reverses-kcrs-decision-restores-yadadri-temples-old-name"
+            },
+            {
+                "name": "Deccan Chronicle (dress code)",
+                "url": "https://deccanchronicle.com/amp/nation/in-other-news/yadadri-temple-mandates-new-dress-code-from-june-1-894742"
+            },
+            {
+                "name": "Yatradham",
+                "url": "https://blog.yatradham.org/yadadri-temple-timings-online-booking/"
+            }
+        ]
+    },
+    {
+        "name": "Bhadrachalam Sita Ramachandraswamy Temple",
+        "deity": "rama",
+        "famous": true,
+        "district": "Bhadradri Kothagudem",
+        "city": "Bhadrachalam",
+        "address": "Temple Road, Bhadrachalam, on the banks of the Godavari",
+        "pincode": "507111",
+        "lat": 17.6669,
+        "lng": 80.8828,
+        "categories": [
+            "river-ghat-temple",
+            "hill-temple"
+        ],
+        "aliases": {
+            "Bhadradri Temple": "en",
+            "Bhadrachalam Temple": "en",
+            "Bhadradri Sri Sita Ramachandra Swamy Devasthanam": "en",
+            "భద్రాచలం శ్రీ సీతారామచంద్ర స్వామి ఆలయం": "te"
+        },
+        "summary": "Riverside temple of Rama with Sita and Lakshmana on the Godavari, built in the 17th century by Kancherla Gopanna (Bhakta Ramadasu); famous for the Sri Rama Navami Kalyanam.",
+        "history": "Legend says the sage Bhadra did penance on this hill, and Rama appeared to him as a four-armed Vaikuntha Rama with Sita and Lakshmana. In the 17th century Kancherla Gopanna, a revenue official (tahsildar) under the Qutb Shahi ruler Abul Hasan Tana Shah, built the present temple, reportedly using tax revenue. Popular tradition holds he was imprisoned at Golconda for this and released after Rama and Lakshmana miraculously repaid the money. Gopanna, known as Bhakta Ramadasu, composed many Telugu kirtanas on the deity.",
+        "significance": "Bhadrachalam is regarded as one of the most important Rama shrines in South India. The Sita Rama Kalyanam on Sri Rama Navami (Chaitra, March–April) draws very large crowds, and the state government traditionally presents silk clothes and pearls (talambralu) for the wedding. Vaikuntha Ekadasi (December–January) with Teppotsavam on the Godavari is another major event. Devotees also visit Parnasala, about 35 km away, associated with the Ramayana.",
+        "architecture_style": "Dravidian",
+        "built_period": "17th century",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": null,
+            "entry": null,
+            "queue": "Free general darshan plus paid special-entry darshan; Rama Navami Kalyanam and Pattabhishekam tickets need advance booking"
+        },
+        "timings": [
+            {
+                "kind": "general",
+                "label": "Morning",
+                "opens": "04:30",
+                "closes": "13:00",
+                "days": null
+            },
+            {
+                "kind": "general",
+                "label": "Evening",
+                "opens": "15:00",
+                "closes": "21:00",
+                "days": null
+            }
+        ],
+        "timings_source": "https://site.outlookindia.com/traveller/?p=50553",
+        "pujas": [
+            {
+                "name": "Suprabhatam",
+                "description": "Early-morning waking hymn for the deity.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Daily",
+                "is_free": false
+            },
+            {
+                "name": "Sahasranamarchana",
+                "description": "Archana with the thousand names of Rama.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Daily",
+                "is_free": false
+            },
+            {
+                "name": "Nitya Kalyanam",
+                "description": "Daily wedding ceremony of Sita and Rama in the Nitya Kalyana Mandapam.",
+                "starts_at": "09:30",
+                "duration_minutes": 90,
+                "schedule_note": "Daily",
+                "is_free": false
+            },
+            {
+                "name": "Suvarna Tulasi Archana",
+                "description": "Archana with golden tulasi leaves.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Saturdays",
+                "is_free": false
+            },
+            {
+                "name": "Suvarna Pushpa Archana",
+                "description": "Archana with golden flowers.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Sundays",
+                "is_free": false
+            },
+            {
+                "name": "Rajata Ratha Seva",
+                "description": "Procession of the deities in the silver chariot.",
+                "starts_at": "18:30",
+                "duration_minutes": null,
+                "schedule_note": "Daily",
+                "is_free": false
+            }
+        ],
+        "nearest": {
+            "railway": "Bhadrachalam Road (Kothagudem), about 40 km",
+            "airport": "Rajahmundry, about 180 km; Hyderabad, about 310 km",
+            "bus": "Bhadrachalam bus station"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Sita_Ramachandraswamy_Temple,_Bhadrachalam"
+            },
+            {
+                "name": "Telangana Tourism",
+                "url": "https://telanganatourism.gov.in/blog/28-12-2018.html"
+            },
+            {
+                "name": "Incredible India",
+                "url": "https://www.incredibleindia.gov.in/en/telangana/khammam/bhadrachalam-hills"
+            },
+            {
+                "name": "Myoksha (seva list)",
+                "url": "https://myoksha.com/bhadrachalam-temple/"
+            }
+        ]
+    },
+    {
+        "name": "Sri Raja Rajeshwara Swamy Temple, Vemulawada",
+        "deity": "shiva",
+        "famous": true,
+        "district": "Rajanna Sircilla",
+        "city": "Vemulawada",
+        "address": "Vemulawada, Rajanna Sircilla",
+        "pincode": "505302",
+        "lat": 18.4655,
+        "lng": 78.8686,
+        "categories": [],
+        "aliases": {
+            "Vemulawada Rajanna Temple": "en",
+            "Dakshina Kashi": "en",
+            "Vemulawada Temple": "en",
+            "వేములవాడ శ్రీ రాజరాజేశ్వర స్వామి ఆలయం": "te"
+        },
+        "summary": "Major Shiva temple of North Telangana, popularly called Rajanna, known for the kode mokku bull-offering vow and the Dharmagundam holy tank.",
+        "history": "The temple traces its origins to the Vemulawada Chalukyas, feudatories of the Rashtrakutas who ruled from here between about 750 and 973 CE; it is generally dated to the 9th–10th century. A local legend tells of King Raja Narendra, who was cured of leprosy after bathing in the Dharmagundam tank and then recovered a Shiva linga from its waters. The complex grew over the centuries and also contains shrines to Rajarajeshwari Devi, Sri Rama and others. A dargah within the precincts is often cited as a sign of communal harmony.",
+        "significance": "Devotees bathe in the Dharmagundam, believed to have healing properties, before darshan. The best-known vow is kode mokku, in which a devotee leads a bull around the temple and hands it to the temple. Maha Shivaratri (February–March) draws the largest crowds, and Sri Rama Navami, Dasara and Bathukamma are also celebrated. The temple is often called Dakshina Kashi.",
+        "architecture_style": "Chalukyan (Vemulawada Chalukya)",
+        "built_period": "9th–10th century",
+        "website": "https://vemulawadatemple.telangana.gov.in/",
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": null,
+            "entry": null,
+            "queue": null
+        },
+        "timings": [
+            {
+                "kind": "aarti",
+                "label": "Suprabhatam",
+                "opens": "04:10",
+                "closes": "04:30",
+                "days": null
+            },
+            {
+                "kind": "aarti",
+                "label": "Pradosha Puja",
+                "opens": "18:00",
+                "closes": "19:00",
+                "days": null
+            }
+        ],
+        "timings_source": "https://blog.yatradham.org/rajarajeshwara-temple-vemulwada/",
+        "pujas": [
+            {
+                "name": "Suprabhatam",
+                "description": "Early-morning waking hymn.",
+                "starts_at": "04:10",
+                "duration_minutes": 20,
+                "schedule_note": "Daily",
+                "is_free": false
+            },
+            {
+                "name": "Abhishekam",
+                "description": "Ritual bath of the Shiva linga with sacred substances.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Daily",
+                "is_free": false
+            },
+            {
+                "name": "Nitya Kalyanam",
+                "description": "Daily celestial wedding ceremony.",
+                "starts_at": "10:30",
+                "duration_minutes": 120,
+                "schedule_note": "Daily",
+                "is_free": false
+            },
+            {
+                "name": "Pradosha Puja",
+                "description": "Evening worship of Shiva.",
+                "starts_at": "18:00",
+                "duration_minutes": 60,
+                "schedule_note": "Daily",
+                "is_free": false
+            },
+            {
+                "name": "Kode Mokku",
+                "description": "Vow in which a devotee leads a bull around the temple and offers it to the deity.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "On request",
+                "is_free": false
+            }
+        ],
+        "nearest": {
+            "railway": "Karimnagar, about 35 km",
+            "airport": "Rajiv Gandhi International Airport, Hyderabad, about 160 km",
+            "bus": "Vemulawada bus station"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Raja_Rajeswara_Temple,_Vemulawada"
+            },
+            {
+                "name": "Telangana Tourism",
+                "url": "https://telanganatourism.gov.in/blog/sri-raja-rajeshwara-temple.html"
+            },
+            {
+                "name": "Yatradham",
+                "url": "https://blog.yatradham.org/rajarajeshwara-temple-vemulwada/"
+            }
+        ]
+    },
+    {
+        "name": "Gnana Saraswati Temple, Basara",
+        "deity": "saraswati",
+        "famous": true,
+        "district": "Nirmal",
+        "city": "Basara",
+        "address": "Basar, on the banks of the Godavari, Nirmal",
+        "pincode": "504101",
+        "lat": 18.877,
+        "lng": 77.956,
+        "categories": [
+            "river-ghat-temple"
+        ],
+        "aliases": {
+            "Basar Saraswati Temple": "en",
+            "Sri Gnana Saraswathi Temple": "en",
+            "Basara Temple": "en",
+            "బాసర శ్రీ జ్ఞాన సరస్వతి ఆలయం": "te"
+        },
+        "summary": "One of the few major temples to Goddess Saraswati in India, on the Godavari at Basar; families bring children here for Aksharabhyasam, their first lesson in letters.",
+        "history": "Legend says the sage Veda Vyasa stayed here after the Kurukshetra war to meditate and shaped the images of Saraswati, Lakshmi and Kali from sand taken from the Godavari, so the place was once called Vyasapuri. The temple is traditionally said to have been built by a local king around the 6th century. After damage in later invasions, a chief of Nandagiri is said to have restored the idols and renovated the temple in the 17th century.",
+        "significance": "Parents bring young children for Aksharabhyasam, the ritual initiation into learning, believing the goddess grants knowledge. Vasanta Panchami (January–February) and Sharan Navaratri/Dasara (September–October) are the main festivals. Pilgrims bathe in the Godavari before darshan and also visit the Vyasa cave nearby.",
+        "architecture_style": null,
+        "built_period": null,
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": null,
+            "entry": null,
+            "queue": "Free general darshan; Aksharabhyasam in general and special sessions without advance booking"
+        },
+        "timings": [
+            {
+                "kind": "general",
+                "label": "Morning",
+                "opens": "04:00",
+                "closes": "13:00",
+                "days": null
+            },
+            {
+                "kind": "general",
+                "label": "Evening",
+                "opens": "14:00",
+                "closes": "20:30",
+                "days": null
+            },
+            {
+                "kind": "special",
+                "label": "Aksharabhyasam",
+                "opens": "07:30",
+                "closes": "12:30",
+                "days": null
+            },
+            {
+                "kind": "special",
+                "label": "Aksharabhyasam (afternoon)",
+                "opens": "14:00",
+                "closes": "18:00",
+                "days": null
+            }
+        ],
+        "timings_source": "https://blog.yatradham.org/gnana-saraswati-temple-timings-basara/",
+        "pujas": [
+            {
+                "name": "Aksharabhyasam",
+                "description": "Initiation of a child into learning by writing the first letters before the goddess.",
+                "starts_at": "07:30",
+                "duration_minutes": null,
+                "schedule_note": "Daily",
+                "is_free": false
+            }
+        ],
+        "nearest": {
+            "railway": "Basar railway station, about 2 km",
+            "airport": "Rajiv Gandhi International Airport, Hyderabad, about 210 km",
+            "bus": "Basar bus stand"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia (Basara)",
+                "url": "https://en.wikipedia.org/wiki/Basara,_Telangana"
+            },
+            {
+                "name": "Hindupad (Aksharabhyasam)",
+                "url": "https://hindupad.com/basara-aksharabhyasam-timings/"
+            },
+            {
+                "name": "Yatradham",
+                "url": "https://blog.yatradham.org/gnana-saraswati-temple-timings-basara/"
+            }
+        ]
+    },
+    {
+        "name": "Ramappa Temple (Kakatiya Rudreshwara Temple)",
+        "deity": "shiva",
+        "famous": true,
+        "district": "Mulugu",
+        "city": "Palampet",
+        "address": "Palampet, Venkatapur mandal, Mulugu",
+        "pincode": "506345",
+        "lat": 18.2591,
+        "lng": 79.9435,
+        "categories": [
+            "unesco-world-heritage"
+        ],
+        "aliases": {
+            "Ramappa Temple": "en",
+            "Ramalingeswara Temple": "en",
+            "Rudreshwara Temple, Palampet": "en",
+            "రామప్ప దేవాలయం": "te"
+        },
+        "summary": "13th-century Kakatiya Shiva temple at Palampet, inscribed as a UNESCO World Heritage Site in 2021 and known for its sculptures and lightweight floating bricks.",
+        "history": "An inscription dates the start of construction to 1213 CE, during the reign of the Kakatiya king Ganapati Deva, under his general Recherla Rudra. UNESCO notes that work is believed to have continued for about 40 years. The temple is popularly named after its chief sculptor, Ramappa. It was inscribed on the UNESCO World Heritage List in July 2021 as the Kakatiya Rudreshwara (Ramappa) Temple.",
+        "significance": "The presiding deity is Shiva as Ramalingeswara, and the temple is still a place of worship as well as a protected monument. It is famous for its dolerite madanika (bracket) figures, carved pillars and a sandbox foundation with lightweight porous bricks in the tower that help make it earthquake resistant. Maha Shivaratri is the main festival. The nearby Ramappa Lake was built in the same period.",
+        "architecture_style": "Kakatiya",
+        "built_period": "13th century (begun 1213 CE)",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": "Footwear must be removed before entering the temple",
+            "entry": "Protected monument; paid entry ticket reported for visitors",
+            "queue": null
+        },
+        "timings": [
+            {
+                "kind": "general",
+                "label": null,
+                "opens": "06:00",
+                "closes": "18:00",
+                "days": null
+            }
+        ],
+        "timings_source": "https://chalbanjare.com/telangana/tourist-attraction/ramappa-ramalingeswara-temple-warangal",
+        "pujas": [],
+        "nearest": {
+            "railway": "Warangal, about 65 km",
+            "airport": "Rajiv Gandhi International Airport, Hyderabad, about 210 km",
+            "bus": "Mulugu bus station, about 15 km"
+        },
+        "sources": [
+            {
+                "name": "UNESCO",
+                "url": "https://whc.unesco.org/en/list/1570"
+            },
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Ramappa_Temple"
+            }
+        ]
+    },
+    {
+        "name": "Thousand Pillar Temple, Hanumakonda",
+        "deity": "shiva",
+        "famous": true,
+        "district": "Hanumakonda",
+        "city": "Hanumakonda",
+        "address": "Hanamkonda–Warangal Road, Hanumakonda",
+        "pincode": "506011",
+        "lat": 18.0037,
+        "lng": 79.5747,
+        "categories": [],
+        "aliases": {
+            "Rudreshwara Swamy Temple": "en",
+            "Veyi Sthambhala Gudi": "en",
+            "Thousand Pillar Temple, Warangal": "en",
+            "వేయి స్తంభాల గుడి": "te"
+        },
+        "summary": "Kakatiya-era triple shrine (trikutalayam) to Shiva, Vishnu and Surya in Hanumakonda, named for its many intricately carved pillars.",
+        "history": "The temple is generally credited to the Kakatiya king Rudra Deva and dated to about 1163 CE, though some sources give a later construction window. Its three shrines, to Rudreshwara (Shiva), Vishnu and Surya, are arranged in a star-shaped plan around a common mandapa. The complex was damaged during the Delhi Sultanate invasions of the 14th century. The Archaeological Survey of India dismantled and rebuilt the Kalyana Mandapam over several decades using the original sandbox foundation technique.",
+        "significance": "Worship continues at the Rudreshwara shrine, and Maha Shivaratri (February–March) is the main festival. A large monolithic Nandi faces the Shiva shrine. The temple is one of the best-known Kakatiya monuments and is usually visited together with Warangal Fort and Bhadrakali Temple.",
+        "architecture_style": "Kakatiya",
+        "built_period": "12th century (c. 1163 CE)",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": "Footwear must be removed before entering the shrine",
+            "entry": null,
+            "queue": null
+        },
+        "timings": [
+            {
+                "kind": "general",
+                "label": null,
+                "opens": "06:00",
+                "closes": "20:00",
+                "days": null
+            }
+        ],
+        "timings_source": "https://blog.yatradham.org/thousand-pillar-temple-timings/",
+        "pujas": [],
+        "nearest": {
+            "railway": "Kazipet Junction, about 5 km; Warangal, about 7 km",
+            "airport": "Rajiv Gandhi International Airport, Hyderabad, about 160 km",
+            "bus": "Hanamkonda bus station, about 2 km"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Thousand_Pillar_Temple"
+            },
+            {
+                "name": "Incredible India",
+                "url": "https://www.incredibleindia.gov.in/en/telangana/warangal/thousand-pillar-temple"
+            }
+        ]
+    },
+    {
+        "name": "Bhadrakali Temple, Warangal",
+        "deity": "devi",
+        "famous": true,
+        "district": "Hanumakonda",
+        "city": "Warangal",
+        "address": "Bhadrakali Temple Road, on the banks of Bhadrakali Lake, between Hanamkonda and Warangal",
+        "pincode": null,
+        "lat": 17.9945,
+        "lng": 79.5843,
+        "categories": [
+            "hill-temple"
+        ],
+        "aliases": {
+            "Sri Bhadrakali Devasthanam": "en",
+            "Warangal Bhadrakali Temple": "en",
+            "భద్రకాళి ఆలయం": "te"
+        },
+        "summary": "Ancient hillside temple of Goddess Bhadrakali beside Bhadrakali Lake in Warangal, revered as the family deity of the Kakatiya kings.",
+        "history": "According to an inscription and local tradition, the temple was founded around 625 CE by the Chalukya king Pulakeshin II after his conquest of the Vengi region. The Kakatiya rulers later adopted Bhadrakali as their family goddess, and King Ganapati Deva is credited with building the adjoining lake. The temple declined after the fall of the Kakatiyas to the Delhi Sultanate. It was renovated in 1950 by Sri Ganesh Rao Sastri with support from local patrons including a Gujarati merchant, Maganlal.",
+        "significance": "The goddess is depicted in a seated pose with eight arms and is worshipped in a fierce yet benevolent form. Devi Navaratri/Dasara (September–October) is the biggest festival, when the goddess is decorated in a different form each day, and the Shakambari festival in Ashadha (June–July) is also well known. Devotees visit especially on Tuesdays and Fridays.",
+        "architecture_style": "Chalukyan, renovated 1950",
+        "built_period": "7th century (c. 625 CE)",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": null,
+            "entry": null,
+            "queue": null
+        },
+        "timings": [
+            {
+                "kind": "general",
+                "label": "Morning",
+                "opens": "05:30",
+                "closes": "13:00",
+                "days": null
+            },
+            {
+                "kind": "general",
+                "label": "Evening",
+                "opens": "15:00",
+                "closes": "20:30",
+                "days": null
+            }
+        ],
+        "timings_source": "https://telanganatourism.gov.in/blog/5_Jan_2017_Bhadrakali_temple.html",
+        "pujas": [],
+        "nearest": {
+            "railway": "Warangal, about 4 km; Kazipet Junction, about 7 km",
+            "airport": "Rajiv Gandhi International Airport, Hyderabad, about 160 km",
+            "bus": "Hanamkonda bus station, about 3 km"
+        },
+        "sources": [
+            {
+                "name": "Telangana Tourism",
+                "url": "https://telanganatourism.gov.in/blog/5_Jan_2017_Bhadrakali_temple.html"
+            },
+            {
+                "name": "Telangana Tourism (Divine in Warangal)",
+                "url": "https://telanganatourism.gov.in/partials/destinations/divine-destinations/warangal/bhadrakali-temple.html"
+            }
+        ]
+    },
+    {
+        "name": "Chilkur Balaji Temple",
+        "deity": "venkateswara",
+        "famous": true,
+        "district": "Rangareddy",
+        "city": "Chilkur",
+        "address": "Chilkur village, Moinabad mandal, Rangareddy (near Osman Sagar)",
+        "pincode": null,
+        "lat": 17.3546,
+        "lng": 78.2967,
+        "categories": [],
+        "aliases": {
+            "Visa Balaji Temple": "en",
+            "Chilukuru Balaji": "en",
+            "Sri Balaji Venkateswara Swamy Temple, Chilkur": "en",
+            "చిలుకూరు బాలాజీ ఆలయం": "te"
+        },
+        "summary": "Old Venkateswara temple on the outskirts of Hyderabad, popularly called Visa Balaji; it accepts no money offerings and has no VIP or paid darshan.",
+        "history": "Tradition says the temple dates from the time of Akkanna and Madanna, the 17th-century Golconda ministers who were uncles of Bhakta Ramadasu. A local legend tells of a devotee who could no longer travel to Tirupati and was told in a dream that the Lord was present at Chilkur, where an image was then found. The temple is one of the few in Telangana that remained outside the control of the state endowments department and is run by a hereditary family of archakas. From the 1990s it became popular with students and professionals seeking visas to study or work abroad.",
+        "significance": "Devotees make a wish while walking 11 pradakshinas (circumambulations) and return to walk 108 pradakshinas once it is fulfilled. The temple has no hundi, accepts no cash offerings and does not sell special-entry or VIP darshan tickets, so everyone uses the same queue. Brahmotsavam and Vaikuntha Ekadasi are the main festivals. Weekends and holidays are very crowded.",
+        "architecture_style": null,
+        "built_period": "17th century (traditional)",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": null,
+            "entry": "Open to all; no VIP, special or paid darshan; no hundi or money offerings accepted",
+            "queue": "Single free queue for everyone; weekday mornings are least crowded"
+        },
+        "timings": [
+            {
+                "kind": "general",
+                "label": null,
+                "opens": "05:00",
+                "closes": "20:00",
+                "days": null
+            }
+        ],
+        "timings_source": "https://hindutone.com/spirituality/chilkur-balaji-visa-temple-pradakshina-nri-guide/",
+        "pujas": [
+            {
+                "name": "Pradakshina vow",
+                "description": "Wish-making with 11 pradakshinas, and 108 pradakshinas in thanksgiving once the wish is fulfilled.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Daily",
+                "is_free": true
+            }
+        ],
+        "nearest": {
+            "railway": "Lingampalli, about 20 km",
+            "airport": "Rajiv Gandhi International Airport, Hyderabad, about 40 km",
+            "bus": "Mehdipatnam bus station, about 23 km (city buses to Chilkur)"
+        },
+        "sources": [
+            {
+                "name": "DT Next",
+                "url": "https://www.dtnext.in/news/national/amid-concerns-over-h1b-fee-hike-this-balaji-temple-in-tgana-in-focus-for-fulfilling-wish-for-visas-847695"
+            },
+            {
+                "name": "Hindutone",
+                "url": "https://hindutone.com/spirituality/chilkur-balaji-visa-temple-pradakshina-nri-guide/"
+            }
+        ]
+    },
+    {
+        "name": "Birla Mandir, Hyderabad",
+        "deity": "venkateswara",
+        "famous": true,
+        "district": "Hyderabad",
+        "city": "Hyderabad",
+        "address": "Hill Fort Road, Naubat Pahad, Khairatabad, Hyderabad",
+        "pincode": "500004",
+        "lat": 17.4062,
+        "lng": 78.4691,
+        "categories": [
+            "hill-temple"
+        ],
+        "aliases": {
+            "Birla Temple": "en",
+            "Sri Venkateswara Temple, Naubat Pahad": "en",
+            "బిర్లా మందిర్": "te"
+        },
+        "summary": "White-marble Venkateswara temple built by the Birla family in 1976 on Naubat Pahad hill, overlooking Hussain Sagar in central Hyderabad.",
+        "history": "The temple was built by the Birla Foundation of the Birla family and completed in 1976 on Naubat Pahad (also called Kala Pahad), a 280-foot hillock. It was constructed with about 2,000 tonnes of white Rajasthani marble. The main idol of Venkateswara is about 11 feet tall, with separate shrines for Padmavati and Andal. The temple was consecrated by Swami Ranganathananda of the Ramakrishna Mission.",
+        "significance": "The temple is open to all and is a popular stop for both pilgrims and tourists, especially in the evening when it is lit up and offers views over the city and Hussain Sagar. Vaikuntha Ekadasi and Sri Rama Navami are among the festivals celebrated. Unusually, there are no bells in the temple, keeping it quiet for meditation.",
+        "architecture_style": "Blend of South Indian (Dravidian), Rajasthani and Utkala styles",
+        "built_period": "1976",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": "Cameras not allowed inside",
+            "mobile": "Mobile phones not allowed inside the temple complex; deposit at the counter",
+            "footwear": "Footwear deposited before climbing to the shrine",
+            "entry": "Open to all",
+            "queue": null
+        },
+        "timings": [
+            {
+                "kind": "general",
+                "label": "Morning",
+                "opens": "07:00",
+                "closes": "12:00",
+                "days": null
+            },
+            {
+                "kind": "general",
+                "label": "Evening",
+                "opens": "15:00",
+                "closes": "21:00",
+                "days": null
+            }
+        ],
+        "timings_source": "https://www.incredibleindia.gov.in/en/telangana/hyderabad/birla-temple",
+        "pujas": [],
+        "nearest": {
+            "railway": "Khairatabad MMTS, about 1 km; Hyderabad Deccan (Nampally), about 3 km",
+            "airport": "Rajiv Gandhi International Airport, Hyderabad, about 30 km",
+            "bus": "Lakdikapul, about 1 km"
+        },
+        "sources": [
+            {
+                "name": "Telangana Tourism",
+                "url": "https://telanganatourism.gov.in/partials/destinations/divine-destinations/hyderabad/birla-mandir.html"
+            },
+            {
+                "name": "Incredible India",
+                "url": "https://www.incredibleindia.gov.in/en/telangana/hyderabad/birla-temple"
+            },
+            {
+                "name": "Maps of India",
+                "url": "https://www.mapsofindia.com/my-india/india/pure-marble-marvel-birla-mandir"
+            }
+        ]
+    },
+    {
+        "name": "Jogulamba Temple, Alampur",
+        "deity": "devi",
+        "famous": true,
+        "district": "Jogulamba Gadwal",
+        "city": "Alampur",
+        "address": "Alampur, at the confluence of the Tungabhadra and Krishna, Jogulamba Gadwal",
+        "pincode": "509152",
+        "lat": 15.8784,
+        "lng": 78.1338,
+        "categories": [
+            "shakti-peetha",
+            "river-ghat-temple"
+        ],
+        "aliases": {
+            "Alampur Jogulamba Temple": "en",
+            "Sri Jogulamba Balabrahmeswara Swamy Temple": "en",
+            "జోగులాంబ ఆలయం": "te"
+        },
+        "summary": "Temple of Goddess Jogulamba at Alampur, the fifth of the 18 Ashtadasa Shakti Peethas, beside the Navabrahma group of early Chalukyan Shiva temples.",
+        "history": "Tradition holds that Sati's upper jaw (teeth) fell at Alampur, making it one of the 18 Maha Shakti Peethas. The surrounding Navabrahma temples, dedicated to Shiva as Balabrahmeswara and others, were built by the Badami Chalukyas in the 7th–8th centuries. The original Jogulamba shrine was destroyed in the 14th century during the Bahmani period, and the deity was kept for centuries in the Balabrahmeswara temple. A new temple was built on the original site in 2005 and the goddess was reinstalled there.",
+        "significance": "Devotees worship Jogulamba as a powerful form of Shakti and visit Balabrahmeswara Swamy in the same complex. Navaratri/Dasara (September–October) and Maha Shivaratri are the main festivals. Alampur is also called the western gateway to Srisailam. The site lies near the confluence of the Tungabhadra and Krishna rivers.",
+        "architecture_style": "Badami Chalukya (Navabrahma temples); main shrine rebuilt 2005",
+        "built_period": "7th–8th century (Navabrahma temples); Jogulamba shrine rebuilt 2005",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": null,
+            "entry": null,
+            "queue": null
+        },
+        "timings": [
+            {
+                "kind": "general",
+                "label": "Morning",
+                "opens": "07:00",
+                "closes": "13:00",
+                "days": null
+            },
+            {
+                "kind": "general",
+                "label": "Evening",
+                "opens": "14:00",
+                "closes": "20:30",
+                "days": null
+            }
+        ],
+        "timings_source": "https://blog.yatradham.org/jogulamba-temple-timings/",
+        "pujas": [],
+        "nearest": {
+            "railway": "Alampur Road, about 10 km; Kurnool City, about 25 km",
+            "airport": "Kurnool (Orvakal), about 50 km; Hyderabad, about 210 km",
+            "bus": "Alampur bus stand"
+        },
+        "sources": [
+            {
+                "name": "Telangana Tourism",
+                "url": "https://telanganatourism.gov.in/partials/destinations/divine-destinations/mahabubnagar/alampur-jogulamba-temple.html"
+            },
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Jogulamba_Temple"
+            },
+            {
+                "name": "Yatradham",
+                "url": "https://blog.yatradham.org/jogulamba-temple-timings/"
+            }
+        ]
+    },
+    {
+        "name": "Sammakka Saralamma Temple, Medaram",
+        "deity": "devi",
+        "famous": true,
+        "district": "Mulugu",
+        "city": "Medaram",
+        "address": "Medaram, Tadvai mandal, Mulugu",
+        "pincode": null,
+        "lat": 18.305,
+        "lng": 80.227,
+        "categories": [
+            "forest-temple"
+        ],
+        "aliases": {
+            "Medaram Jatara": "en",
+            "Sammakka Sarakka": "en",
+            "Medaram Gaddelu": "en",
+            "సమ్మక్క సారలమ్మ": "te"
+        },
+        "summary": "Forest shrine of the tribal goddesses Sammakka and Saralamma at Medaram, site of the biennial Medaram Jatara, one of the largest tribal gatherings in India.",
+        "history": "Koya oral tradition says that in the 13th century the Kakatiya king Prataparudra imposed taxes on the Koya chief Pagididda Raju, which he could not pay during a drought. In the battle that followed, Pagididda Raju, his daughter Saralamma and others were killed, and Sammakka, after fighting bravely, disappeared into the forest near Chilakalagutta, where only a vermilion casket was found. The Koya people deified mother and daughter and began a festival in their honour every two years. The goddesses are represented by sacred poles and vermilion on raised platforms (gaddelu) rather than by idols.",
+        "significance": "The Medaram Jatara is held every two years for four days in Magha (January–February). On the first day Saralamma is brought from Kannepalli, and on the second Sammakka is brought from Chilakalagutta to the gaddelu, with rituals performed by Koya priests. Pilgrims bathe in the Jampanna Vagu stream and offer jaggery, called bangaram (gold), equal to their own weight. Crowds are estimated at over a crore people, and it is often called the Kumbh Mela of the tribals.",
+        "architecture_style": null,
+        "built_period": null,
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": null,
+            "entry": null,
+            "queue": null
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [
+            {
+                "name": "Bangaram offering",
+                "description": "Offering of jaggery equal to one's body weight to the goddesses.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Especially during the jatara",
+                "is_free": false
+            }
+        ],
+        "nearest": {
+            "railway": "Warangal / Kazipet, about 100 km",
+            "airport": "Rajiv Gandhi International Airport, Hyderabad, about 250 km",
+            "bus": "Special TGSRTC buses to Medaram during the jatara; Mulugu bus station otherwise"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Sammakka_Saralamma_Jatara"
+            },
+            {
+                "name": "The South First",
+                "url": "https://thesouthfirst.com/telangana/medaram-jatara-an-ode-to-the-odessey-of-tribal-deities-valour-sacrifice/"
+            }
+        ]
+    },
+    {
+        "name": "Komuravelli Mallikarjuna Swamy Temple",
+        "deity": "shiva",
+        "famous": true,
+        "district": "Siddipet",
+        "city": "Komuravelli",
+        "address": "Komuravelli hill, Komuravelli mandal, Siddipet",
+        "pincode": null,
+        "lat": 17.93,
+        "lng": 78.8963,
+        "categories": [
+            "hill-temple",
+            "cave-temple"
+        ],
+        "aliases": {
+            "Komuravelli Mallanna Temple": "en",
+            "Komrelly Mallanna": "en",
+            "కొమురవెల్లి మల్లన్న ఆలయం": "te"
+        },
+        "summary": "Hill-cave shrine of Mallanna (Mallikarjuna Swamy, a form of Shiva) with his consorts Golla Ketamma and Medalamma, a major folk pilgrimage centre of Telangana.",
+        "history": "The temple stands in a cave on a small hill at Komuravelli. According to local tradition, a devotee named Komaranna of the Yadava (Golla) community installed the deity on the hill. The main image is moulded from clay and is believed to be about 500 years old. Mallanna's story, including his marriage to Medalamma, is not written down but is preserved in the Oggu Katha ballad tradition sung by Oggu pujaris.",
+        "significance": "The deity is especially revered by pastoral and farming communities, who come to fulfil vows and offer bonam (cooked rice offerings). The jatara season runs from Makara Sankranti (January) to Ugadi (March–April) and includes Brahmotsavam, Pedda Patnam on Maha Shivaratri, and Agni Gundalu (fire-walking) on the Sunday before Ugadi. Oggu pujaris draw large coloured-powder designs called patnam as offerings. Sundays during the jatara see the biggest crowds.",
+        "architecture_style": null,
+        "built_period": null,
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": null,
+            "entry": null,
+            "queue": null
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [
+            {
+                "name": "Bonam offering",
+                "description": "Offering of cooked rice in decorated pots to Mallanna.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Especially on Sundays and jatara days",
+                "is_free": false
+            },
+            {
+                "name": "Patnam",
+                "description": "Ritual floor design of coloured powders drawn by Oggu pujaris as an offering.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "On request; Pedda Patnam on Maha Shivaratri",
+                "is_free": false
+            }
+        ],
+        "nearest": {
+            "railway": "Siddipet, about 30 km; Secunderabad, about 85 km",
+            "airport": "Rajiv Gandhi International Airport, Hyderabad, about 110 km",
+            "bus": "Komuravelli bus stop (buses from Siddipet and Hyderabad)"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Komrelly_Mallanna_Temple"
+            },
+            {
+                "name": "Telangana Tourism",
+                "url": "https://telanganatourism.gov.in/partials/about/festivals-of-telangana/komuravelli-mallanna-jaathara.html"
+            },
+            {
+                "name": "Deccan Chronicle",
+                "url": "https://deccanchronicle.com/southern-states/telangana/sri-mallikarjuna-swamy-brahmotsavalu-conclude-1868730"
+            }
+        ]
+    },
+    {
+        "name": "Kondagattu Anjaneya Swamy Temple",
+        "deity": "hanuman",
+        "famous": true,
+        "district": "Jagtial",
+        "city": "Kondagattu",
+        "address": "Kondagattu hill, near Muthyampet, Mallial mandal, Jagtial",
+        "pincode": null,
+        "lat": null,
+        "lng": null,
+        "categories": [
+            "hill-temple",
+            "forest-temple"
+        ],
+        "aliases": {
+            "Kondagattu Hanuman Temple": "en",
+            "Kondagattu Anjanna": "en",
+            "కొండగట్టు ఆంజనేయ స్వామి ఆలయం": "te"
+        },
+        "summary": "Hilltop Hanuman temple near Jagtial, the main centre of Hanuman Deeksha in Telangana, drawing lakhs of devotees around Hanuman Jayanti.",
+        "history": "Local legend says that about 300 years ago a cowherd named Singam Sanjeevudu, searching for a lost cow, fell asleep on the hill and was told by Anjaneya in a dream where to find it; on waking he found the idol of Anjaneya there. The present temple is credited to Krishna Rao Deshmukh, a local landlord, though sources differ on when he rebuilt it. The idol is notable for showing Anjaneya with two faces, one of them Narasimha.",
+        "significance": "Many devotees take the 41-day Hanuman Deeksha and walk long distances to Kondagattu to complete it, carrying irumudi up the hill. Hanuman Jayanti (Chinna and Pedda Jayanti in Chaitra and Vaisakha) is the main festival and draws several lakh pilgrims. The temple is also popular with couples praying for children, and Tuesdays and Saturdays are busy.",
+        "architecture_style": null,
+        "built_period": null,
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": null,
+            "entry": null,
+            "queue": null
+        },
+        "timings": [
+            {
+                "kind": "general",
+                "label": null,
+                "opens": "04:00",
+                "closes": "20:30",
+                "days": null
+            }
+        ],
+        "timings_source": "https://www.trawell.in/telangana/karimnagar/kondagattu-anjaneya-swamy-temple",
+        "pujas": [
+            {
+                "name": "Hanuman Deeksha viramana",
+                "description": "Completion of the 41-day Hanuman Deeksha with irumudi offering at the temple.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Around Hanuman Jayanti",
+                "is_free": false
+            }
+        ],
+        "nearest": {
+            "railway": "Karimnagar, about 35 km",
+            "airport": "Rajiv Gandhi International Airport, Hyderabad, about 200 km",
+            "bus": "Jagtial bus station, about 15 km"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Kondagattu_Anjaneya_Swamy_Temple"
+            },
+            {
+                "name": "Telangana Tourism",
+                "url": "https://telanganatourism.gov.in/partials/destinations/divine-destinations/karimnagar/kondagattu-anjaneya-swamy-temple.html"
+            },
+            {
+                "name": "Deccan Chronicle",
+                "url": "https://deccanchronicle.com/southern-states/telangana/grand-hanuman-jayanti-fete-in-kondagattu-1872558"
+            }
+        ]
+    },
+    {
+        "name": "Kaleshwara Mukteswara Swamy Temple, Kaleshwaram",
+        "deity": "shiva",
+        "famous": true,
+        "district": "Jayashankar Bhupalpally",
+        "city": "Kaleshwaram",
+        "address": "Kaleshwaram, Mahadevpur mandal, Jayashankar Bhupalpally",
+        "pincode": "505504",
+        "lat": 18.8131,
+        "lng": 79.9069,
+        "categories": [
+            "river-ghat-temple"
+        ],
+        "aliases": {
+            "Kaleshwaram Temple": "en",
+            "Kaleshwara Mukteshwara Swamy Temple": "en",
+            "Dakshina Kashi": "en",
+            "కాళేశ్వర ముక్తీశ్వర స్వామి ఆలయం": "te"
+        },
+        "summary": "Ancient Shiva temple at the Triveni Sangamam of the Godavari, Pranahita and the hidden Saraswati, unusual for its two lingas on a single pedestal.",
+        "history": "The temple enshrines two lingas on one pedestal: Mukteswara, representing Shiva, and Kaleshwara, representing Yama. A popular legend says Yama, finding that people freed of sins at Mukteswara were bypassing his realm, did penance here and Shiva allowed him a linga beside his own. Kaleshwaram is counted as one of the three Trilinga kshetras, with Srisailam and Draksharamam, that are said to give Telangana its name. In 2026 a Rs 198-crore redevelopment of the temple began, and daily rituals were shifted to a balalayam at the nearby Adi Mukteswara Swamy temple.",
+        "significance": "Pilgrims bathe at the confluence (Triveni Sangamam) before worshipping both lingas, believing it frees them from sins and grants moksha. Maha Shivaratri and Kartika masam (October–November) are the main festivals. The temple hosts the Pranahita and Saraswati Pushkaralu, held once every 12 years. A notable feature is a hole in the Mukteswara linga said never to fill with water.",
+        "architecture_style": null,
+        "built_period": null,
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": null,
+            "entry": "During the 2026 redevelopment, darshan and rituals are held at the balalayam in the Adi Mukteswara Swamy temple",
+            "queue": null
+        },
+        "timings": [
+            {
+                "kind": "general",
+                "label": "Morning",
+                "opens": "04:30",
+                "closes": "13:00",
+                "days": null
+            },
+            {
+                "kind": "general",
+                "label": "Evening",
+                "opens": "16:00",
+                "closes": "20:00",
+                "days": null
+            },
+            {
+                "kind": "aarti",
+                "label": "Suprabhatha Seva",
+                "opens": "04:30",
+                "closes": "05:30",
+                "days": null
+            },
+            {
+                "kind": "darshan",
+                "label": "Sarva darshan",
+                "opens": "07:00",
+                "closes": "12:30",
+                "days": null
+            }
+        ],
+        "timings_source": "https://blog.yatradham.org/kaleshwaram-temple-timings/",
+        "pujas": [
+            {
+                "name": "Suprabhatha Seva",
+                "description": "Early-morning waking service.",
+                "starts_at": "04:30",
+                "duration_minutes": 60,
+                "schedule_note": "Daily",
+                "is_free": false
+            },
+            {
+                "name": "Abhishekam",
+                "description": "Ritual bath of the lingas.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Daily",
+                "is_free": false
+            },
+            {
+                "name": "Laksha Bilwarchana",
+                "description": "Worship with one lakh bilva leaves, booked in advance with the devasthanam.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "On request",
+                "is_free": false
+            }
+        ],
+        "nearest": {
+            "railway": "Ramagundam, about 120 km; Manchiryal, about 110 km",
+            "airport": "Rajiv Gandhi International Airport, Hyderabad, about 280 km",
+            "bus": "Kaleshwaram bus stand; Mahadevpur, about 15 km"
+        },
+        "sources": [
+            {
+                "name": "Deccan Chronicle (redevelopment)",
+                "url": "https://www.deccanchronicle.com/southern-states/telangana/198-cr-kaleshwaram-temple-makeover-gathers-pace-1977128"
+            },
+            {
+                "name": "All India Radio (Pushkaralu)",
+                "url": "https://www.newsonair.gov.in/telangana-12-day-saraswati-pushkaralu-begins-at-kaleshwaram"
+            },
+            {
+                "name": "Yatradham",
+                "url": "https://blog.yatradham.org/kaleshwaram-temple-timings/"
+            },
+            {
+                "name": "Telangana360",
+                "url": "https://www.telangana360.com/2016/11/kaleshwaram.html"
+            }
+        ]
+    },
+    {
+        "name": "Sri Lakshmi Narasimha Swamy Temple, Dharmapuri",
+        "deity": "narasimha",
+        "famous": true,
+        "district": "Jagtial",
+        "city": "Dharmapuri",
+        "address": "Dharmapuri, on the banks of the Godavari, Jagtial",
+        "pincode": "505425",
+        "lat": 18.9476,
+        "lng": 79.0936,
+        "categories": [
+            "river-ghat-temple"
+        ],
+        "aliases": {
+            "Dharmapuri Narasimha Temple": "en",
+            "Dharmapuri Temple": "en",
+            "ధర్మపురి శ్రీ లక్ష్మీనరసింహ స్వామి ఆలయం": "te"
+        },
+        "summary": "Narasimha temple at Dharmapuri on the Godavari, where the river flows south (Dakshina Vahini); known for its Yama Dharmaraja shrine at the entrance.",
+        "history": "Dharmapuri is mentioned in inscriptions from about the 10th century, and the temple is dated to the Chalukya period, with later expansion under the Kakatiyas, roughly between the 11th and 13th centuries. Legend links the town's name to King Dharmavarma, who is said to have done penance here. The complex has shrines to Ugra (fierce) and Yoga/Saumya (peaceful) forms of Narasimha, along with a Venkateswara shrine, a Shiva temple and a shrine of Yama.",
+        "significance": "Pilgrims bathe in the Godavari, which flows north to south here and is considered especially holy. Devotees traditionally pray first to Yama Dharmaraja at the entrance to be spared an untimely death, then to Anjaneya, before the main deity. The 13-day Brahmotsavam from Phalguna Shuddha Ekadasi (usually March) includes the Kalyanam and a chariot procession. Godavari Pushkaralu is also celebrated here.",
+        "architecture_style": "Chalukya–Kakatiya",
+        "built_period": "11th–13th century",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": null,
+            "entry": null,
+            "queue": null
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [],
+        "nearest": {
+            "railway": "Peddapalli, about 51 km; Mancherial, about 40 km",
+            "airport": "Rajiv Gandhi International Airport, Hyderabad, about 250 km",
+            "bus": "Dharmapuri bus stand; Jagtial, about 48 km"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Lakshmi_Narasimha_Temple,_Dharmapuri"
+            },
+            {
+                "name": "Telangana Tourism",
+                "url": "https://telanganatourism.gov.in/partials/destinations/divine-destinations/nalgonda/dharmapuri-lakshmi-narasimha-swamy-temple.html"
+            },
+            {
+                "name": "Sakshi Post",
+                "url": "https://www.sakshipost.com/news/telangana/dharmapuri-brahmotsavam-begins-today-march-10-385522"
+            }
+        ]
+    },
+    {
+        "name": "Keesaragutta Sri Ramalingeswara Swamy Temple",
+        "deity": "shiva",
+        "famous": true,
+        "district": "Medchal–Malkajgiri",
+        "city": "Keesara",
+        "address": "Keesaragutta hill, Keesara mandal, Medchal-Malkajgiri",
+        "pincode": "501301",
+        "lat": null,
+        "lng": null,
+        "categories": [
+            "hill-temple"
+        ],
+        "aliases": {
+            "Keesaragutta Temple": "en",
+            "Sri Bhavani Ramalingeswara Swamy Temple": "en",
+            "కీసరగుట్ట శ్రీ రామలింగేశ్వర స్వామి ఆలయం": "te"
+        },
+        "summary": "Hillock Shiva temple about 30 km from Hyderabad, where tradition says Rama installed a linga; the hill is strewn with lingas said to have been brought by Hanuman.",
+        "history": "Legend says Rama wished to install a Shiva linga here to atone for killing Ravana and sent Hanuman to Varanasi to fetch one. When Hanuman was late for the auspicious hour, Shiva appeared and gave a linga himself, which Rama installed as Ramalingeswara. Hanuman returned with 101 lingas and, disappointed, scattered them across the hill; Rama then ordained that Hanuman would be worshipped first, and the hill came to be called Kesarigiri, later Keesaragutta. Archaeological finds on the hill include rock-cut caves with an early Telugu inscription of about the 5th century CE and remains associated with the Vishnukundina period.",
+        "significance": "Maha Shivaratri (February–March) is the biggest festival and draws several lakh devotees, and Kartika masam (October–November) is also busy. Devotees worship the many lingas scattered on the hill. It is one of the most popular Shiva temples near Hyderabad.",
+        "architecture_style": null,
+        "built_period": null,
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": null,
+            "entry": null,
+            "queue": null
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [],
+        "nearest": {
+            "railway": "Cherlapally, about 15 km; Secunderabad, about 30 km",
+            "airport": "Rajiv Gandhi International Airport, Hyderabad, about 60 km",
+            "bus": "ECIL bus terminal, about 12 km"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Keesaragutta_Temple"
+            },
+            {
+                "name": "Telangana Tourism",
+                "url": "https://telanganatourism.gov.in/blog/13-june-2017-keesaragutta.html"
+            },
+            {
+                "name": "Telangana360",
+                "url": "https://www.telangana360.com/2016/01/keesaragutta-temple.html"
+            }
+        ]
+    },
+    {
+        "name": "Ujjaini Mahankali Temple, Secunderabad",
+        "deity": "kali",
+        "famous": true,
+        "district": "Hyderabad",
+        "city": "Secunderabad",
+        "address": "General Bazaar, M.G. Road, Secunderabad",
+        "pincode": "500003",
+        "lat": 17.437,
+        "lng": 78.4965,
+        "categories": [],
+        "aliases": {
+            "Lashkar Bonalu Temple": "en",
+            "Sri Ujjaini Mahakali Devasthanam": "en",
+            "Secunderabad Mahankali Temple": "en",
+            "ఉజ్జయిని మహంకాళి ఆలయం": "te"
+        },
+        "summary": "Temple of Goddess Mahankali in Secunderabad founded in 1815 by a soldier returning from Ujjain; centre of the Lashkar Bonalu festival.",
+        "history": "In 1813 a cholera epidemic struck Hyderabad and Secunderabad. Suriti Appaiah, a doli bearer in a military battalion posted to Ujjain, prayed at the Mahakali temple there and vowed to install the goddess in Secunderabad if the epidemic ended. On returning, he and his associates installed a wooden image of Mahankali in July 1815. A stone image of Manikyalamma was found during construction and installed beside her, and a stone image of Mahankali replaced the wooden one in 1964. The temple is managed by the Telangana Endowments Department, with the founder's family retaining a hereditary role.",
+        "significance": "The temple is the focus of Lashkar (Secunderabad) Bonalu in the month of Ashadha (July–August), when lakhs of women carry bonam pots of cooked rice to the goddess. The day after Bonalu, a female oracle delivers Rangam, a prophecy for the coming year, followed by the Ghatam procession. Devotees pray to the goddess for protection from disease and misfortune.",
+        "architecture_style": null,
+        "built_period": "1815",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": null,
+            "entry": null,
+            "queue": null
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [
+            {
+                "name": "Bonam offering",
+                "description": "Offering of cooked rice with jaggery in a decorated pot to the goddess.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Especially during Ashadha Bonalu",
+                "is_free": false
+            }
+        ],
+        "nearest": {
+            "railway": "Secunderabad Junction, about 1 km",
+            "airport": "Rajiv Gandhi International Airport, Hyderabad, about 35 km",
+            "bus": "Secunderabad (Rathifile) bus station, about 1 km"
+        },
+        "sources": [
+            {
+                "name": "Telangana Tourism",
+                "url": "https://telanganatourism.gov.in/blog/ujjaini-Mahakali-temple.html"
+            },
+            {
+                "name": "Incredible India",
+                "url": "https://incredibleindia.gov.in/en/telangana/hyderabad/sri-ujjaini-mahankali-temple"
+            },
+            {
+                "name": "Telangana Today",
+                "url": "https://telanganatoday.com/grand-arrangements-in-place-for-lashkar-bonalu-at-ujjaini-mahakali-temple"
+            }
+        ]
+    },
+    {
+        "name": "Balkampet Yellamma Temple",
+        "deity": "devi",
+        "famous": true,
+        "district": "Hyderabad",
+        "city": "Hyderabad",
+        "address": "Balkampet, near S.R. Nagar / Ameerpet, Hyderabad",
+        "pincode": null,
+        "lat": 17.4436,
+        "lng": 78.4443,
+        "categories": [],
+        "aliases": {
+            "Balkampet Yellamma Pochamma Temple": "en",
+            "Jala Durga Temple": "en",
+            "బల్కంపేట ఎల్లమ్మ ఆలయం": "te"
+        },
+        "summary": "Hyderabad temple of Goddess Yellamma, whose self-manifested image lies about 10 feet below ground in spring water; famous for its Ashadha Kalyanotsavam.",
+        "history": "Tradition holds that the image of the goddess was found by people digging a well, carved on a rock deep below ground level; it is treated as a self-manifested (swayambhu) image and the goddess is also called Jala Durga. The shrine is commonly dated to around the 15th century, and the present temple building is usually dated to 1919. The temple is administered by the Telangana Endowments Department.",
+        "significance": "Water from the spring at the deity's feet is taken home as tirtham and is believed to have healing properties. The Yellamma Kalyanotsavam, held on the first Tuesday of Ashadha (June–July), and the Bonalu that follow draw very large crowds and are attended by state ministers. Sundays and Tuesdays are busy throughout the year.",
+        "architecture_style": null,
+        "built_period": "1919 (present building)",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": null,
+            "entry": null,
+            "queue": null
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [
+            {
+                "name": "Yellamma Kalyanotsavam",
+                "description": "Annual celestial wedding of the goddess.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Annually in Ashadha",
+                "is_free": false
+            }
+        ],
+        "nearest": {
+            "railway": "Begumpet, about 3 km; Secunderabad, about 8 km",
+            "airport": "Rajiv Gandhi International Airport, Hyderabad, about 35 km",
+            "bus": "Ameerpet / S.R. Nagar, about 1 km (Metro: Ameerpet)"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Balkampet_Yellamma_Temple"
+            },
+            {
+                "name": "Deccan Chronicle",
+                "url": "https://www.deccanchronicle.com/nation/current-affairs/080418/jala-durga-at-balkampet-fulfills-all-your-desires.html"
+            },
+            {
+                "name": "Telangana Tourism",
+                "url": "https://telanganatourism.gov.in/partials/destinations/divine-destinations/hyderabad/balkampet-yellamma-temple.html"
+            }
+        ]
+    },
+    {
+        "name": "Sri Simhavahini Mahankali Temple, Lal Darwaza",
+        "deity": "devi",
+        "famous": false,
+        "district": "Hyderabad",
+        "city": "Hyderabad",
+        "address": "Lal Darwaza, Old City, Hyderabad",
+        "pincode": "500065",
+        "lat": null,
+        "lng": null,
+        "categories": [],
+        "aliases": {
+            "Lal Darwaza Mahankali Temple": "en",
+            "Lal Darwaza Bonalu Temple": "en",
+            "లాల్ దర్వాజా సింహవాహిని మహంకాళి ఆలయం": "te"
+        },
+        "summary": "Old City shrine of Goddess Mahankali seated on a lion, best known as the venue where Hyderabad's Ashada Bonalu season comes to its close.",
+        "history": "The goddess is worshipped here as Simhavahini, the lion-riding form of Mahankali. Accounts link the shrine's rise to the great Musi flood of September 1908: according to temple tradition, the sixth Nizam, Mir Mahbub Ali Khan, on the advice of his prime minister Maharaja Kishen Pershad, offered pearls in a silver vessel to the river and to the goddess, after which the waters receded. One account says the Nizam had donated land for the temple in 1905. These details rest on oral tradition and temple committee accounts rather than contemporary records; the Lal Darwaza Bonalu has been held for well over a century (the 2026 festival was described as the 118th).",
+        "significance": "Lal Darwaza hosts the last and one of the largest stages of the Ashada Bonalu festival (July-August), after Golconda and Secunderabad Ujjaini Mahankali. Women carry decorated pots of cooked rice (bonam) as offerings, followed the next day by the Rangam oracle and the Ghatam procession to the Musi near Afzalgunj. The temple is also visited through the year by devotees seeking protection from illness and misfortune.",
+        "architecture_style": null,
+        "built_period": "early 20th century",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": "Remove footwear before entering the shrine",
+            "entry": null,
+            "queue": "Very heavy crowds and long queues on Bonalu days; police-managed queue lines are set up"
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [
+            {
+                "name": "Bonam offering",
+                "description": "Devotees offer pots of cooked rice with jaggery and curd to the goddess during Ashada Bonalu.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Ashada month (July-August)",
+                "is_free": true
+            }
+        ],
+        "nearest": {
+            "railway": "Malakpet / Yakutpura, about 2-3 km",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad, about 22 km",
+            "bus": "Charminar / Afzalgunj bus stops, about 2 km"
+        },
+        "sources": [
+            {
+                "name": "Deccan Chronicle - Untold story of Lal Darwaza Bonalu",
+                "url": "https://www.deccanchronicle.com/amp/southern-states/telangana/pearls-floods-and-the-nizams-faith-the-untold-story-of-lal-darwaza-bonalu-1977773"
+            },
+            {
+                "name": "Deccan Chronicle - Pearl traders owe to this temple",
+                "url": "https://deccanchronicle.com/nation/in-other-news/190622/pearl-traders-in-old-city-owe-to-this-temple.html"
+            },
+            {
+                "name": "Telangana Today - Old City Bonalu",
+                "url": "https://telanganatoday.com/old-city-bonalu-celebrations-to-begin-in-hyderabad-on-sunday"
+            }
+        ]
+    },
+    {
+        "name": "Sri Ranganatha Swamy Temple, Jiyaguda",
+        "deity": "vishnu",
+        "famous": false,
+        "district": "Hyderabad",
+        "city": "Hyderabad",
+        "address": "Jiyaguda, on the banks of the Musi River, Hyderabad",
+        "pincode": "500006",
+        "lat": 17.3695,
+        "lng": 78.4511,
+        "categories": [
+            "river-ghat-temple"
+        ],
+        "aliases": {
+            "Jiyaguda Ranganathaswamy Temple": "en",
+            "Jiyaguda Ranganath Mandir": "en",
+            "జియాగూడ శ్రీ రంగనాథ స్వామి ఆలయం": "te"
+        },
+        "summary": "Roughly 400-year-old Vaishnava temple to Lord Ranganatha on the Musi riverbank in Jiyaguda, one of the oldest Vishnu shrines in Hyderabad.",
+        "history": "The temple is about four centuries old and is credited to the Nanganur (Vanamamalai) Prathama Peetham of Sri Vaishnavas. Local tradition holds that Kalyana Vanamamalai Ramanuja Jeeyar, head of the peetham, stayed here, giving the locality the name Jeeyarguda, later Jiyaguda. In Qutb Shahi times the surrounding area was the trading settlement of Karwan. Worship originally followed the Thenkalai tradition and later the Vanamamalai sampradayam. The temple is now administered by the Telangana Endowments Department.",
+        "significance": "Vaikuntha Ekadasi (December-January) is the main festival, when large crowds come for darshan through the northern Vaikuntha Dwaram. The temple also observes Brahmotsavams and Sri Vaishnava festivals of Ranganatha. Its riverside setting and old complex make it a heritage landmark of the old city.",
+        "architecture_style": "Dravidian",
+        "built_period": "c. 17th century",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": "Remove footwear before entering",
+            "entry": null,
+            "queue": "Heavy queues on Vaikuntha Ekadasi"
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [],
+        "nearest": {
+            "railway": "Nampally (Hyderabad Deccan), about 4 km",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad, about 25 km",
+            "bus": "Jiyaguda / Puranapul bus stops"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Ranganathaswamy_Temple,_Jiyaguda"
+            },
+            {
+                "name": "Uniquely Telangana",
+                "url": "https://uniquelytelangana.in/?p=2232"
+            },
+            {
+                "name": "AroundUs (coordinates)",
+                "url": "https://aroundus.com/p/7810244-ranganathaswamy-temple-jiyaguda"
+            }
+        ]
+    },
+    {
+        "name": "Sri Ashtalakshmi Temple, Vasavi Colony",
+        "deity": "lakshmi",
+        "famous": false,
+        "district": "Rangareddy",
+        "city": "Hyderabad",
+        "address": "Vasavi Colony, Kothapet (between Dilsukhnagar and LB Nagar), Hyderabad",
+        "pincode": "500035",
+        "lat": null,
+        "lng": null,
+        "categories": [],
+        "aliases": {
+            "Ashtalakshmi Temple Hyderabad": "en",
+            "Ashtalakshmi Devalayam": "en",
+            "అష్టలక్ష్మి దేవాలయం": "te"
+        },
+        "summary": "Modern temple in Vasavi Colony dedicated to the eight forms of Goddess Lakshmi, consecrated in 1996 and modelled on the Ashtalakshmi temple in Chennai.",
+        "history": "The foundation stone was laid on 23 February 1991 and construction took more than five years. The temple was consecrated in April 1996 under the guidance of the Kanchi Kamakoti Peetham, with Sri Jayendra Saraswathi performing the ceremony. Its plan was adapted, with modifications, from the Ashtalakshmi temple at Besant Nagar, Chennai. It was built by devotees in the Vasavi Colony housing layout near the Hyderabad-Vijayawada highway.",
+        "significance": "Devotees worship Lakshmi in her eight aspects, including Adi, Dhanya, Dhairya, Gaja, Santana, Vijaya, Vidya and Dhana Lakshmi, for prosperity and family welfare. Fridays are especially busy, and the temple holds Navaratri (September-October), Sravana masam celebrations including Varalakshmi Vratam (July-August) and an annual Brahmotsavam. It closes during solar and lunar eclipses.",
+        "architecture_style": "Dravidian",
+        "built_period": "1991-1996",
+        "website": "https://ashtalakshmitemple.co.in",
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": "Remove footwear before entering",
+            "entry": null,
+            "queue": "Crowded on Fridays and during Navaratri and Sravana masam"
+        },
+        "timings": [
+            {
+                "kind": "general",
+                "label": "Morning",
+                "opens": "06:00",
+                "closes": "12:00",
+                "days": null
+            },
+            {
+                "kind": "general",
+                "label": "Evening",
+                "opens": "17:00",
+                "closes": "21:00",
+                "days": null
+            }
+        ],
+        "timings_source": "https://www.oneindia.com/temples/ashtalakshmi-temple-hyderabad-t955/",
+        "pujas": [
+            {
+                "name": "Abhishekam",
+                "description": "Ritual bathing of the deity performed weekly.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Fridays",
+                "is_free": false
+            }
+        ],
+        "nearest": {
+            "railway": "Malakpet, about 5 km",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad, about 30 km",
+            "bus": "Kothapet / Dilsukhnagar bus stops, about 1-2 km"
+        },
+        "sources": [
+            {
+                "name": "Official website - Devalayam history",
+                "url": "https://ashtalakshmitemple.co.in/temple_history"
+            },
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Ashtalakshmi_Temple,_Hyderabad"
+            },
+            {
+                "name": "Oneindia temples",
+                "url": "https://www.oneindia.com/temples/ashtalakshmi-temple-hyderabad-t955/"
+            }
+        ]
+    },
+    {
+        "name": "Sri Venkateswara Swamy Temple (TTD), Himayatnagar",
+        "deity": "venkateswara",
+        "famous": false,
+        "district": "Hyderabad",
+        "city": "Hyderabad",
+        "address": "TTD Balaji Bhavan, Himayatnagar, Hyderabad",
+        "pincode": "500029",
+        "lat": null,
+        "lng": null,
+        "categories": [],
+        "aliases": {
+            "Himayatnagar Balaji Temple": "en",
+            "TTD Balaji Bhavan Himayatnagar": "en",
+            "హిమాయత్‌నగర్ శ్రీ వేంకటేశ్వర స్వామి ఆలయం": "te"
+        },
+        "summary": "Temple of Lord Venkateswara run by Tirumala Tirupati Devasthanams at its Balaji Bhavan in Himayatnagar, central Hyderabad.",
+        "history": "Tirumala Tirupati Devasthanams (TTD) maintains the Balaji Bhavan in Himayatnagar, which serves as a temple and information centre for Tirumala pilgrims in Hyderabad. The temple follows Tirumala worship traditions. Its annual Brahmotsavams reached their 20th edition in June 2026, which suggests the present temple dates from the mid-2000s.",
+        "significance": "The temple gives Hyderabad devotees darshan of Venkateswara in the Tirumala tradition without travelling to Tirupati. Annual Brahmotsavams (May-June) feature morning and evening vahana sevas, and on Vaikuntha Ekadasi the temple opens from about 2 a.m. for Uttara Dwara darshan.",
+        "architecture_style": "Dravidian",
+        "built_period": "2000s",
+        "website": "https://www.tirumala.org",
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": "Traditional dress is customary in TTD temples",
+            "photography": null,
+            "mobile": null,
+            "footwear": "Remove footwear before entering",
+            "entry": null,
+            "queue": "Heavy crowds on Vaikuntha Ekadasi and Saturdays"
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [
+            {
+                "name": "Vahana Seva",
+                "description": "Processions of the utsava deity on different vahanams during the annual Brahmotsavams.",
+                "starts_at": null,
+                "duration_minutes": 60,
+                "schedule_note": "During Brahmotsavams, mornings about 8:30-9:30 and evenings about 20:00-21:00",
+                "is_free": true
+            }
+        ],
+        "nearest": {
+            "railway": "Kacheguda, about 3 km",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad, about 30 km",
+            "bus": "Himayatnagar / Narayanguda bus stops"
+        },
+        "sources": [
+            {
+                "name": "The News Minute - TTD temple plans",
+                "url": "https://www.thenewsminute.com/article/hyderabad-get-its-own-venkateswara-temple-ttd-makes-grand-plans-35487"
+            },
+            {
+                "name": "Hindupad - Himayatnagar Brahmotsavams",
+                "url": "https://hindupad.com/himayatnagar-venkateswara-swamy-temple-brahmotsavams-hyderabad/"
+            },
+            {
+                "name": "Deccan Chronicle - Vaikunta Ekadasi",
+                "url": "https://deccanchronicle.com/nation/in-other-news/010123/temples-decked-up-for-vaikunta-ekadasi.html"
+            }
+        ]
+    },
+    {
+        "name": "Statue of Equality and 108 Divya Desam Temples, Muchintal",
+        "deity": "vishnu",
+        "famous": true,
+        "district": "Rangareddy",
+        "city": "Shamshabad",
+        "address": "Sri Ramanagaram, Muchintal, Shamshabad, Hyderabad",
+        "pincode": "509325",
+        "lat": 17.186,
+        "lng": 78.3332,
+        "categories": [
+            "divya-desam"
+        ],
+        "aliases": {
+            "Samatha Murthy": "en",
+            "Sri Ramanuja Sahasrabdi Complex": "en",
+            "Divya Saketam": "en",
+            "సమతామూర్తి": "te"
+        },
+        "summary": "A 216-ft seated statue of Sri Ramanujacharya ringed by stone replicas of the 108 Divya Desam shrines, part of Chinna Jeeyar Swamy's ashram complex near Shamshabad.",
+        "history": "The complex was conceived by Tridandi Chinna Jeeyar Swamy to mark the 1,000th birth anniversary of the 11th-century philosopher Ramanujacharya. The 216-ft panchaloha statue was unveiled by Prime Minister Narendra Modi in February 2022 during the Sahasrabdi celebrations. A 120-kg gold idol of Ramanuja is installed in the sanctum within the Bhadra Vedi base. Around the statue, 108 shrines built in black stone reproduce the 108 Divya Desams praised by the Alvars, linked by a covered corridor.",
+        "significance": "The site lets devotees visit representations of all 108 Divya Desams of Vishnu in one place, and it honours Ramanuja's teaching that all people are equal before God. The annual Samatha Kumbh celebrations around the anniversary (February) draw large crowds. A musical laser show on the statue is held in the evenings.",
+        "architecture_style": "Dravidian",
+        "built_period": "2022",
+        "website": "https://statueofequality.org",
+        "phone": "+91 79014 22022",
+        "email": null,
+        "rules": {
+            "dress_code": "Shoulders and knees must be covered; traditional dress preferred",
+            "photography": "Cameras not allowed inside",
+            "mobile": "Mobile phones not allowed; deposit at cloakroom",
+            "footwear": "Remove footwear before entering the shrine area",
+            "entry": "Entry by pass, available at walk-in counters or online; food, bags, pets, tobacco and sharp objects are not allowed",
+            "queue": null
+        },
+        "timings": [
+            {
+                "kind": "general",
+                "label": null,
+                "opens": "11:00",
+                "closes": "20:00",
+                "days": null
+            }
+        ],
+        "timings_source": "https://www.holidify.com/places/hyderabad/the-statue-of-equality-sightseeing-1263922.html",
+        "pujas": [],
+        "nearest": {
+            "railway": "Shamshabad / Umdanagar, about 10 km",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad, about 15 km",
+            "bus": "Shamshabad bus station, about 12 km"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Statue_of_Equality_(Ramanuja)"
+            },
+            {
+                "name": "Holidify",
+                "url": "https://www.holidify.com/places/hyderabad/the-statue-of-equality-sightseeing-1263922.html"
+            },
+            {
+                "name": "HITEX feature",
+                "url": "https://hitex.co.in/features/a-symbol-of-equality.html"
+            }
+        ]
+    },
+    {
+        "name": "Sri Seetha Ramachandra Swamy Temple, Ammapalli",
+        "deity": "rama",
+        "famous": false,
+        "district": "Rangareddy",
+        "city": "Shamshabad",
+        "address": "Ammapalli, Narkhuda village, Shamshabad mandal",
+        "pincode": null,
+        "lat": null,
+        "lng": null,
+        "categories": [],
+        "aliases": {
+            "Ammapalli Temple": "en",
+            "Ammapalli Sri Rama Temple": "en",
+            "Narkhuda Sita Rama Temple": "en",
+            "అమ్మపల్లి సీతారామచంద్ర స్వామి ఆలయం": "te"
+        },
+        "summary": "Old temple of Sita, Rama and Lakshmana near Shamshabad with a large stepwell, long a film location and now a popular wedding venue.",
+        "history": "Local legend says Rama rested here on his way to the Dandakaranya forest. There are no inscriptions on site, and accounts differ on its age: it is variously attributed to the Chalukyas between the 7th and 13th centuries, most often to the 12th-13th century. According to the priests, the sanctum and mandapa are the oldest parts, while the gopuram and the pillared corridors around the stepwell were added in the 17th century. The complex covers about nine acres.",
+        "significance": "The sanctum images of Sita, Rama and Lakshmana are carved from a single stone, and unusually there is no Hanuman beside them, as he had not yet joined Rama during the exile. Sri Rama Navami (March-April) is the main festival, when Sri Rama Kalyanam draws tens of thousands of devotees. Hundreds of Telugu films were shot here until filming was stopped, and the temple is now sought after for weddings.",
+        "architecture_style": "Chalukyan",
+        "built_period": "c. 12th-13th century",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": "Film shooting is no longer permitted",
+            "mobile": null,
+            "footwear": "Remove footwear before entering",
+            "entry": null,
+            "queue": "Large crowds on Sri Rama Navami"
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [
+            {
+                "name": "Sri Rama Kalyanam",
+                "description": "Celestial wedding of Sita and Rama performed on Sri Rama Navami.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Annually on Sri Rama Navami (March-April)",
+                "is_free": true
+            }
+        ],
+        "nearest": {
+            "railway": "Shamshabad / Umdanagar, about 10 km",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad, about 8 km",
+            "bus": "Shamshabad bus station"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia - Narkhuda",
+                "url": "https://en.wikipedia.org/wiki/Narkhuda"
+            },
+            {
+                "name": "Telangana360",
+                "url": "https://www.telangana360.com/2018/01/ammapalli-sita-rama-temple.html"
+            },
+            {
+                "name": "The Week",
+                "url": "https://www.theweek.in/leisure/society/2022/07/22/wedding-bells-ring-louder-at-this-temple.amp.html"
+            }
+        ]
+    },
+    {
+        "name": "Sri Ganesh Temple, Secunderabad",
+        "deity": "ganesha",
+        "famous": false,
+        "district": "Hyderabad",
+        "city": "Secunderabad",
+        "address": "Station Road, beside Secunderabad Railway Station, Secunderabad",
+        "pincode": "500003",
+        "lat": null,
+        "lng": null,
+        "categories": [],
+        "aliases": {
+            "Secunderabad Ganesh Temple": "en",
+            "Station Road Ganesh Temple": "en",
+            "సికింద్రాబాద్ గణేష్ దేవాలయం": "te"
+        },
+        "summary": "About 200-year-old Ganesha temple beside Secunderabad railway station, built around an idol said to have been found in a well in 1824.",
+        "history": "According to temple tradition, sepoys of the Madras Regiment found the Ganesha idol in 1824 while digging a well in the cantonment. A shrine was built for the idol, which became the presiding deity, and the temple grew over the following two centuries. The temple states that the idol's installation was performed under the Kanchi Kamakoti Peetham. The complex now includes several sub-shrines.",
+        "significance": "It is one of the best-known Ganesha temples in the twin cities and is busy on Tuesdays and Sankashti Chaturthi. Vinayaka Chavithi (August-September) is the main festival. Devotees perform daily homams and Ganapathi Kalyanam, and many travellers stop here before journeys from the adjacent station.",
+        "architecture_style": "Dravidian",
+        "built_period": "19th century",
+        "website": null,
+        "phone": "+91 40 2770 1885",
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": "Remove footwear before entering",
+            "entry": null,
+            "queue": "Crowded on Tuesdays and Vinayaka Chavithi"
+        },
+        "timings": [
+            {
+                "kind": "general",
+                "label": "Morning",
+                "opens": "05:30",
+                "closes": "13:00",
+                "days": null
+            },
+            {
+                "kind": "general",
+                "label": "Evening",
+                "opens": "15:30",
+                "closes": "20:00",
+                "days": null
+            }
+        ],
+        "timings_source": "https://hindupad.com/puja-timings-secunderabad-ganesh-temple/",
+        "pujas": [
+            {
+                "name": "Panchamrutha Abhishekam",
+                "description": "Morning ablution of Ganesha with five sacred substances.",
+                "starts_at": "05:45",
+                "duration_minutes": null,
+                "schedule_note": "Daily",
+                "is_free": false
+            },
+            {
+                "name": "Nitya Ganapathi Homam",
+                "description": "Daily fire ritual dedicated to Ganapathi.",
+                "starts_at": "08:30",
+                "duration_minutes": null,
+                "schedule_note": "Daily",
+                "is_free": false
+            },
+            {
+                "name": "Satyanarayana Swamy Vratham",
+                "description": "Vratam to Lord Satyanarayana performed for devotees.",
+                "starts_at": "09:30",
+                "duration_minutes": null,
+                "schedule_note": "Daily",
+                "is_free": false
+            },
+            {
+                "name": "Nitya Ganapathi Kalyanam",
+                "description": "Daily wedding ritual of Ganapathi with Siddhi and Buddhi.",
+                "starts_at": "11:30",
+                "duration_minutes": null,
+                "schedule_note": "Daily",
+                "is_free": false
+            },
+            {
+                "name": "Ganapati Sahita Manyusukta Homam",
+                "description": "Weekly homam combining Ganapathi worship with the Manyu Suktam.",
+                "starts_at": "08:30",
+                "duration_minutes": null,
+                "schedule_note": "Tuesdays",
+                "is_free": false
+            }
+        ],
+        "nearest": {
+            "railway": "Secunderabad Junction, adjacent",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad, about 35 km",
+            "bus": "Secunderabad (Rathifile / Jubilee) bus stations, under 1 km"
+        },
+        "sources": [
+            {
+                "name": "Hindupad - Puja timings",
+                "url": "https://hindupad.com/puja-timings-secunderabad-ganesh-temple/"
+            },
+            {
+                "name": "Hindupad - Contact details",
+                "url": "https://hindupad.com/contact-details-ganesh-temple-secunderabad-station-road/"
+            },
+            {
+                "name": "Holidify",
+                "url": "https://www.holidify.com/places/secunderabad/sri-ganesh-temple-secunderabad-sightseeing-1255207.html"
+            }
+        ]
+    },
+    {
+        "name": "Sri Kurumurthy Venkateswara Swamy Temple, Ammapur",
+        "deity": "venkateswara",
+        "famous": false,
+        "district": "Mahabubnagar",
+        "city": "Ammapur",
+        "address": "Kurumurthy hills, Ammapur, Chinna Chintakunta mandal",
+        "pincode": null,
+        "lat": null,
+        "lng": null,
+        "categories": [
+            "hill-temple",
+            "cave-temple"
+        ],
+        "aliases": {
+            "Kurumurthy Temple": "en",
+            "Kurumurthy Swamy": "en",
+            "Palamuru's Tirupati": "en",
+            "కురుమూర్తి స్వామి ఆలయం": "te"
+        },
+        "summary": "Hill shrine of Lord Venkateswara (Kurumurthy Swamy) near Ammapur, host of the largest annual jatara in the Mahabubnagar region.",
+        "history": "Legend holds that Goddess Lakshmi asked Lord Srinivasa to manifest on these hills, and the name Kurumurthy is linked to the Telugu for 'place where the Lord resides'. The image is said to have stayed in a hill cave for centuries until a local chieftain, Mukkara Chandra Reddy, built a temple on the hill and enshrined it. Sources date the temple to about 1350 CE.",
+        "significance": "The annual Kurumurthy jatara, held over about 19 days in the Karthika season (October-November), is the biggest fair in the district. A highlight is the offering of a new pair of leather sandals (uddalu), made by residents of nearby Vaddeman village who fast while making them, which are carried in procession and placed in the Uddala mandapam. Devotees fulfil vows such as head-shaving and offerings to the deity.",
+        "architecture_style": null,
+        "built_period": "14th century",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": "Remove footwear before climbing to the shrine",
+            "entry": null,
+            "queue": "Very large crowds during the jatara"
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [
+            {
+                "name": "Uddala procession (sandal offering)",
+                "description": "Procession presenting new handmade sandals to the deity.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Annually during the jatara, about a week after Diwali",
+                "is_free": true
+            }
+        ],
+        "nearest": {
+            "railway": "Kurumurthi / Madanapuram station",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad, about 140 km",
+            "bus": "Kothakota, about 25 km; Devarakadra"
+        },
+        "sources": [
+            {
+                "name": "Telangana Tourism - Kurumurthy Swamy Jathara",
+                "url": "https://telanganatourism.gov.in/partials/about/festivals-of-telangana/kurumurthy-swami-jaathara.html"
+            },
+            {
+                "name": "Mahabubnagar district - CC Kunta",
+                "url": "https://mahabubnagar.nic.in/cc-kunta/"
+            },
+            {
+                "name": "Telangana360",
+                "url": "https://www.telangana360.com/2016/12/kurumurthy-temple.html"
+            }
+        ]
+    },
+    {
+        "name": "Manyamkonda Sri Lakshmi Venkateswara Swamy Temple",
+        "deity": "venkateswara",
+        "famous": false,
+        "district": "Mahabubnagar",
+        "city": "Manyamkonda",
+        "address": "Manyamkonda hill, near Devarakadra, on the Mahabubnagar-Raichur road (NH 167)",
+        "pincode": null,
+        "lat": null,
+        "lng": null,
+        "categories": [
+            "hill-temple",
+            "cave-temple"
+        ],
+        "aliases": {
+            "Palamoor Tirupathi": "en",
+            "Munulakonda": "en",
+            "Manyamkonda Temple": "en",
+            "మన్యంకొండ శ్రీ లక్ష్మీ వేంకటేశ్వర స్వామి ఆలయం": "te"
+        },
+        "summary": "Cave shrine of Lord Venkateswara atop the Manyamkonda hills near Mahabubnagar, popularly called the Tirupati of Palamuru.",
+        "history": "The hill was once known as Munulakonda because sages such as Narasimha Yogi, Kasirayalu, Veerappaiah and Ettepu Ramayogi are believed to have meditated here; the name later became Manyamkonda. The devotional singer Hanumadasu (Narayana Konda Hanumadas) is associated with the place. The deity is enshrined in a natural cave on top of the hills, about 16-22 km from Mahabubnagar town.",
+        "significance": "Known as Palamoor Tirupathi, the temple is a major Venkateswara pilgrimage for the Mahabubnagar region and is regarded as a Harihara kshetra. The main annual festival falls on Magha Purnima (February), drawing large numbers of pilgrims. Saturdays in Sravana and Karthika months are also busy.",
+        "architecture_style": null,
+        "built_period": null,
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": "Remove footwear before entering",
+            "entry": null,
+            "queue": null
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [],
+        "nearest": {
+            "railway": "Devarakadra, about 5 km",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad, about 110 km",
+            "bus": "Mahabubnagar bus station, about 16-22 km"
+        },
+        "sources": [
+            {
+                "name": "Telangana Tourism",
+                "url": "https://telanganatourism.gov.in/partials/destinations/divine-destinations/mahabubnagar/manyamkonda-sri-lakshmi-venkateshwara-swamy-temple.html"
+            },
+            {
+                "name": "Mahabubnagar district",
+                "url": "https://mahabubnagar.nic.in/manyam-konda/"
+            },
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Manyamkonda"
+            }
+        ]
+    },
+    {
+        "name": "Sri Satyanarayana Swamy Temple, Gudem",
+        "deity": "vishnu",
+        "famous": false,
+        "district": "Mancherial",
+        "city": "Gudem",
+        "address": "Gudem Gutta (Ratnagiri hill), Gudem village, Dandepalli mandal",
+        "pincode": null,
+        "lat": 18.9058,
+        "lng": 79.1722,
+        "categories": [
+            "hill-temple",
+            "river-ghat-temple"
+        ],
+        "aliases": {
+            "Gudem Gutta Temple": "en",
+            "Annavaram of Telangana": "en",
+            "గూడెం సత్యనారాయణ స్వామి ఆలయం": "te"
+        },
+        "summary": "Hilltop temple of Lord Satyanarayana above the Godavari at Gudem, often called the Annavaram of Telangana.",
+        "history": "According to local tradition, in 1964 Lord Satyanarayana appeared in a dream to a Gudem resident, Govardhana Perumandla Swamy, revealing that he was on the Ratnapu hill; idols were then found on the hill. With help from villagers, a temple was built on the hilltop. The hill was earlier known as Ratnadri.",
+        "significance": "Devotees perform the Satyanarayana Swamy Vratam here, as at Annavaram, for family welfare and fulfilment of vows. Pilgrim numbers peak in Karthika masam (October-November), when devotees bathe in the Godavari before worship. A seven-day annual Brahmotsavam is also held.",
+        "architecture_style": null,
+        "built_period": "1960s",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": "Remove footwear before entering",
+            "entry": null,
+            "queue": "Crowded during Karthika masam"
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [
+            {
+                "name": "Satyanarayana Swamy Vratam",
+                "description": "Vratam to Lord Satyanarayana performed by devotees with the help of temple priests.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Daily; busiest in Karthika masam",
+                "is_free": false
+            }
+        ],
+        "nearest": {
+            "railway": "Mancherial, about 30 km",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad, about 280 km",
+            "bus": "Luxettipet / Dandepalli"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Gudem_Gutta_Shree_Satyanarayana_Swamy_Temple"
+            },
+            {
+                "name": "Telangana Tourism",
+                "url": "https://telanganatourism.gov.in/partials/destinations/divine-destinations/adilabad/gudem-satyanarayana-swamy.html"
+            },
+            {
+                "name": "Uniquely Telangana",
+                "url": "https://uniquelytelangana.in/?p=7725"
+            }
+        ]
+    },
+    {
+        "name": "Sri Koteswara Siddeswara Swamy Temple, Kotilingala",
+        "deity": "shiva",
+        "famous": false,
+        "district": "Jagtial",
+        "city": "Kotilingala",
+        "address": "Kotilingala village, Velgatoor mandal, on the Godavari",
+        "pincode": null,
+        "lat": 18.8614,
+        "lng": 79.1964,
+        "categories": [
+            "river-ghat-temple"
+        ],
+        "aliases": {
+            "Kotilingala Temple": "en",
+            "Kotilingeswara Temple": "en",
+            "Koteshwara Swamy Temple": "en",
+            "కోటిలింగాల ఆలయం": "te"
+        },
+        "summary": "Shiva temple on the Godavari at Kotilingala, beside an early historic fortified site linked to the pre-Satavahana and early Satavahana period.",
+        "history": "Kotilingala is an important archaeological site: excavations revealed a mud fort about 1 km long and punch-marked coins of local rulers Gobhada and Samagopa from around the 2nd-3rd century BCE, and coins bearing the name Simuka, leading some to call it an early Satavahana capital (a view scholars debate). The name Koteshwara is linked to the Shiva shrine standing inside this kota or fort. Some local sources attribute the temple to the Satavahanas, but this dating is not confirmed. The present shrine is the focus of worship on the riverbank.",
+        "significance": "Devotees bathe in the Godavari at the riverside ghat before worshipping Koteswara Siddeswara Swamy. The site is a major bathing point during Godavari Pushkaralu (next due in 2027, with new ghats planned), and is also busy in Karthika masam and on Maha Shivaratri. Its archaeological remains add heritage interest to the pilgrimage.",
+        "architecture_style": null,
+        "built_period": null,
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": "Remove footwear before entering",
+            "entry": null,
+            "queue": null
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [],
+        "nearest": {
+            "railway": "Peddapalli / Mancherial",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad, about 250 km",
+            "bus": "Velgatoor / Jagtial"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Kotilingala"
+            },
+            {
+                "name": "Ministry of Tourism - Rural tourism",
+                "url": "https://rural.tourism.gov.in/Kotilingala-destination.html"
+            },
+            {
+                "name": "Deccan Chronicle - Pushkaralu temples",
+                "url": "https://www.deccanchronicle.com/southern-states/telangana/minister-govt-to-develop-temples-along-godavari-ahead-of-pushkaralu-1968611"
+            }
+        ]
+    },
+    {
+        "name": "Sri Lakshmi Narasimha Swamy Temple, Bejjanki",
+        "deity": "narasimha",
+        "famous": false,
+        "district": "Siddipet",
+        "city": "Bejjanki",
+        "address": "Rocky hillock, Bejjanki village",
+        "pincode": null,
+        "lat": null,
+        "lng": null,
+        "categories": [
+            "hill-temple"
+        ],
+        "aliases": {
+            "Bejjanki Gutta": "en",
+            "Bejjanki Narasimha Temple": "en",
+            "బెజ్జంకి శ్రీ లక్ష్మీ నరసింహ స్వామి ఆలయం": "te"
+        },
+        "summary": "Kakatiya-era hilltop temple of Lakshmi Narasimha at Bejjanki, the surviving shrine among several ruined medieval temples around the village.",
+        "history": "Bejjanki is a historic village surrounded by ruins of several Kakatiya-period temples. The Lakshmi Narasimha Swamy temple, built on top of a rocky hillock, is the one that survived in use. Much of its sculpture was deliberately damaged in the past, but enough of the carving and architecture remains to be of interest to scholars. The village lies about 40 km southwest of Karimnagar.",
+        "significance": "The temple is a local centre of Narasimha worship for the Siddipet-Karimnagar area. Festivals noted include Vasantha Panchami (January-February), Navaratri (September-October) and Shani Trayodashi. Free meals (annadanam) for devotees are reported at the temple premises.",
+        "architecture_style": "Kakatiya",
+        "built_period": "c. 12th-13th century",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": "Remove footwear before climbing",
+            "entry": null,
+            "queue": null
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [],
+        "nearest": {
+            "railway": "Siddipet / Karimnagar",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad, about 150 km",
+            "bus": "Bejjanki"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia - Siddipet district",
+                "url": "https://en.wikipedia.org/wiki/Siddipet_district"
+            },
+            {
+                "name": "Wikimedia Commons photo description",
+                "url": "https://kn.wikipedia.com/wiki/%E0%B2%9A%E0%B2%BF%E0%B2%A4%E0%B3%8D%E0%B2%B0:Lakshmi_Narasimha_Swamy_temple,_Bejjanki_Telangana_-_01.jpg"
+            },
+            {
+                "name": "Telangana Tourism - Siddipet",
+                "url": "https://telanganatourism.gov.in/partials/about/33-districts-of-telangana/siddipet.html"
+            }
+        ]
+    },
+    {
+        "name": "Sri Lakshmi Narasimha Swamy Temple, Nampally Gutta",
+        "deity": "narasimha",
+        "famous": false,
+        "district": "Rajanna Sircilla",
+        "city": "Vemulawada",
+        "address": "Nampally Gutta, on the Vemulawada-Karimnagar road, near Vemulawada",
+        "pincode": null,
+        "lat": null,
+        "lng": null,
+        "categories": [
+            "hill-temple"
+        ],
+        "aliases": {
+            "Nampally Gutta Temple": "en",
+            "Snake Temple Vemulawada": "en",
+            "నాంపల్లి గుట్ట లక్ష్మీ నరసింహ స్వామి ఆలయం": "te"
+        },
+        "summary": "Hillock shrine of Lakshmi Narasimha near Vemulawada, known for its giant serpent-shaped tunnel that leads devotees through scenes of the Prahlada story.",
+        "history": "The temple stands on a small hillock beside the Vemulawada-Karimnagar road. The main image of Narasimha is carved from the rock around which the shrine was built. A later addition is a large structure in the form of a serpent: devotees enter through its body, a long winding tunnel lined with figures telling the story of Prahlada and Hiranyakashipu, ending at an image of Narasimha slaying the demon. Telangana Tourism notes the shrine does not appear ancient; no founding date is published.",
+        "significance": "Pilgrims visiting the Raja Rajeshwara temple at Vemulawada commonly stop here. The serpent tunnel and the image of Narasimha emerging from a pillar at the entrance make it popular with families. Narasimha Jayanti (April-May) and Saturdays draw more devotees.",
+        "architecture_style": null,
+        "built_period": null,
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": "Remove footwear before entering",
+            "entry": null,
+            "queue": null
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [],
+        "nearest": {
+            "railway": "Karimnagar, about 35 km",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad, about 180 km",
+            "bus": "Vemulawada bus station, about 5 km"
+        },
+        "sources": [
+            {
+                "name": "Telangana Tourism",
+                "url": "https://telanganatourism.gov.in/partials/destinations/divine-destinations/karimnagar/lakshmi-narasimha-swamy-temple-nampally-gutta.html"
+            },
+            {
+                "name": "Telangana360",
+                "url": "https://telangana360.com/2016/06/nampally-gutta-temple.html"
+            },
+            {
+                "name": "Trawell",
+                "url": "https://www.trawell.in/telangana/vemulawada/lakshmi-narasimha-temple-nampally-gutta"
+            }
+        ]
+    },
+    {
+        "name": "Sri Kondapochamma Temple, Siddipet",
+        "deity": "devi",
+        "famous": false,
+        "district": "Siddipet",
+        "city": null,
+        "address": "Near Kondapochamma Sagar reservoir, Siddipet district",
+        "pincode": null,
+        "lat": null,
+        "lng": null,
+        "categories": [],
+        "aliases": {
+            "Konda Pochamma Temple": "en",
+            "Kondapochamma Gudi": "en",
+            "కొండపోచమ్మ ఆలయం": "te"
+        },
+        "summary": "Folk shrine of Goddess Kondapochamma, guardian deity of the area, closely linked to the Komuravelli Mallanna pilgrimage and the reservoir named Kondapochamma Sagar.",
+        "history": "Kondapochamma is a village guardian goddess worshipped in the Telangana folk tradition. Local belief, transmitted orally rather than in scripture, holds that she is the sister of Mallanna, the deity of Komuravelli. The Kaleshwaram project's Kondapochamma Sagar reservoir lies near the shrine. No founding date is recorded.",
+        "significance": "Many pilgrims to the Komuravelli Mallanna jatara (Sankranti to Ugadi, January-March) also visit Kondapochamma. Bonalu and Navaratri are the main festivals, when devotees offer bonam pots and fulfil vows for family welfare.",
+        "architecture_style": null,
+        "built_period": null,
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": "Remove footwear before entering",
+            "entry": null,
+            "queue": null
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [],
+        "nearest": {
+            "railway": "Siddipet",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad",
+            "bus": "Siddipet / Gajwel"
+        },
+        "sources": [
+            {
+                "name": "Telangana360",
+                "url": "https://www.telangana360.com/2026/07/konda-pochamma-temple.html"
+            },
+            {
+                "name": "Wikipedia - Komrelly Mallanna Temple",
+                "url": "https://en.wikipedia.org/wiki/Komrelly_Mallanna_Temple"
+            },
+            {
+                "name": "Telangana Tourism - Siddipet",
+                "url": "https://telanganatourism.gov.in/partials/about/33-districts-of-telangana/siddipet.html"
+            }
+        ]
+    },
+    {
+        "name": "Sri Chennakesava Swamy Temple, Gangapuram",
+        "deity": "vishnu",
+        "famous": false,
+        "district": "Mahabubnagar",
+        "city": "Jadcherla",
+        "address": "Gangapuram village, Jadcherla mandal, about 5 km from Jadcherla towards Kalwakurthy",
+        "pincode": null,
+        "lat": null,
+        "lng": null,
+        "categories": [],
+        "aliases": {
+            "Gangapuram Temple": "en",
+            "Gangapuram Chenna Kesava Temple": "en",
+            "గంగాపురం చెన్నకేశవ స్వామి ఆలయం": "te"
+        },
+        "summary": "Medieval Chalukya-period temple of Chenna Kesava (Vishnu) with Lakshmi at Gangapuram near Jadcherla, known for its Ratha Saptami festival.",
+        "history": "Local sources date the temple to about 1042 CE and credit the Kalyani Chalukya king Trailokyamalla Someshvara I, when the place was called Kesavapuram; other accounts describe it as a 12th-century temple, and the dating is not confirmed by a published inscription. Earlier names recorded for the village include Mayapuram, Matsyapuram and Duritapuram. The surrounding area also shows traces of Jaina, Kalamukha and Shaiva activity. The temple is said to be mentioned in the Skanda Purana.",
+        "significance": "The main festival is held on Ratha Saptami (January-February), drawing large numbers of people from the region; Brahmotsavam and Kalyanotsavam are also celebrated. Besides Chenna Kesava and Lakshmi, the temple has shrines of Anjaneya and a four-armed Ganapathi. Its outer hall has 20 old carved pillars, 12 of them facing the sanctum.",
+        "architecture_style": "Kalyani Chalukya",
+        "built_period": "11th-12th century",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": "Remove footwear before entering",
+            "entry": null,
+            "queue": null
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [],
+        "nearest": {
+            "railway": "Jadcherla, about 5 km",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad, about 75 km",
+            "bus": "Jadcherla bus station, about 5 km"
+        },
+        "sources": [
+            {
+                "name": "Telangana360",
+                "url": "https://www.telangana360.com/2023/09/gangapuram-chenna-keshava-swamy-temple.html"
+            }
+        ]
+    },
+    {
+        "name": "Ghanpur Group of Temples (Kota Gullu), Ghanpur",
+        "deity": "shiva",
+        "famous": false,
+        "district": "Mulugu",
+        "city": "Ghanpur",
+        "address": "Ghanpur village, Ghanpur (Mulugu) mandal, about 9 km north-west of Ramappa",
+        "pincode": null,
+        "lat": 18.3111,
+        "lng": 79.8722,
+        "categories": [],
+        "aliases": {
+            "Kota Gullu": "en",
+            "Ganapeswaralayam": "en",
+            "Ghanpur Temples": "en",
+            "కోట గుళ్లు": "te"
+        },
+        "summary": "Walled Kakatiya-era complex of about 22 stone temples at Ghanpur near Ramappa, centred on a Shiva temple known as Ganapeswaralayam.",
+        "history": "The temples were built in the reign of the Kakatiya king Ganapatideva (c. 1199-1262). A slab inscription of about 1234-35 CE records Ganapathi Reddy installing the Ganapeswara shrine and granting land. The name Kota Gullu means 'fort temples', from the stone enclosure around the group. The complex was badly damaged, either by invasions between the 14th and 16th centuries or by a later earthquake, and is now protected by the Archaeological Survey of India.",
+        "significance": "The main Shiva temple, with fine sculpture and bracket figures in the style of nearby Ramappa, is the highlight and is still visited by devotees, especially on Maha Shivaratri (February-March). The site is of strong interest for Kakatiya art and architecture and is often combined with a visit to the Ramappa temple.",
+        "architecture_style": "Kakatiya",
+        "built_period": "13th century",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": "Remove footwear before entering shrines",
+            "entry": "ASI-protected monument",
+            "queue": null
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [],
+        "nearest": {
+            "railway": "Warangal / Kazipet",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad, about 230 km",
+            "bus": "Mulugu / Ghanpur"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia - Kota Gullu",
+                "url": "https://en.wikipedia.org/wiki/Kota_Gullu"
+            },
+            {
+                "name": "Wikipedia - Ghanpur, Mulugu district",
+                "url": "https://en.wikipedia.org/wiki/Ghanpur,_Mulugu_district"
+            },
+            {
+                "name": "Telangana360",
+                "url": "https://telangana360.com/2016/06/kotagullu-or-ghanpur-temples.html"
+            },
+            {
+                "name": "Ministry of Tourism - Rural tourism",
+                "url": "https://rural.tourism.gov.in/Ghanpur-destination.html"
+            }
+        ]
+    },
+    {
+        "name": "Sri Erakeswara Swamy Temple, Pillalamarri",
+        "deity": "shiva",
+        "famous": false,
+        "district": "Suryapet",
+        "city": "Pillalamarri",
+        "address": "Pillalamarri village, about 6-8 km north-west of Suryapet",
+        "pincode": null,
+        "lat": 17.1697,
+        "lng": 79.5822,
+        "categories": [],
+        "aliases": {
+            "Pillalamarri Temples": "en",
+            "Erakeshwara Temple": "en",
+            "పిల్లలమర్రి ఎరకేశ్వర ఆలయం": "te"
+        },
+        "summary": "Early 13th-century Kakatiya-style Shiva temple at Pillalamarri, part of a group of Recherla-built temples near Suryapet.",
+        "history": "The Erakeswara temple was built around 1208 CE by the Recherla chiefs, feudatories of the Kakatiyas; one account credits Erakasani, wife of Beti Reddi of the Recherla family, after whom the god is named. It stands in a village with several contemporary temples, including the Nameswara temple built by Nami Reddy around 1202 CE, the Trikuteswara temple and a Chennakesava temple. Inscriptions at the site mention the Kakatiya rulers Rudradeva and Ganapatideva.",
+        "significance": "The temple is noted for its Kakatiya sculpture, carved pillars and ceiling panels, and is still a place of local Shiva worship, with Maha Shivaratri (February-March) the main occasion. It is one of the important Kakatiya heritage sites of the Nalgonda-Suryapet region.",
+        "architecture_style": "Kakatiya",
+        "built_period": "c. 1208 CE",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": "Remove footwear before entering",
+            "entry": null,
+            "queue": null
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [],
+        "nearest": {
+            "railway": "Nalgonda, about 45 km",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad, about 150 km",
+            "bus": "Suryapet bus station, about 7 km"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Erakeswara_Temple,_Pillalamarri"
+            },
+            {
+                "name": "Wikipedia - Nameswara Temple",
+                "url": "https://en.wikipedia.org/wiki/Nameswara_Temple,_Pillalamarri"
+            },
+            {
+                "name": "Telangana360",
+                "url": "https://www.telangana360.com/2016/12/pillalamarri-temple-of-suryapet.html"
+            }
+        ]
+    },
+    {
+        "name": "Sri Veerabhadra Swamy Temple, Kothakonda",
+        "deity": "shiva",
+        "famous": false,
+        "district": "Hanumakonda",
+        "city": "Kothakonda",
+        "address": "Kothakonda village, Bheemadevarapalli mandal",
+        "pincode": null,
+        "lat": null,
+        "lng": null,
+        "categories": [
+            "hill-temple"
+        ],
+        "aliases": {
+            "Kothakonda Temple": "en",
+            "Kothakonda Veerabhadra Swamy": "en",
+            "కొత్తకొండ వీరభద్ర స్వామి ఆలయం": "te"
+        },
+        "summary": "Temple of Veerabhadra Swamy at the foot of a fortified hill in Kothakonda, famous for its large three-day Sankranti jatara.",
+        "history": "The temple stands at the foot of a rocky hill whose top bears the ruins of a large fort with gateways in a style resembling Kakatiya work. Veerabhadra, a fierce form of Shiva, is enshrined flanked by Kethamma and Medalamma. No documented founding date is published.",
+        "significance": "The Kothakonda jatara, also called the Veerabhadra Swamy Brahmotsavam, is held for three days around Makara Sankranti in January and draws thousands of pilgrims from across Telangana. Maha Shivaratri and Devi Navaratri are also celebrated. Devotees fulfil vows and take part in the Bhadrakali-Veerabhadra kalyanam.",
+        "architecture_style": null,
+        "built_period": null,
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": "Remove footwear before entering",
+            "entry": null,
+            "queue": "Large crowds during the January jatara"
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [
+            {
+                "name": "Veerabhadra Swamy Kalyanam",
+                "description": "Celestial wedding of Veerabhadra and Bhadrakali performed during the annual festivals.",
+                "starts_at": null,
+                "duration_minutes": null,
+                "schedule_note": "Annual",
+                "is_free": null
+            }
+        ],
+        "nearest": {
+            "railway": "Hasanparthy / Kazipet",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad, about 180 km",
+            "bus": "Huzurabad / Hanumakonda"
+        },
+        "sources": [
+            {
+                "name": "Wikipedia - Kothakonda Jatara",
+                "url": "https://en.wikipedia.org/wiki/Kothakonda_Jatara"
+            },
+            {
+                "name": "Hindupad",
+                "url": "https://hindupad.com/kothakonda-veerabhadra-swamy/"
+            },
+            {
+                "name": "Ministry of Tourism - Rural tourism",
+                "url": "https://rural.tourism.gov.in/Kothakonda-destination.html"
+            }
+        ]
+    },
+    {
+        "name": "Ratnalayam Sri Venkateswara Swamy Temple, Shamirpet",
+        "deity": "venkateswara",
+        "famous": false,
+        "district": "Medchal–Malkajgiri",
+        "city": "Shamirpet",
+        "address": "Near Shamirpet Lake, Shamirpet, Hyderabad",
+        "pincode": null,
+        "lat": null,
+        "lng": null,
+        "categories": [],
+        "aliases": {
+            "Ratnalayam Temple": "en",
+            "Ratnalayam Balaji Temple": "en",
+            "రత్నాలయం": "te"
+        },
+        "summary": "White-stone Dravidian temple of Lord Venkateswara near Shamirpet Lake on Hyderabad's northern edge, consecrated in 2003.",
+        "history": "The temple was built by T. R. Venkatesh and T. Rama Devi in memory of his father, to give devotees who could not travel to Tirumala a place to worship Venkateswara. Bhoomi puja was held in April 2001 and the temple was consecrated in February 2003. The architect was M. Shankar, and the idols were carved by Ganapathi Sthapathi of Kanchipuram.",
+        "significance": "The temple follows Tirumala-style worship of Venkateswara and is popular with Hyderabad families for darshan, tonsuring and weddings. The complex includes a Kalyana Katta, discourse hall, goshala, gardens and fountains, and sits close to Shamirpet Lake.",
+        "architecture_style": "Dravidian",
+        "built_period": "2001-2003",
+        "website": null,
+        "phone": null,
+        "email": null,
+        "rules": {
+            "dress_code": null,
+            "photography": null,
+            "mobile": null,
+            "footwear": "Remove footwear before entering",
+            "entry": null,
+            "queue": null
+        },
+        "timings": [],
+        "timings_source": null,
+        "pujas": [],
+        "nearest": {
+            "railway": "Secunderabad Junction, about 25 km",
+            "airport": "Rajiv Gandhi International Airport, Shamshabad, about 60 km",
+            "bus": "Shamirpet bus stop"
+        },
+        "sources": [
+            {
+                "name": "AstroVed",
+                "url": "https://www.astroved.com/astropedia/en/temples/south-india/ratnalayam-temple"
+            },
+            {
+                "name": "TravelTriangle",
+                "url": "https://traveltriangle.com/blog/ratnalayam-temple"
+            }
+        ]
+    }
+]

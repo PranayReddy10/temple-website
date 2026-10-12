@@ -42,6 +42,7 @@ class Temple extends Model
         'entry_rules',
         'queue_information',
         'photography_policy',
+        'how_to_reach',
     ];
 
     /**
@@ -65,7 +66,7 @@ class Temple extends Model
         'mantra', 'mantra_transliteration', 'mantra_media_id',
         'architecture_style', 'built_period',
         'dress_code', 'photography_policy', 'mobile_policy', 'footwear_policy',
-        'entry_rules', 'queue_information', 'search_keywords',
+        'entry_rules', 'queue_information', 'how_to_reach', 'search_keywords',
         'official_website', 'contact_phone', 'contact_email',
         'verification_status', 'source_name', 'source_url', 'last_verified_at',
         'status', 'is_featured', 'accepts_donations', 'published_at', 'created_by', 'updated_by',

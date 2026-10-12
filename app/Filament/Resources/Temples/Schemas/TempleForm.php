@@ -332,6 +332,12 @@ class TempleForm
                     ->rows(3)
                     ->columnSpanFull()
                     ->placeholder('e.g. Free darshan queue, special entry darshan, senior citizen queue'),
+
+                Textarea::make('how_to_reach')
+                    ->label('How to reach')
+                    ->rows(3)
+                    ->columnSpanFull()
+                    ->placeholder('e.g. Nearest railway station, airport and bus station, with distances'),
             ]);
     }
 

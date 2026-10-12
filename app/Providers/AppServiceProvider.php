@@ -20,6 +20,8 @@ use App\Support\LoginRecorder;
 use App\Support\MailSettings;
 use App\Support\MediaStorage;
 use App\Support\Pwa;
+use App\Support\TempleAgent\ClaudeTempleResearcher;
+use App\Support\TempleAgent\TempleResearcher;
 use App\Support\TempleTheme;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
@@ -45,7 +47,9 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // Resolved only when temples:agent runs, so a missing API key never
+        // stops the site from booting.
+        $this->app->bind(TempleResearcher::class, fn () => ClaudeTempleResearcher::fromConfig());
     }
 
     public function boot(): void
