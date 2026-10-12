@@ -66,9 +66,10 @@ class SitemapController extends Controller
                 'photos' => fn ($q) => $q->published()->orderByDesc('is_primary')->orderBy('sort_order'),
                 'translations' => fn ($q) => $q->where('field', 'name')->where('is_reviewed', true),
                 'payoutAccount',
+                'deity:id,image_disk,image_path',
             ])
             ->withCount(['pujas' => fn ($q) => $q->published()])
-            ->get(['id', 'name', 'slug', 'updated_at', 'is_featured', 'accepts_donations']);
+            ->get(['id', 'name', 'slug', 'updated_at', 'is_featured', 'accepts_donations', 'deity_id']);
 
         abort_if($temples->isEmpty() && $page > 1, 404);
 
@@ -79,6 +80,10 @@ class SitemapController extends Controller
             $images = $t->photos->map(fn ($ph) => Seo::absolute($ph->mediumUrl() ?? $ph->url()))
                 ->prepend(Seo::absolute($t->primaryPhoto?->mediumUrl()))
                 ->filter()->unique()->take(20)->values()->all();
+            // No photo yet: the deity's painting that the page shows instead.
+            if ($images === [] && ($deityImage = Seo::absolute($t->deity?->imageUrl()))) {
+                $images = [$deityImage];
+            }
             $alternates = SiteLocale::alternates($t, SiteLocale::languagesOf($t));
 
             foreach ($alternates === [] ? ['en' => Seo::url('temples/'.$t->slug)] : array_diff_key($alternates, ['x-default' => true]) as $code => $loc) {

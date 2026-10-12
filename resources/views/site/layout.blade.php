@@ -12,6 +12,9 @@
     @if (! \App\Support\Seo::onWebsite(request()) || ! empty($noindex))
         {{-- The admin host's copy (the website's is the one to list), a search, or a missing page. --}}
         <meta name="robots" content="noindex, follow">
+    @else
+        {{-- Let search results show this page's photo large, and its text in full. --}}
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
     @endif
     <meta property="og:site_name" content="{{ config('brand.name') }}">
     <meta property="og:type" content="{{ $ogType ?? 'website' }}">
@@ -23,7 +26,7 @@
     @php($shareImage = ! empty($image) ? $image : \App\Support\Seo::url('og.png'))
     <meta property="og:image" content="{{ $shareImage }}">
     <meta property="og:image:alt" content="{{ $title }}">
-    @if (empty($image))
+    @if (empty($image) || str_ends_with((string) $image, '/card.png'))
         <meta property="og:image:width" content="1200">
         <meta property="og:image:height" content="630">
     @endif

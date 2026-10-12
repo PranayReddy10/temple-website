@@ -90,6 +90,8 @@
     <style>
         .hero { border-radius: 18px; overflow: hidden; aspect-ratio: 21/9; background: #efe3cf; margin: 12px 0; }
         .hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .hero.deity { aspect-ratio: auto; max-height: 420px; display: flex; justify-content: center; background: linear-gradient(135deg, #3E2723, #6b2a22); }
+        .hero.deity img { width: auto; max-width: 100%; max-height: 420px; object-fit: contain; }
         .cols { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; }
         @media (max-width: 760px) { .cols { grid-template-columns: 1fr; } }
         table { width: 100%; border-collapse: collapse; font-size: .92rem; }
@@ -271,11 +273,15 @@
         <div class="today" style="background:#fdeceb;border-color:#f3c3be"><b>{{ __('Closure') }}</b><span>{{ $c->reason ?? __('Closed') }} · {{ $c->starts_on?->format('d M Y') }}@if ($c->ends_on && ! $c->ends_on->equalTo($c->starts_on)) – {{ $c->ends_on->format('d M Y') }}@endif</span></div>
     @endforeach
 
-    @if ($image)
+    @if ($heroIsDeity ?? false)
+        {{-- No photo of the temple yet: its deity's painting, credited. --}}
+        <div class="hero deity"><img src="{{ $heroImage }}" alt="{{ $temple->deity->name }} – {{ $photoName }}" fetchpriority="high"></div>
+        <p style="font-size:.8rem;opacity:.7;margin:4px 0 0">{{ __('Painting of :deity', ['deity' => $temple->deity->name]) }}@if ($temple->deity->image_credit): {{ $temple->deity->image_credit }}@endif</p>
+    @elseif ($heroImage ?? null)
         @php
             $lead = $temple->primaryPhoto ?? $temple->photos->first();
         @endphp
-        <div class="hero"><img src="{{ $image }}" alt="{{ $photoName }}" fetchpriority="high"></div>
+        <div class="hero"><img src="{{ $heroImage }}" alt="{{ $photoName }}" fetchpriority="high"></div>
         @if ($lead?->credit || $lead?->license)
             {{-- Commons photos may be used only with their photographer and licence beside them. --}}
             <p style="font-size:.8rem;opacity:.7;margin:4px 0 0">Photo: @if ($lead->source_url)<a href="{{ $lead->source_url }}" rel="noopener">{{ $lead->credit ?? 'source' }}</a>@else{{ $lead->credit }}@endif{{ $lead->license ? ', '.$lead->license : '' }}</p>

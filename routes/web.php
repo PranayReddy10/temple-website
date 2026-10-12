@@ -17,6 +17,7 @@ use App\Http\Controllers\Site\ReviewController as SiteReview;
 use App\Http\Controllers\Site\YatraController as SiteYatra;
 use App\Http\Controllers\SiteHomeController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\TempleCardController;
 use App\Http\Controllers\TempleCheckinController;
 use App\Http\Controllers\TempleQrPrintController;
 use App\Models\Temple;
@@ -143,6 +144,8 @@ Route::get('/pay/{payment}/done', [PayController::class, 'done'])->name('pay.don
 // Public, indexable pages for the devotees' website: darshansaathi.com's
 // .htaccess sends these paths here. See App\Support\Seo.
 Route::get('/temples', [PublicTempleController::class, 'index'])->name('site.temples');
+// A temple's share card, for one with no photo or deity painting yet.
+Route::get('/temples/{slug}/card.png', TempleCardController::class)->where('slug', '[a-z0-9-]+')->middleware('throttle:120,1')->name('site.temple.card');
 Route::get('/temples/{slug}', [PublicTempleController::class, 'show'])->name('site.temple');
 Route::get('/states/{slug}', [PublicTempleController::class, 'state'])->name('site.state');
 // A temple's page before it is published, from the admin's Preview page
