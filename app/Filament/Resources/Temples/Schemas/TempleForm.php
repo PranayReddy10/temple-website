@@ -7,6 +7,7 @@ use App\Enums\VerificationStatus;
 use App\Filament\Schemas\MantraFields;
 use App\Models\District;
 use App\Models\Temple;
+use App\Models\TempleCategory;
 use App\Support\FormState;
 use App\Support\UploadRules;
 use Filament\Forms\Components\CheckboxList;
@@ -14,6 +15,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -81,12 +83,35 @@ class TempleForm
                     ->native(false),
 
                 Select::make('categories')
-                    ->label('Pilgrimage circuits and categories')
+                    ->label('Tags, circuits and categories')
                     ->relationship('categories', 'name')
                     ->multiple()
                     ->searchable()
                     ->preload()
-                    ->helperText('For example Jyotirlinga, Shakti Peetha or Char Dham.'),
+                    // A new tag straight from here, without leaving the temple.
+                    ->createOptionForm([
+                        TextInput::make('name')
+                            ->label('Tag')
+                            ->required()
+                            ->maxLength(100)
+                            ->placeholder('Hill temple'),
+                    ])
+                    ->createOptionUsing(fn (array $data): int => TempleCategory::query()->firstOrCreate(
+                        ['slug' => Str::slug($data['name'])],
+                        ['name' => trim($data['name']), 'kind' => 'type', 'is_active' => true],
+                    )->getKey())
+                    ->helperText('For example Hill temple, Jyotirlinga, Shakti Peetha or Char Dham. Each tag has its own page on the website listing its temples, linked from this temple\'s page.'),
+
+                // Other ways people search for this temple. The website, app
+                // and admin search find it by these, and the page shows them.
+                TagsInput::make('search_keywords')
+                    ->label('Search keywords')
+                    ->separator(',')
+                    ->splitKeys(['Enter', ','])
+                    ->placeholder('bhongir temple')
+                    ->nestedRecursiveRules(['max:80'])
+                    ->helperText('How people search for this temple besides its name: a short name, the nearby town or hill, a common spelling. One per tag; press Enter after each. Shown on the page as "Also searched as".')
+                    ->columnSpanFull(),
 
                 Repeater::make('aliases')
                     ->label('Alternate and local names')
