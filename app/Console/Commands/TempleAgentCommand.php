@@ -16,7 +16,9 @@ use Illuminate\Console\Command;
  * 2. asks the researcher for the state's top temples not among them
  *    (or takes the names given with --temple);
  * 3. skips any the site already has under another name;
- * 4. researches each from its own website and public sources;
+ * 4. researches each from its own website and public sources, then
+ *    fact-checks the result field by field in a second pass (kept only
+ *    when the official site or two independent sources confirm it);
  * 5. saves it to the state's data file (database/data/temples/<state>.json),
  *    so the research is kept, reviewed and re-importable;
  * 6. imports it — a temple found to be listed after all only has its
@@ -88,6 +90,9 @@ class TempleAgentCommand extends Command
 
                 continue;
             }
+
+            $corrections = count($row['verification']['changes'] ?? []);
+            $this->line("             fact-checked: {$corrections} ".($corrections === 1 ? 'correction' : 'corrections'));
 
             $saved = self::upsert($saved, $row);
             $this->save($file, $saved);

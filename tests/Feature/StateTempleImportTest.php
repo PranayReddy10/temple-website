@@ -196,6 +196,22 @@ class StateTempleImportTest extends TestCase
         $this->assertSame(0, TemplePuja::whereNotNull('fee_amount')->count());
     }
 
+    public function test_a_pin_code_of_another_state_or_a_pin_far_from_its_district_is_dropped(): void
+    {
+        $this->write([
+            $this->kanipakam(),
+            // Same district, a pin 400 km away and a Telangana PIN: both mistakes.
+            $this->kanipakam(['name' => 'Sri Kanaka Durga Temple, Vijayawada', 'aliases' => [], 'pincode' => '500001', 'lat' => 16.5178, 'lng' => 80.6050]),
+        ]);
+
+        $this->artisan('temples:import-state', ['state' => 'AP', '--file' => $this->file])->assertSuccessful();
+
+        $durga = Temple::where('slug', 'sri-kanaka-durga-temple-vijayawada')->firstOrFail();
+        $this->assertNull($durga->pincode);
+        $this->assertFalse($durga->hasCoordinates());
+        $this->assertSame('517131', Temple::where('slug', 'sri-varasiddhi-vinayaka-swamy-temple-kanipakam')->value('pincode'));
+    }
+
     public function test_the_agent_researches_only_temples_not_yet_listed_and_saves_its_research(): void
     {
         $this->write([$this->kanipakam()]);

@@ -35,6 +35,21 @@ final class StateTempleImporter
 {
     public const TIMING_NOTE = 'Hours as published by the temple or commonly reported, not confirmed with the temple. Hours change on festival days, during eclipses and for renovation — check with the devasthanam before travelling.';
 
+    /** No district reaches further than this from its middle. */
+    public const DISTRICT_KM = 150;
+
+    /**
+     * The first two digits of the state's PIN codes, for the states whose
+     * temples are imported so far. A state not listed is not checked.
+     */
+    public const PIN_PREFIXES = [
+        'AP' => ['51', '52', '53'],
+        'TG' => ['50'],
+        'KA' => ['56', '57', '58', '59'],
+        'TN' => ['60', '61', '62', '63', '64'],
+        'KL' => ['67', '68', '69'],
+    ];
+
     /** @var array{created: int, updated: int, unchanged: int, skipped: int, invalid: int} */
     public array $counts = ['created' => 0, 'updated' => 0, 'unchanged' => 0, 'skipped' => 0, 'invalid' => 0];
 
@@ -148,6 +163,15 @@ final class StateTempleImporter
         $sources = array_values(array_filter((array) ($row['sources'] ?? []), fn ($s) => is_array($s) && filled($s['url'] ?? null)));
         $lat = is_numeric($row['lat'] ?? null) ? round((float) $row['lat'], 7) : null;
         $lng = is_numeric($row['lng'] ?? null) ? round((float) $row['lng'], 7) : null;
+        // Only a pin inside India; a swapped or zero pair is worse than none.
+        if ($lat === null || $lng === null || $lat <= 6 || $lat >= 37 || $lng <= 68 || $lng >= 98 || ! $this->nearDistrict($district, $lat, $lng)) {
+            $lat = $lng = null;
+        }
+        $pincode = preg_match('/^\d{6}$/', (string) ($row['pincode'] ?? '')) ? (string) $row['pincode'] : null;
+        $prefixes = self::PIN_PREFIXES[$this->state->code] ?? null;
+        if ($pincode !== null && $prefixes !== null && ! in_array(substr($pincode, 0, 2), $prefixes, true)) {
+            $pincode = null; // A PIN of another state is a mistake, not an address.
+        }
 
         return array_map(fn ($v) => is_string($v) ? (trim($v) === '' ? null : trim($v)) : $v, [
             'deity_id' => filled($row['deity'] ?? null) ? Deity::where('slug', $row['deity'])->value('id') : null,
@@ -155,10 +179,9 @@ final class StateTempleImporter
             'district_id' => $district->id,
             'city' => self::text($row['city'] ?? null, 255),
             'address' => self::text($row['address'] ?? null),
-            'pincode' => preg_match('/^\d{6}$/', (string) ($row['pincode'] ?? '')) ? (string) $row['pincode'] : null,
-            // Only a pin inside India; a swapped or zero pair is worse than none.
-            'latitude' => $lat !== null && $lat > 6 && $lat < 37 ? $lat : null,
-            'longitude' => $lng !== null && $lng > 68 && $lng < 98 ? $lng : null,
+            'pincode' => $pincode,
+            'latitude' => $lat,
+            'longitude' => $lng,
             'short_description' => self::text($row['summary'] ?? null, 500),
             'history' => self::text($row['history'] ?? null),
             'significance' => self::text($row['significance'] ?? null),
@@ -177,6 +200,24 @@ final class StateTempleImporter
             'source_name' => isset($sources[0]) ? self::text($sources[0]['name'] ?? 'Public source', 255) : null,
             'source_url' => isset($sources[0]) ? self::url($sources[0]['url']) : null,
         ]);
+    }
+
+    /**
+     * Whether a pin is plausibly in its district: within DISTRICT_KM of the
+     * middle of the district's other pinned temples. A district with none
+     * yet cannot say, so any pin passes.
+     */
+    private function nearDistrict(District $district, float $lat, float $lng): bool
+    {
+        $pins = Temple::where('district_id', $district->id)->whereNotNull('latitude')->whereNotNull('longitude')
+            ->get(['latitude', 'longitude']);
+        if ($pins->isEmpty()) {
+            return true;
+        }
+        $middleLat = $pins->pluck('latitude')->map(fn ($v) => (float) $v)->median();
+        $middleLng = $pins->pluck('longitude')->map(fn ($v) => (float) $v)->median();
+
+        return TempleMatcher::metres($lat, $lng, (float) $middleLat, (float) $middleLng) <= self::DISTRICT_KM * 1000;
     }
 
     private function attachDetails(Temple $temple, array $row, string &$result): void
