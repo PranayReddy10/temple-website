@@ -14,6 +14,16 @@ return [
     |
     */
 
+    /*
+     * The temple research agent (temples:agent): Claude with web search and
+     * web fetch, reading temples' own websites and public sources.
+     */
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('TEMPLE_AGENT_MODEL', 'claude-opus-5-5'),
+        'effort' => env('TEMPLE_AGENT_EFFORT', 'high'),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

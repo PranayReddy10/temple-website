@@ -76,6 +76,8 @@ class TempleDetailResource extends JsonResource
                 'queue' => $this->localised('queue_information'),
             ],
 
+            'how_to_reach' => $this->localised('how_to_reach'),
+
             'contact' => [
                 'website' => $this->official_website,
                 'phone' => $this->contact_phone,

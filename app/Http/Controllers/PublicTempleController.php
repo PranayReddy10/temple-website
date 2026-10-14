@@ -213,6 +213,7 @@ class PublicTempleController extends Controller
             'significance' => $temple->translate('significance', $lang, reviewedOnly: true),
             'entryRules' => $temple->translate('entry_rules', $lang, reviewedOnly: true),
             'queueInfo' => $temple->translate('queue_information', $lang, reviewedOnly: true),
+            'howToReach' => $temple->translate('how_to_reach', $lang, reviewedOnly: true),
             'dressCode' => $dressCode,
             'todays' => $todays,
             'bookable' => $bookable,

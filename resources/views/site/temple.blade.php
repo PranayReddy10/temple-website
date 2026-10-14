@@ -318,7 +318,7 @@
                 @endforeach
             @endif
 
-            @foreach (['significance' => [$significance, __('Significance')], 'history' => [$history, __('History of :name', ['name' => $name])], 'entry_rules' => [$entryRules, __('Entry rules')], 'queue_information' => [$queueInfo, __('Queue and darshan tips')]] as $field => [$text, $heading])
+            @foreach (['significance' => [$significance, __('Significance')], 'history' => [$history, __('History of :name', ['name' => $name])], 'entry_rules' => [$entryRules, __('Entry rules')], 'queue_information' => [$queueInfo, __('Queue and darshan tips')], 'how_to_reach' => [$howToReach ?? null, __('How to reach')]] as $field => [$text, $heading])
                 @if ($text)
                     <h2>{{ $heading }}</h2>
                     <p style="white-space:pre-line">{{ $text }}</p>
