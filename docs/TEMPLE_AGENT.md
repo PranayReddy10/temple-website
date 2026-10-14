@@ -17,6 +17,11 @@ php artisan temples:import-state AP
 php artisan temples:import-state TG
 ```
 
+If an earlier version of a file was already imported, add `--refresh`: a
+fact-checked record (one carrying `"verification"`) then replaces what the
+earlier import wrote, corrections and removals included, but only on temples
+no staff member has edited.
+
 `--draft` adds new temples as drafts for an editor to publish, instead of
 publishing them.
 
@@ -50,6 +55,24 @@ php artisan temples:agent AP --no-import          # only save the research to th
 ```
 
 Commit the changed data file, so the research is kept and can be reviewed.
+
+## How far the shipped data is checked
+
+Every record carrying `"verification"` was cross-checked field by field:
+kept only when the temple's own site, the AP/Telangana endowments department
+(tms.ap.gov.in, *.telangana.gov.in), TTD or the district portal shows it, or
+two independent sources agree; corrected otherwise; emptied when nothing
+confirmed it. Its `changes` list says what was corrected and why.
+
+As of 14 October 2026, 53 of the 95 records are checked. The other 42
+(no `"verification"` key) are from the first research pass and still need
+the check. The checking environment could search the web but not open
+pages, so re-running with page access, which `temples:agent` has on a
+normal server, is the way to finish them:
+
+```bash
+php artisan temples:agent AP --temple="Sri Varasiddhi Vinayaka Swamy Temple, Kanipakam" --no-import
+```
 
 ## Trust level
 

@@ -10,6 +10,7 @@ use App\Models\District;
 use App\Models\State;
 use App\Models\Temple;
 use App\Models\TempleCategory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 /**
@@ -62,6 +63,7 @@ final class StateTempleImporter
         private readonly State $state,
         private readonly TempleStatus $newStatus = TempleStatus::Published,
         private readonly bool $dryRun = false,
+        private readonly bool $refresh = false,
     ) {
         $this->matcher = new TempleMatcher($state->id);
     }
@@ -137,7 +139,11 @@ final class StateTempleImporter
             $result = 'created';
         } else {
             // Fill only what is empty. An editor's wording always wins.
-            $fill = array_filter(
+            // A fact-checked record replaces an earlier import outright, on
+            // a temple no editor has touched: its corrections and removals
+            // must land, not only its additions.
+            $replace = $this->replaces($temple, $row);
+            $fill = $replace ? $attributes : array_filter(
                 $attributes,
                 fn ($value, string $key): bool => $value !== null && blank($temple->getAttribute($key)),
                 ARRAY_FILTER_USE_BOTH,
@@ -239,7 +245,11 @@ final class StateTempleImporter
             }
         }
 
-        $timings = array_values(array_filter((array) ($row['timings'] ?? []), fn ($t) => is_array($t) && self::time($t['opens'] ?? null) && self::time($t['closes'] ?? null)));
+        $timings = array_values(array_filter((array) ($row['timings'] ?? []), fn ($t) => is_array($t) && self::validWindow($t['opens'] ?? null, $t['closes'] ?? null)));
+        if ($this->replaces($temple, $row) && self::untouched($temple->timings())) {
+            $result = $temple->timings()->exists() || $timings !== [] ? ($result === 'unchanged' ? 'updated' : $result) : $result;
+            $temple->timings()->delete();
+        }
         if ($timings !== [] && ! $temple->timings()->exists()) {
             foreach ($timings as $index => $t) {
                 $kind = TimingKind::tryFrom((string) ($t['kind'] ?? '')) ?? TimingKind::General;
@@ -258,6 +268,10 @@ final class StateTempleImporter
         }
 
         $pujas = array_values(array_filter((array) ($row['pujas'] ?? []), fn ($p) => is_array($p) && filled($p['name'] ?? null)));
+        if ($this->replaces($temple, $row) && self::untouched($temple->pujas()) && ! $temple->pujaBookings()->exists()) {
+            $result = $temple->pujas()->exists() || $pujas !== [] ? ($result === 'unchanged' ? 'updated' : $result) : $result;
+            $temple->pujas()->delete();
+        }
         if ($pujas !== [] && ! $temple->pujas()->exists()) {
             foreach ($pujas as $index => $p) {
                 $temple->pujas()->create([
@@ -274,6 +288,22 @@ final class StateTempleImporter
             }
             $result = $result === 'unchanged' ? 'updated' : $result;
         }
+    }
+
+    /**
+     * With --refresh, a fact-checked record (one carrying "verification")
+     * replaces what an earlier import wrote, but only on a temple no staff
+     * member has edited.
+     */
+    private function replaces(Temple $temple, array $row): bool
+    {
+        return $this->refresh && ! $temple->wasRecentlyCreated && isset($row['verification']) && $temple->updated_by === null;
+    }
+
+    /** Rows nobody has edited since they were imported. */
+    private static function untouched(HasMany $rows): bool
+    {
+        return (clone $rows)->whereColumn('updated_at', '!=', 'created_at')->doesntExist();
     }
 
     /**
@@ -333,6 +363,22 @@ final class StateTempleImporter
     private static function time(mixed $value): ?string
     {
         return is_string($value) && preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', trim($value)) ? trim($value) : null;
+    }
+
+    /**
+     * A ritual is often published with a start only ("Suprabhatam 03:30"),
+     * which the site shows as "From 3:30 AM". Each time given must be a real
+     * time, at least one must be given, and a window must not run backwards.
+     */
+    private static function validWindow(mixed $opens, mixed $closes): bool
+    {
+        $o = self::time($opens);
+        $c = self::time($closes);
+        if (($opens !== null && $o === null) || ($closes !== null && $c === null) || ($o === null && $c === null)) {
+            return false;
+        }
+
+        return $o === null || $c === null || $o < $c;
     }
 
     /** @param array<string, mixed> $nearest */

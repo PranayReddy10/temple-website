@@ -7,6 +7,7 @@ use App\Enums\VerificationStatus;
 use App\Models\State;
 use App\Models\Temple;
 use App\Models\TemplePuja;
+use App\Models\User;
 use App\Support\TempleAgent\TempleResearcher;
 use Database\Seeders\DeitySeeder;
 use Database\Seeders\StateSeeder;
@@ -55,6 +56,8 @@ class StateTempleImportTest extends TestCase
                 ['kind' => 'general', 'label' => null, 'opens' => '04:00', 'closes' => '21:30', 'days' => null],
                 ['kind' => 'aarti', 'label' => 'Suprabhatam', 'opens' => '04:00', 'closes' => '04:30', 'days' => null],
                 ['kind' => 'darshan', 'label' => 'Weekend', 'opens' => '05:00', 'closes' => '25:00', 'days' => [0, 6]],
+                ['kind' => 'aarti', 'label' => 'Ekanta seva', 'opens' => '21:00', 'closes' => null, 'days' => null],
+                ['kind' => 'darshan', 'label' => 'Backwards', 'opens' => '20:00', 'closes' => '06:00', 'days' => null],
             ],
             'pujas' => [['name' => 'Abhishekam', 'description' => 'Bathing of the deity.', 'starts_at' => '05:30', 'duration_minutes' => 45, 'schedule_note' => 'Daily', 'is_free' => false]],
             'nearest' => ['railway' => 'Chittoor, 12 km', 'airport' => 'Tirupati, 80 km', 'bus' => null],
@@ -87,8 +90,10 @@ class StateTempleImportTest extends TestCase
         $this->assertStringContainsString('Nearest railway station: Chittoor, 12 km', $temple->how_to_reach);
         $this->assertSame(['Kanipakam Temple', 'కాణిపాకం'], $temple->aliases->pluck('name')->all());
         $this->assertSame(['river-ghat-temple'], $temple->categories->pluck('slug')->all());
-        // The row with an impossible time is dropped, not stored half-right.
-        $this->assertCount(2, $temple->timings);
+        // A row with an impossible or backwards time is dropped, not stored
+        // half-right; a ritual published with its start only is kept.
+        $this->assertSame(['04:00', '04:00', '21:00'], $temple->timings->map(fn ($t) => substr((string) $t->opens_at, 0, 5))->all());
+        $this->assertSame('From 9:00 PM', $temple->timings->last()->window());
         $this->assertNotNull($temple->timings->first()->notes);
         $this->assertNull($temple->pujas->first()->fee_amount);
     }
@@ -161,7 +166,7 @@ class StateTempleImportTest extends TestCase
 
         $temple = Temple::firstOrFail();
         $this->assertSame(1, Temple::count());
-        $this->assertCount(2, $temple->timings);
+        $this->assertCount(3, $temple->timings);
         $this->assertCount(1, $temple->pujas);
         $this->assertCount(2, $temple->aliases);
     }
@@ -210,6 +215,35 @@ class StateTempleImportTest extends TestCase
         $this->assertNull($durga->pincode);
         $this->assertFalse($durga->hasCoordinates());
         $this->assertSame('517131', Temple::where('slug', 'sri-varasiddhi-vinayaka-swamy-temple-kanipakam')->value('pincode'));
+    }
+
+    public function test_with_refresh_a_fact_checked_record_replaces_an_earlier_import_on_untouched_temples(): void
+    {
+        $this->write([$this->kanipakam(), $this->kanipakam(['name' => 'Sri Kanaka Durga Temple, Vijayawada', 'aliases' => [], 'lat' => null, 'lng' => null])]);
+        $this->artisan('temples:import-state', ['state' => 'AP', '--file' => $this->file]);
+        // An editor has since worked on Kanaka Durga.
+        Temple::where('slug', 'sri-kanaka-durga-temple-vijayawada')->update(['updated_by' => User::factory()->create()->id]);
+
+        $checked = ['verification' => ['checked_on' => '2026-10-14', 'changes' => []]];
+        $this->write([
+            $this->kanipakam($checked + ['pincode' => '517132', 'history' => null, 'timings' => [['kind' => 'general', 'label' => null, 'opens' => '05:00', 'closes' => '21:00', 'days' => null]]]),
+            $this->kanipakam($checked + ['name' => 'Sri Kanaka Durga Temple, Vijayawada', 'aliases' => [], 'lat' => null, 'lng' => null, 'pincode' => '520001']),
+        ]);
+
+        // Without --refresh only empty fields are filled.
+        $this->artisan('temples:import-state', ['state' => 'AP', '--file' => $this->file]);
+        $kanipakam = Temple::where('slug', 'sri-varasiddhi-vinayaka-swamy-temple-kanipakam')->firstOrFail();
+        $this->assertSame('517131', $kanipakam->pincode);
+
+        $this->artisan('temples:import-state', ['state' => 'AP', '--file' => $this->file, '--refresh' => true])->assertSuccessful();
+
+        $kanipakam->refresh();
+        $this->assertSame('517132', $kanipakam->pincode);
+        // What the fact-check could not confirm is removed, not kept.
+        $this->assertNull($kanipakam->history);
+        $this->assertSame(['05:00'], $kanipakam->timings->map(fn ($t) => substr((string) $t->opens_at, 0, 5))->all());
+        // The temple an editor worked on keeps their record.
+        $this->assertSame('517131', Temple::where('slug', 'sri-kanaka-durga-temple-vijayawada')->value('pincode'));
     }
 
     public function test_the_agent_researches_only_temples_not_yet_listed_and_saves_its_research(): void

@@ -19,6 +19,7 @@ class ImportStateTemplesCommand extends Command
         {state : State code or name, e.g. AP, TG or "Andhra Pradesh"}
         {--file= : A JSON file of temples; defaults to database/data/temples/<state>.json}
         {--draft : Add new temples as drafts, for an editor to publish}
+        {--refresh : Let fact-checked records replace an earlier import on temples no editor has touched}
         {--dry-run : Only report which temples are new and which are already listed}';
 
     protected $description = 'Import a state\'s researched temples (details, location, timings, sevas) without duplicating listed ones or overwriting editors\' work';
@@ -50,6 +51,7 @@ class ImportStateTemplesCommand extends Command
             $state,
             $this->option('draft') ? TempleStatus::Draft : TempleStatus::Published,
             dryRun: (bool) $this->option('dry-run'),
+            refresh: (bool) $this->option('refresh'),
         );
         $importer->importAll($rows);
 
