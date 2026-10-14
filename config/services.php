@@ -15,9 +15,14 @@ return [
     */
 
     /*
-     * The temple research agent (temples:agent): Claude with web search and
-     * web fetch, reading temples' own websites and public sources.
+     * The temple research agent (temples:agent). "free" (the default) uses
+     * only free open sources: Wikidata, Wikipedia, OpenStreetMap and each
+     * temple's own website, with no API key and no cost. "claude" uses
+     * Claude with web search instead, which is paid API usage and needs
+     * ANTHROPIC_API_KEY.
      */
+    'temple_agent' => env('TEMPLE_AGENT', 'free'),
+
     'anthropic' => [
         'key' => env('ANTHROPIC_API_KEY'),
         'model' => env('TEMPLE_AGENT_MODEL', 'claude-opus-5-5'),

@@ -248,7 +248,7 @@ class StateTempleImportTest extends TestCase
 
     public function test_the_agent_explains_a_missing_api_key_instead_of_crashing(): void
     {
-        config(['services.anthropic.key' => null]);
+        config(['services.temple_agent' => 'claude', 'services.anthropic.key' => null]);
 
         $this->artisan('temples:agent', ['state' => 'AP'])
             ->expectsOutputToContain('Add ANTHROPIC_API_KEY=')

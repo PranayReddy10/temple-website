@@ -34,7 +34,7 @@ class TempleAgentCommand extends Command
         {--file= : Where to save the research; defaults to database/data/temples/<state>.json}
         {--no-import : Only save the research to the data file}';
 
-    protected $description = 'AI research agent: find a state\'s top temples not yet listed, research each from its website, and add them';
+    protected $description = 'Research agent: find a state\'s top temples not yet listed, research each from Wikidata, Wikipedia, OpenStreetMap and its own website (free), and add them';
 
     public function handle(): int
     {
@@ -99,10 +99,17 @@ class TempleAgentCommand extends Command
                 continue;
             }
 
-            $corrections = count($row['verification']['changes'] ?? []);
-            $this->line("             fact-checked: {$corrections} ".($corrections === 1 ? 'correction' : 'corrections'));
+            if (isset($row['verification'])) {
+                $corrections = count($row['verification']['changes'] ?? []);
+                $this->line("             fact-checked: {$corrections} ".($corrections === 1 ? 'correction' : 'corrections'));
+            }
+            $this->line('             sources: '.implode(', ', array_column($row['sources'] ?? [], 'name')));
 
             $saved = self::upsert($saved, $row);
+            // OpenStreetMap and Wikimedia ask for no more than one request a second.
+            if (! app()->runningUnitTests()) {
+                sleep(1);
+            }
             $this->save($file, $saved);
             $researched++;
 
