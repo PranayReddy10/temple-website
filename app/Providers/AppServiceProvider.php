@@ -21,6 +21,7 @@ use App\Support\MailSettings;
 use App\Support\MediaStorage;
 use App\Support\Pwa;
 use App\Support\TempleAgent\ClaudeTempleResearcher;
+use App\Support\TempleAgent\FreeTempleResearcher;
 use App\Support\TempleAgent\TempleResearcher;
 use App\Support\TempleTheme;
 use Filament\Facades\Filament;
@@ -47,9 +48,12 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Resolved only when temples:agent runs, so a missing API key never
+        // Free open sources unless Claude is chosen (paid, needs a key).
+        // Resolved only when temples:agent runs, so a missing key never
         // stops the site from booting.
-        $this->app->bind(TempleResearcher::class, fn () => ClaudeTempleResearcher::fromConfig());
+        $this->app->bind(TempleResearcher::class, fn () => config('services.temple_agent') === 'claude'
+            ? ClaudeTempleResearcher::fromConfig()
+            : new FreeTempleResearcher);
     }
 
     public function boot(): void

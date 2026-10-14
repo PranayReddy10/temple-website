@@ -35,26 +35,36 @@ filled, timings and sevas are added only when it has none, and anything an
 editor wrote is kept. A temple an editor verified or deleted is left alone.
 Running an import again changes nothing.
 
-## Find and research more temples with the agent
+## Find and research more temples with the agent (free)
 
-The agent uses Claude with web search and web fetch. It reads which temples
-the state already has, asks for the state's most significant temples that
-are not among them, researches each from its own website, the endowments
-department and other public sources, saves it to the state's data file and
-imports it.
+The agent costs nothing and needs no API key. It uses only free, open
+sources:
+
+- **Wikidata** finds the state's temples, most notable first, and gives the
+  map location, official website, when built, style, deity, Telugu name and
+  World Heritage status;
+- **Wikipedia** gives the summary, history and festivals;
+- **the temple's own website** gives timings, sevas, phone and email (read
+  by the same reader as the admin panel's "Read official site");
+- **OpenStreetMap** gives the address, PIN code and district at the map pin.
+
+It skips temples the site already lists, saves each new one to the state's
+data file (with its sources) and imports it.
 
 ```bash
-# .env
-ANTHROPIC_API_KEY=sk-ant-...
-# optional: TEMPLE_AGENT_MODEL=claude-opus-5-5, TEMPLE_AGENT_EFFORT=high
-
 php artisan temples:agent AP --limit=10           # discover and add 10 more
-php artisan temples:agent TG --temple="Sri Kurumurthy Venkateswara Swamy Temple"  # research named temples
+php artisan temples:agent TG --temple="Kurumurthy Venkateswara Temple"  # research named temples
 php artisan temples:agent KA --limit=25 --draft   # next state, as drafts
 php artisan temples:agent AP --no-import          # only save the research to the data file
 ```
 
-Commit the changed data file, so the research is kept and can be reviewed.
+What these sources do not have (dress code, queue rules, how to reach, and
+timings for temples whose website cannot be read) stays empty for editors
+to fill. Commit the changed data file so the research is kept and reviewed.
+
+Optional: `TEMPLE_AGENT=claude` in `.env` switches to Claude with web
+search, which researches more fields but is **paid API usage** and needs
+`ANTHROPIC_API_KEY`. Leave it unset to stay free.
 
 ## How far the shipped data is checked
 
@@ -67,12 +77,8 @@ confirmed it. Its `changes` list says what was corrected and why.
 As of 14 October 2026, 53 of the 95 records are checked. The other 42
 (no `"verification"` key) are from the first research pass and still need
 the check. The checking environment could search the web but not open
-pages, so re-running with page access, which `temples:agent` has on a
-normal server, is the way to finish them:
-
-```bash
-php artisan temples:agent AP --temple="Sri Varasiddhi Vinayaka Swamy Temple, Kanipakam" --no-import
-```
+pages; the rest can be checked the same way, or by an editor against the
+temple's own website.
 
 ## Trust level
 

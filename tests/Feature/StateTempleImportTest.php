@@ -246,6 +246,15 @@ class StateTempleImportTest extends TestCase
         $this->assertSame('517131', Temple::where('slug', 'sri-kanaka-durga-temple-vijayawada')->value('pincode'));
     }
 
+    public function test_the_agent_explains_a_missing_api_key_instead_of_crashing(): void
+    {
+        config(['services.temple_agent' => 'claude', 'services.anthropic.key' => null]);
+
+        $this->artisan('temples:agent', ['state' => 'AP'])
+            ->expectsOutputToContain('Add ANTHROPIC_API_KEY=')
+            ->assertFailed();
+    }
+
     public function test_the_agent_researches_only_temples_not_yet_listed_and_saves_its_research(): void
     {
         $this->write([$this->kanipakam()]);
