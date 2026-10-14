@@ -36,8 +36,16 @@ class TempleAgentCommand extends Command
 
     protected $description = 'AI research agent: find a state\'s top temples not yet listed, research each from its website, and add them';
 
-    public function handle(TempleResearcher $researcher): int
+    public function handle(): int
     {
+        try {
+            $researcher = $this->laravel->make(TempleResearcher::class);
+        } catch (\RuntimeException $e) {
+            $this->error($e->getMessage());
+
+            return self::FAILURE;
+        }
+
         $state = ImportStateTemplesCommand::state((string) $this->argument('state'));
         if ($state === null) {
             $this->error('No state "'.$this->argument('state').'". Use its code (AP, TG …) or name.');

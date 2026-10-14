@@ -48,6 +48,7 @@ imports it.
 ANTHROPIC_API_KEY=sk-ant-...
 # optional: TEMPLE_AGENT_MODEL=claude-opus-5-5, TEMPLE_AGENT_EFFORT=high
 
+php artisan config:cache   # app:deploy caches the configuration: re-cache after editing .env
 php artisan temples:agent AP --limit=10           # discover and add 10 more
 php artisan temples:agent TG --temple="Sri Kurumurthy Venkateswara Swamy Temple"  # research named temples
 php artisan temples:agent KA --limit=25 --draft   # next state, as drafts

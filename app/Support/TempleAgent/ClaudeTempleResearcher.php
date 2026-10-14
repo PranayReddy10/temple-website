@@ -55,7 +55,9 @@ TXT;
     {
         $key = (string) config('services.anthropic.key');
         if ($key === '') {
-            throw new RuntimeException('Set ANTHROPIC_API_KEY in .env to run the temple research agent.');
+            throw new RuntimeException(app()->configurationIsCached()
+                ? 'No Anthropic API key. Add ANTHROPIC_API_KEY=sk-ant-... to .env, then run `php artisan config:cache` (the configuration is cached, so .env is not read until you do).'
+                : 'No Anthropic API key. Add ANTHROPIC_API_KEY=sk-ant-... to .env (create a key at https://console.anthropic.com/settings/keys).');
         }
 
         return new self(
