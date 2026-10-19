@@ -98,10 +98,12 @@ final class TempleLinkImport
     /** A temple already listed at that place, or with the same website. */
     public static function existing(?array $maps, ?string $website, string $name): ?Temple
     {
-        if (filled($website) && ($url = OfficialSiteReader::normaliseUrl($website))) {
-            $host = preg_replace('/^www\./', '', (string) parse_url($url, PHP_URL_HOST));
+        // Many temples share one portal (the AP Endowments one), so a site
+        // is told apart by its temple code there, not by its host alone.
+        if (filled($website) && ($key = OfficialSiteReader::siteKey($website))) {
+            $host = explode('/', $key)[0];
             $t = Temple::where('official_website', 'like', '%'.$host.'%')->get()
-                ->first(fn (Temple $t) => preg_replace('/^www\./', '', (string) parse_url((string) $t->official_website, PHP_URL_HOST)) === $host);
+                ->first(fn (Temple $t) => OfficialSiteReader::siteKey((string) $t->official_website) === $key);
             if ($t) {
                 return $t;
             }
