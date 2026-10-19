@@ -56,6 +56,49 @@ class OfficialSiteImportTest extends TestCase
         return collect($timings)->mapWithKeys(fn ($t) => [$t['label'].'|'.implode(',', $t['days'] ?? []) => $t])->all();
     }
 
+    public function test_an_ap_endowments_portal_link_is_read_from_the_temples_plain_pages(): void
+    {
+        $html = ['Content-Type' => 'text/html; charset=utf-8'];
+        Http::fake([
+            'tms.ap.gov.in/MKJNWD/cnt/index' => Http::response('<html><head><title>Sri Mallikarjuna Swamy Kamakshi Tayee Devasthanam</title></head><body>'
+                .'<h2>Temple Timings</h2><p>Darshan: 5:00 AM to 1:00 PM and 4:30 PM to 9:15 PM</p>'
+                .'<p>Phone: 0861-2345678</p></body></html>', 200, $html),
+            'tms.ap.gov.in/MKJNWD/cnt/about-temple' => Http::response('<html><body><h1>About Temple</h1>'
+                .'<p>The temple of Mallikarjuna Swamy and Kamakshi Tayee stands on the Penna river at Jonnawada, near Nellore.</p></body></html>', 200, $html),
+            // The portal's own address gives only the page its browser code fills in.
+            'tms.ap.gov.in/' => Http::response('<html><body><app-root></app-root><script src="main.js"></script></body></html>', 200, $html),
+            '*' => Http::response('', 404),
+        ]);
+
+        $found = OfficialSiteReader::read('https://tms.ap.gov.in/#/temple-details/MKJNWD?section=history');
+
+        $this->assertArrayNotHasKey('error', $found);
+        $this->assertArrayNotHasKey('warning', $found);
+        $this->assertSame('https://tms.ap.gov.in/MKJNWD/cnt/index', $found['source_url']);
+        $this->assertSame(['05:00', '16:30'], array_column($found['timings'], 'opens_at'));
+        $this->assertContains('0861-2345678', $found['phones']);
+        $this->assertContains('https://tms.ap.gov.in/MKJNWD/cnt/about-temple', array_column($found['pages'], 'url'));
+    }
+
+    public function test_temples_sharing_the_ap_endowments_portal_are_told_apart_by_their_code(): void
+    {
+        $this->assertSame('MKJNWD', OfficialSiteReader::endowmentsCode('https://tms.ap.gov.in/#/temple-details/MKJNWD?section=history'));
+        $this->assertSame('VAVDPL', OfficialSiteReader::endowmentsCode('https://tms.ap.gov.in/vavdpl/cnt/about-temple'));
+        $this->assertNull(OfficialSiteReader::endowmentsCode('https://tms.ap.gov.in/temples'));
+        $this->assertNull(OfficialSiteReader::endowmentsCode('https://www.swarnagiritemple.com/cnt/index'));
+
+        $this->assertSame('tms.ap.gov.in/VAVDPL', OfficialSiteReader::siteKey('https://tms.ap.gov.in/#/temple-details/vavdpl'));
+        $this->assertSame(
+            OfficialSiteReader::siteKey('https://tms.ap.gov.in/#/temple-details/MKJNWD'),
+            OfficialSiteReader::siteKey('https://tms.ap.gov.in/MKJNWD/cnt/index'),
+        );
+        $this->assertNotSame(
+            OfficialSiteReader::siteKey('https://tms.ap.gov.in/#/temple-details/MKJNWD'),
+            OfficialSiteReader::siteKey('https://tms.ap.gov.in/#/temple-details/VAVDPL'),
+        );
+        $this->assertSame('swarnagiritemple.com', OfficialSiteReader::siteKey(self::SITE.'/darshan-timings'));
+    }
+
     public function test_the_reader_finds_contact_timings_and_sevas(): void
     {
         $found = OfficialSiteReader::extract([

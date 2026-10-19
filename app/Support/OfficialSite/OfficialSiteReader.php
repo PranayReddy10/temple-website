@@ -69,6 +69,9 @@ final class OfficialSiteReader
         if ($url === null) {
             return ['error' => 'That is not a web address.'];
         }
+        // A portal page built in the browser, read from its plain pages.
+        [$url, $portalPages] = self::readablePages($url);
+        $extraPages = [...$portalPages, ...$extraPages];
 
         [$home, $reason, $url] = self::fetchHome($url);
         if ($home === null) {
@@ -1183,6 +1186,63 @@ final class OfficialSiteReader
     private static function pincodeIn(string $text): ?string
     {
         return preg_match('/(?<![\d₹,.:])([1-9]\d{2})\s?(\d{3})(?![\d,.:])/u', $text, $m) ? $m[1].$m[2] : null;
+    }
+
+    /**
+     * The AP Endowments portal (tms.ap.gov.in) shows a temple at
+     * "#/temple-details/<CODE>", a page its browser code builds, which
+     * a reader receives empty. The same portal serves each temple as plain
+     * pages under "/<CODE>/cnt/", so those are read instead, and their
+     * links lead on to the temple's seva and timings pages.
+     *
+     * @return array{0: string, 1: array<int, string>} the page to start from, and more pages to read
+     */
+    public static function readablePages(string $url): array
+    {
+        $code = self::endowmentsCode($url);
+        if ($code === null) {
+            return [$url, []];
+        }
+        $base = 'https://tms.ap.gov.in/'.$code.'/cnt/';
+
+        return [$base.'index', [$base.'about-temple']];
+    }
+
+    /**
+     * The temple's code on the AP Endowments portal, from any of its link
+     * forms: "#/temple-details/MKJNWD", "/MKJNWD/cnt/about-temple".
+     */
+    public static function endowmentsCode(string $url): ?string
+    {
+        $host = preg_replace('/^www\./', '', strtolower((string) parse_url($url, PHP_URL_HOST)));
+        if ($host !== 'tms.ap.gov.in') {
+            return null;
+        }
+        $rest = (string) parse_url($url, PHP_URL_PATH).'#'.(string) parse_url($url, PHP_URL_FRAGMENT);
+
+        return preg_match('~temple-details/([A-Za-z0-9]{4,12})\b~', $rest, $m) || preg_match('~^/([A-Za-z0-9]{4,12})/cnt(?:/|$)~', $rest, $m)
+            ? strtoupper($m[1])
+            : null;
+    }
+
+    /**
+     * What tells one temple's website from another's: its host, and on a
+     * portal that many temples share, the temple's code there too.
+     */
+    public static function siteKey(string $url): ?string
+    {
+        $url = self::normaliseUrl($url);
+        if ($url === null) {
+            return null;
+        }
+        $host = preg_replace('/^www\./', '', strtolower((string) parse_url($url, PHP_URL_HOST)));
+        if ($host === 'tms.ap.gov.in') {
+            $code = self::endowmentsCode($url);
+
+            return $code !== null ? $host.'/'.$code : null;
+        }
+
+        return $host;
     }
 
     public static function normaliseUrl(string $url): ?string
