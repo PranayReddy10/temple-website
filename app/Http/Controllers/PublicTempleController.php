@@ -403,8 +403,8 @@ class PublicTempleController extends Controller
         }
 
         if ($place !== '' || $temple->address) {
-            $faq[] = ['q' => 'Where is '.$name.' and how do I reach it?', 'a' => trim(collect([$temple->address, $place, $temple->pincode])->filter()->implode(', '))
-                .'. '.($temple->hasCoordinates() ? 'Use the directions link on this page or in the '.config('brand.name').' app for the route.' : 'Search the temple\'s name in Google Maps for the route.')];
+            $faq[] = ['q' => 'Where is '.$name.' and how do I reach it?', 'a' => TempleSeo::addressLine($temple, $place)
+                .'. Use the Get directions button on this page or the '.config('brand.name').' app for the route.'];
         }
 
         if ($temple->pujas->isNotEmpty()) {

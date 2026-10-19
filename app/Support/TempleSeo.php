@@ -174,6 +174,31 @@ final class TempleSeo
             ->values();
     }
 
+    /**
+     * The temple's address, then its town, district, state and PIN, each
+     * part once: "Arasavalli, near Srikakulam" and "Arasavalli, Srikakulam,
+     * Andhra Pradesh" make "Arasavalli, near Srikakulam, Srikakulam, …".
+     */
+    public static function addressLine(Temple $temple, ?string $place): string
+    {
+        return collect([$temple->address, $place, $temple->pincode])->filter()
+            ->flatMap(fn ($part) => array_map('trim', explode(',', (string) $part)))
+            ->filter()->unique(fn ($part) => mb_strtolower($part))->implode(', ');
+    }
+
+    /**
+     * Directions in Google Maps: to the pin, or, for a temple with none
+     * yet, a search for its name and address, which finds it all the same.
+     */
+    public static function directionsUrl(Temple $temple, ?string $place = null): string
+    {
+        if ($temple->hasCoordinates()) {
+            return 'https://www.google.com/maps/dir/?api=1&destination='.$temple->latitude.','.$temple->longitude;
+        }
+
+        return 'https://www.google.com/maps/search/?api=1&query='.rawurlencode(trim($temple->name.', '.self::addressLine($temple, $place), ', '));
+    }
+
     /** "3.2 km", "18 km". */
     public static function km(float $km): string
     {

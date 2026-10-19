@@ -134,6 +134,37 @@
         .puja { padding: 10px 0; border-top: 1px solid #efe6d8; }
         .puja b { display: block; }
         .facts dt { font-weight: 600; margin-top: 10px; }
+        /* Each section a card of its own, tinted by what it holds. */
+        .panels { display: grid; gap: 18px; align-content: start; }
+        .panel { background: #fffdf9; border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; box-shadow: 0 2px 10px rgba(62,39,35,.05); min-width: 0; }
+        .panel > h2, .reviews.panel > h2, .glance > h2, .map-card > h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(0,0,0,.06); font-size: 1.15rem; line-height: 1.3; }
+        .panel > p:last-child { margin-bottom: 0; }
+        .panel h3 { font-size: .95rem; margin: 6px 0 8px; }
+        .pi { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 10px; background: rgba(0,0,0,.05); font-size: 1rem; }
+        .tile { background: rgba(255,255,255,.75); border: 1px solid rgba(0,0,0,.05); border-radius: 12px; padding: 10px 12px; margin-top: 8px; display: grid; gap: 2px; }
+        .tone-blue { background: #eef5ff; border-color: #cfe0fb; } .tone-blue > h2 { color: #1e4f9c; } .tone-blue .pi { background: #d9e8ff; }
+        .tone-amber { background: #fff7e6; border-color: #f6dfae; } .tone-amber > h2 { color: #8a5300; } .tone-amber .pi { background: #fde8bd; }
+        .tone-saffron { background: #fff2e8; border-color: #f7d3b8; } .tone-saffron > h2 { color: #a23e0e; } .tone-saffron .pi { background: #fddcc5; }
+        .tone-green { background: #eefaf1; border-color: #c8ebd2; } .tone-green > h2 { color: #1d6b38; } .tone-green .pi { background: #d3f1dc; }
+        .tone-purple { background: #f6f0ff; border-color: #e1d3fa; } .tone-purple > h2 { color: #5b2b9c; } .tone-purple .pi { background: #e6d9fb; }
+        .timings { width: 100%; border-collapse: collapse; font-size: .95rem; }
+        .timings th, .timings td { text-align: left; padding: 8px 6px; border-top: 1px solid #d6e4fa; vertical-align: top; }
+        .timings tr:first-child th, .timings tr:first-child td { border-top: 0; }
+        .timings th { font-weight: 600; } .timings .win { white-space: nowrap; color: #1e4f9c; font-weight: 600; }
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .chip { background: #ebe0fd; color: #5b2b9c; border-radius: 999px; padding: 5px 12px; text-decoration: none; font-size: .9rem; font-weight: 600; }
+        .chip small { font-weight: 400; opacity: .8; margin-left: 4px; }
+        .faq { margin-top: 24px; }
+        .glance { margin-bottom: 16px; }
+        /* At a glance: first thing on a phone, in the side column on a wide screen. */
+        .glance.top { display: none; margin: 0; }
+        @media (max-width: 760px) { .glance.top { display: block; } .glance.side { display: none; } }
+        .reach > h2 { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(0,0,0,.06); }
+        .glance > h2, .map-card > h2 { font-size: 1.05rem; }
+        .g-tile { background: #f8f2e9; border-radius: 12px; padding: 9px 12px; margin-top: 8px; font-size: .93rem; overflow-wrap: anywhere; }
+        .g-tile .lbl { display: block; font-size: .78rem; font-weight: 700; color: var(--muted); margin-bottom: 2px; }
+        .map-card { margin-top: 16px; }
+        .map-card iframe { width: 100%; height: 220px; border: 0; border-radius: 12px; display: block; background: #e9e2d6; }
         .reach h2 { margin: 0 0 12px; font-size: 1.1rem; line-height: 1.3; }
         .reach h3 { margin: 16px 0 4px; font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
         .reach-actions { display: grid; gap: 8px; margin-bottom: 6px; }
@@ -164,6 +195,10 @@
         .more span { color: var(--muted); font-size: .8rem; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         @media (max-width: 520px) { .more { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } }
         .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 6px; }
+        /* Five to a row on a wide screen: a sixth card would sit alone. */
+        @media (min-width: 1000px) { .more > a:nth-child(6) { display: none; } }
+        /* A temple without a photo yet: a short tinted band, not an empty box. */
+        .more .ph:has(.none) { aspect-ratio: 16/7; background: linear-gradient(135deg, #f3e6d0, #ead6b8); }
         .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 999px; font-weight: 600; font-size: .95rem; text-decoration: none; border: 1.5px solid var(--line); color: var(--deep); background: #fffdf9; cursor: pointer; font-family: inherit; }
         .btn.primary { background: var(--kumkum, #9B1B30); border-color: var(--kumkum, #9B1B30); color: #fff; }
         .today { display: flex; flex-wrap: wrap; gap: 6px 18px; background: #fff7e8; border: 1px solid #f0dcb4; border-radius: 14px; padding: 12px 14px; margin: 10px 0; font-size: .93rem; }
@@ -181,6 +216,10 @@
             .actions { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
             .actions > .btn, .actions > form, .actions > details, .actions form .btn, .actions details summary { width: 100%; justify-content: center; text-align: center; }
             .actions details.add-yatra .pop { min-width: 0; width: calc(200% + 8px); }
+            /* An odd one out takes the whole row rather than sitting alone. */
+            .actions > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+            .timings th, .timings td { padding: 7px 4px; font-size: .88rem; }
+            .timings .win { white-space: normal; }
         }
         details.add-yatra { position: relative; display: inline-block; }
         details.add-yatra summary { list-style: none; }
@@ -283,9 +322,7 @@
         @else
             <a class="btn" href="{{ Seo::url('login').'?'.http_build_query(['next' => $canonical]) }}" rel="nofollow">🧭 {{ __('Add to yatra') }}</a>
         @endif
-        @if ($temple->hasCoordinates())
-            <a class="btn" href="https://www.google.com/maps/dir/?api=1&destination={{ $temple->latitude }},{{ $temple->longitude }}" rel="nofollow noopener" target="_blank">{{ __('Directions') }}</a>
-        @endif
+        <a class="btn" href="{{ TempleSeo::directionsUrl($temple, $place) }}" rel="nofollow noopener" target="_blank">🧭 {{ __('Directions') }}</a>
         <button type="button" class="btn" id="share" data-url="{{ $canonical }}" data-title="{{ $name }}">{{ __('Share') }}</button>
     </div>
 
@@ -315,55 +352,79 @@
     @endif
 
     <div class="cols">
-        <div>
-            @if ($intro !== [] && $locale === 'en')
-                <h2>{{ __('About :name', ['name' => $name]) }}</h2>
-                <p>{{ implode(' ', $intro) }}</p>
-            @endif
-            @if ($about)
-                <p>{{ $about }}</p>
+        <div class="panels">
+            @include('site._glance', ['where' => 'top'])
+            @if (($intro !== [] && $locale === 'en') || $about)
+                <section class="panel">
+                    <h2><span class="pi" aria-hidden="true">📖</span>{{ __('About :name', ['name' => $name]) }}</h2>
+                    @if ($intro !== [] && $locale === 'en')<p>{{ implode(' ', $intro) }}</p>@endif
+                    @if ($about)<p>{{ $about }}</p>@endif
+                </section>
             @endif
 
             @if ($temple->timings->isNotEmpty())
-                <h2>{{ __(':name timings', ['name' => $name]) }}</h2>
-                <table>
-                    @foreach (\App\Models\TempleTiming::inReadingOrder($temple->timings) as $t)
-                        <tr><td>{{ $t->label ?: __($t->kind?->getLabel() ?? '') }}</td><td>{{ __($t->dayLabel()) }}</td><td>{{ $t->window() }}</td></tr>
-                    @endforeach
-                </table>
+                <section class="panel tone-blue">
+                    <h2><span class="pi" aria-hidden="true">🕘</span>{{ __(':name timings', ['name' => $name]) }}</h2>
+                    <table class="timings">
+                        @foreach (\App\Models\TempleTiming::inReadingOrder($temple->timings) as $t)
+                            <tr><th>{{ $t->label ?: __($t->kind?->getLabel() ?? '') }}</th><td>{{ __($t->dayLabel()) }}</td><td class="win">{{ $t->window() }}</td></tr>
+                        @endforeach
+                    </table>
+                </section>
             @endif
 
             @if ($temple->pujas->isNotEmpty())
-                <h2>{{ __('Pujas and sevas at :name', ['name' => $name]) }}</h2>
-                @foreach ($temple->pujas as $p)
-                    <div class="puja">
-                        <b>{{ $p->name }}</b>
-                        <span class="muted">{{ collect([$p->feeLabel(), $p->durationLabel()])->filter()->implode(' · ') }}</span>
-                        @if ($p->description)<div>{{ \Illuminate\Support\Str::limit($p->description, 240) }}</div>@endif
-                    </div>
-                @endforeach
+                <section class="panel tone-amber">
+                    <h2><span class="pi" aria-hidden="true">🪔</span>{{ __('Pujas and sevas at :name', ['name' => $name]) }}</h2>
+                    @foreach ($temple->pujas as $p)
+                        <div class="tile">
+                            <b>{{ $p->name }}</b>
+                            @if (filled($p->feeLabel()) || filled($p->durationLabel()))<span class="muted">{{ collect([$p->feeLabel(), $p->durationLabel()])->filter()->implode(' · ') }}</span>@endif
+                            @if ($p->description)<div>{{ \Illuminate\Support\Str::limit($p->description, 240) }}</div>@endif
+                        </div>
+                    @endforeach
+                </section>
             @endif
 
-            @foreach (['significance' => [$significance, __('Significance')], 'history' => [$history, __('History of :name', ['name' => $name])], 'entry_rules' => [$entryRules, __('Entry rules')], 'queue_information' => [$queueInfo, __('Queue and darshan tips')]] as $field => [$text, $heading])
-                @if ($text)
-                    <h2>{{ $heading }}</h2>
-                    <p style="white-space:pre-line">{{ $text }}</p>
-                @endif
-            @endforeach
-
-            @if (($deityFestivals ?? collect())->isNotEmpty())
-                <h2>{{ __('Festivals of :deity', ['deity' => $deityName ?? $temple->deity?->name]) }}</h2>
-                <p>@foreach ($deityFestivals as $f)<a href="{{ \App\Http\Controllers\FestivalPageController::url($f) }}">{{ $f->name }}</a> – {{ $f->starts_on->format('j M Y') }}@if (! $loop->last) · @endif@endforeach</p>
+            @if ($significance)
+                <section class="panel tone-saffron">
+                    <h2><span class="pi" aria-hidden="true">🕉️</span>{{ __('Significance') }}</h2>
+                    <p style="white-space:pre-line">{{ $significance }}</p>
+                </section>
             @endif
-            @if ($temple->events->isNotEmpty())
-                <h2>{{ __('Festivals and events') }}</h2>
-                @foreach ($temple->events as $e)
-                    <div class="event">
-                        <b>{{ $e->title }}</b>
-                        <span class="muted">{{ optional($e->nextDate() ?? $e->starts_on)->format('l, d M Y') }}@if ($e->group_name) · {{ $e->group_name }}@endif</span>
-                        @if ($e->description)<div>{{ \Illuminate\Support\Str::limit(strip_tags($e->description), 220) }}</div>@endif
-                    </div>
-                @endforeach
+
+            @if ($history)
+                <section class="panel">
+                    <h2><span class="pi" aria-hidden="true">📜</span>{{ __('History') }}</h2>
+                    <p style="white-space:pre-line">{{ $history }}</p>
+                </section>
+            @endif
+
+            @if ($entryRules || $queueInfo)
+                <section class="panel tone-green">
+                    <h2><span class="pi" aria-hidden="true">✅</span>{{ __('Visitor guidelines') }}</h2>
+                    @if ($entryRules)<div class="tile"><b>{{ __('Entry rules') }}</b><div style="white-space:pre-line">{{ $entryRules }}</div></div>@endif
+                    @if ($queueInfo)<div class="tile"><b>{{ __('Queue and darshan tips') }}</b><div style="white-space:pre-line">{{ $queueInfo }}</div></div>@endif
+                </section>
+            @endif
+
+            @if (($deityFestivals ?? collect())->isNotEmpty() || $temple->events->isNotEmpty())
+                <section class="panel tone-purple">
+                    <h2><span class="pi" aria-hidden="true">🎉</span>{{ __('Festivals and events') }}</h2>
+                    @if (($deityFestivals ?? collect())->isNotEmpty())
+                        <h3>{{ __('Festivals of :deity', ['deity' => $deityName ?? $temple->deity?->name]) }}</h3>
+                        <div class="chips">
+                            @foreach ($deityFestivals as $f)<a class="chip" href="{{ \App\Http\Controllers\FestivalPageController::url($f) }}">{{ $f->name }} <small>{{ $f->starts_on->format('j M Y') }}</small></a>@endforeach
+                        </div>
+                    @endif
+                    @foreach ($temple->events as $e)
+                        <div class="tile">
+                            <b>{{ $e->title }}</b>
+                            <span class="muted">{{ optional($e->nextDate() ?? $e->starts_on)->format('l, d M Y') }}@if ($e->group_name) · {{ $e->group_name }}@endif</span>
+                            @if ($e->description)<div>{{ \Illuminate\Support\Str::limit(strip_tags($e->description), 220) }}</div>@endif
+                        </div>
+                    @endforeach
+                </section>
             @endif
 
             @php
@@ -393,7 +454,8 @@
             @endif
 
             @if ($pictures->isNotEmpty())
-                <h2>{{ __('Photos of :name', ['name' => $name]) }}</h2>
+                <section class="panel">
+                <h2><span class="pi" aria-hidden="true">📷</span>{{ __('Photos of :name', ['name' => $name]) }}</h2>
                 <div class="gallery">
                     @foreach ($pictures as $i => $p)
                         <button type="button" data-photo="{{ $i }}" aria-label="{{ __('Open photo :n of :total', ['n' => $i + 1, 'total' => $pictures->count()]) }}">
@@ -419,10 +481,12 @@
                     'credit' => collect([$p['credit'], $p['license']])->filter()->implode(', '),
                     'source' => $p['source'],
                 ])->all(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) !!}</script>
+                </section>
             @endif
 
             @if ($videos->isNotEmpty())
-                <h2>{{ __('Videos') }}</h2>
+                <section class="panel">
+                <h2><span class="pi" aria-hidden="true">🎬</span>{{ __('Videos') }}</h2>
                 <div class="videos">
                     @foreach ($videos as $v)
                         <div class="video">
@@ -440,6 +504,7 @@
                         </div>
                     @endforeach
                 </div>
+                </section>
             @endif
 
             @include('site._reviews')
@@ -463,22 +528,21 @@
                 // The address, then the town, district and state, each part once:
                 // "Arasavalli, near Srikakulam" and "Arasavalli, Srikakulam, …"
                 // read as "Arasavalli, near Srikakulam, Srikakulam, …" no more.
-                $addressLine = collect([$temple->address, $place, $temple->pincode])->filter()
-                    ->flatMap(fn ($part) => array_map('trim', explode(',', (string) $part)))
-                    ->filter()->unique(fn ($part) => mb_strtolower($part))->implode(', ');
+                $addressLine = TempleSeo::addressLine($temple, $place);
                 $rules = collect([
                     ['👘', __('Dress code'), $dressCode],
                     ['👟', __('Footwear'), $temple->footwear_policy],
                     ['📵', __('Mobile phones'), $temple->mobile_policy],
                 ])->filter(fn ($r) => filled($r[2]));
             @endphp
+            @include('site._glance', ['where' => 'side'])
             <div class="card reach">
-                <h2>{{ __('How to reach :name', ['name' => $name]) }}</h2>
+                <h2><span class="pi" aria-hidden="true">🧭</span>{{ __('How to reach :name', ['name' => $name]) }}</h2>
 
-                @if ($temple->hasCoordinates() || $temple->contact_phone || $temple->official_website)
+                @if ($temple->hasCoordinates() || $addressLine || $temple->contact_phone || $temple->official_website)
                     <div class="reach-actions">
-                        @if ($temple->hasCoordinates())
-                            <a class="btn primary go" href="https://www.google.com/maps/dir/?api=1&destination={{ $temple->latitude }},{{ $temple->longitude }}" rel="nofollow noopener" target="_blank">🧭 {{ __('Get directions') }}</a>
+                        @if ($temple->hasCoordinates() || $addressLine)
+                            <a class="btn primary go" href="{{ TempleSeo::directionsUrl($temple, $place) }}" rel="nofollow noopener" target="_blank">🧭 {{ __('Get directions') }}</a>
                         @endif
                         @if ($temple->contact_phone || $temple->official_website)
                             <div class="pair">
@@ -549,8 +613,20 @@
                     </p>
                 @endif
             </div>
+            @if ($temple->hasCoordinates())
+                @php
+                    $lat = (float) $temple->latitude;
+                    $lng = (float) $temple->longitude;
+                @endphp
+                <div class="card map-card">
+                    <h2><span class="pi" aria-hidden="true">🗺️</span>{{ __('Temple location') }}</h2>
+                    <iframe title="{{ __('Map of :name', ['name' => $name]) }}" loading="lazy" referrerpolicy="no-referrer"
+                        src="https://www.openstreetmap.org/export/embed.html?bbox={{ $lng - 0.012 }}%2C{{ $lat - 0.008 }}%2C{{ $lng + 0.012 }}%2C{{ $lat + 0.008 }}&amp;layer=mapnik&amp;marker={{ $lat }}%2C{{ $lng }}"></iframe>
+                    <p class="reach-foot" style="border:0;padding:0;margin-top:6px">© <a href="https://www.openstreetmap.org/copyright" rel="noopener" target="_blank">OpenStreetMap</a> · <a href="{{ TempleSeo::directionsUrl($temple, $place) }}" rel="nofollow noopener" target="_blank">{{ __('Get directions') }}</a></p>
+                </div>
+            @endif
             <div class="card" style="margin-top:16px">
-                <b>{{ $bookable ? __('Book a seva at :name', ['name' => $name]) : __('Plan your visit to :name', ['name' => $name]) }}</b>
+                <b>{{ $bookable ? __('Book a seva') : __('Plan your visit') }}</b>
                 <p class="muted" style="margin:6px 0 10px">{{ $bookable ? __('Timings, sevas, festivals and directions in the :app app, with booking and payment.', ['app' => config('brand.name')]) : __('Timings, sevas, festivals and directions in the :app app.', ['app' => config('brand.name')]) }}</p>
                 @if ($bookable)<a class="btn primary" href="{{ $bookLink }}">{{ __('Book a seva') }}</a>@endif
                 @if ($donateLink)<a class="btn" href="{{ $donateLink }}" style="margin-top:8px">🪔 {{ __('Donate to the hundi') }}</a>@endif
@@ -574,10 +650,12 @@
     @endif
 
     @if ($faq !== [])
-        <h2>{{ __('Questions devotees ask about :name', ['name' => $name]) }}</h2>
-        @foreach ($faq as $f)
-            <details class="q" @if ($loop->first) open @endif><summary>{{ $f['q'] }}</summary><p>{{ $f['a'] }}</p></details>
-        @endforeach
+        <section class="panel faq">
+            <h2><span class="pi" aria-hidden="true">❓</span>{{ __('Questions devotees ask') }}</h2>
+            @foreach ($faq as $f)
+                <details class="q" @if ($loop->first) open @endif><summary>{{ $f['q'] }}</summary><p>{{ $f['a'] }}</p></details>
+            @endforeach
+        </section>
     @endif
 
     @foreach ([
