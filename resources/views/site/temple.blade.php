@@ -94,6 +94,12 @@
         .hero.deity img { width: auto; max-width: 100%; max-height: 420px; object-fit: contain; }
         .cols { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; }
         @media (max-width: 760px) { .cols { grid-template-columns: 1fr; } }
+        .temple-song { position: fixed; left: 12px; bottom: 12px; z-index: 50; display: flex; align-items: center; gap: 8px; max-width: min(420px, calc(100vw - 24px)); padding: 8px 8px 8px 14px; border-radius: 999px; background: #3b1d0e; color: #fff; box-shadow: 0 6px 20px rgba(0,0,0,.25); font-size: .9rem; }
+        .temple-song[hidden] { display: none; }
+        .temple-song .ts-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; flex: 1; }
+        .temple-song small { opacity: .75; }
+        .temple-song button { flex: none; width: 34px; height: 34px; border: 0; border-radius: 50%; background: rgba(255,255,255,.15); color: #fff; font-size: .95rem; cursor: pointer; }
+        .temple-song button:hover, .temple-song button:focus-visible { background: rgba(255,255,255,.3); }
         table { width: 100%; border-collapse: collapse; font-size: .92rem; }
         td { padding: 8px 4px; border-top: 1px solid #efe6d8; vertical-align: top; }
         .scan { display: flex; gap: 14px; align-items: flex-start; background: #eef7ef; border: 1.5px solid #9cc9a3; border-radius: 16px; padding: 14px 16px; margin: 12px 0; }
@@ -351,7 +357,22 @@
                     'caption' => $m->title, 'credit' => $m->credit, 'license' => $m->license, 'source' => null,
                 ]))->filter(fn ($p) => filled($p['full']))->values();
                 $videos = $media->filter(fn ($m) => $m->type?->value === 'video' && $m->url())->values();
+                // The song that plays on opening the page: the temple's own
+                // (uploaded, or a link to an audio file), else its deity's.
+                // allMedia() lists the temple's media first. A YouTube link
+                // cannot play as sound alone, so it is not chosen.
+                $templeSong = $media->first(fn ($m) => in_array($m->type?->value, ['song', 'chant'], true)
+                    && $m->url() && $m->playbackKind() === 'audio');
             @endphp
+
+            @if ($templeSong)
+                <div class="temple-song" id="temple-song" data-src="{{ $templeSong->url() }}" hidden>
+                    <span class="ts-note" aria-hidden="true">♪</span>
+                    <span class="ts-title">{{ $templeSong->title ?: __('Temple song') }}@if ($templeSong->artist)<small> · {{ $templeSong->artist }}</small>@endif</span>
+                    <button type="button" class="ts-play" aria-label="{{ __('Play') }}" data-play="{{ __('Play') }}" data-pause="{{ __('Pause') }}">▶</button>
+                    <button type="button" class="ts-stop" aria-label="{{ __('Stop the song') }}">■</button>
+                </div>
+            @endif
 
             @if ($pictures->isNotEmpty())
                 <h2>{{ __('Photos of :name', ['name' => $name]) }}</h2>
@@ -534,6 +555,63 @@
                 b.replaceWith(f);
             });
         });
+
+        // The temple's song: starts when the page opens, stops when the
+        // devotee leaves (or goes back), and can be paused or stopped.
+        // Browsers refuse sound before the visitor has touched the page, so
+        // when the first try is refused it starts on their first tap.
+        (function () {
+            var bar = document.getElementById('temple-song');
+            if (!bar) return;
+            var audio = new Audio(bar.dataset.src);
+            audio.loop = true;
+            audio.preload = 'auto';
+            var play = bar.querySelector('.ts-play'), stop = bar.querySelector('.ts-stop');
+            var stopped = false;
+            bar.hidden = false;
+
+            function show() {
+                var on = !audio.paused;
+                play.textContent = on ? '❚❚' : '▶';
+                play.setAttribute('aria-label', on ? play.dataset.pause : play.dataset.play);
+            }
+            function start() {
+                if (stopped) return;
+                audio.play().then(show).catch(function () {
+                    // Not allowed yet: wait for the visitor's first touch.
+                    ['pointerdown', 'keydown', 'scroll'].forEach(function (ev) {
+                        window.addEventListener(ev, firstTouch, { once: true, passive: true });
+                    });
+                    show();
+                });
+            }
+            function firstTouch(e) {
+                if (e && e.target && bar.contains(e.target)) return;
+                ['pointerdown', 'keydown', 'scroll'].forEach(function (ev) { window.removeEventListener(ev, firstTouch); });
+                start();
+            }
+            audio.addEventListener('play', show);
+            audio.addEventListener('pause', show);
+            audio.addEventListener('error', function () { bar.hidden = true; });
+
+            play.addEventListener('click', function () {
+                stopped = false;
+                audio.paused ? audio.play().catch(function () {}) : audio.pause();
+            });
+            stop.addEventListener('click', function () {
+                stopped = true;
+                audio.pause();
+                audio.currentTime = 0;
+                ['pointerdown', 'keydown', 'scroll'].forEach(function (ev) { window.removeEventListener(ev, firstTouch); });
+                show();
+            });
+            // Leaving the page, or going back: the song stops.
+            window.addEventListener('pagehide', function () { audio.pause(); });
+            // Coming back to this page from the browser's history.
+            window.addEventListener('pageshow', function (e) { if (e.persisted) start(); });
+
+            start();
+        })();
 
         // Share this temple's page: the phone's share sheet, else WhatsApp.
         document.getElementById('share')?.addEventListener('click', function () {

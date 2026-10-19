@@ -2,10 +2,13 @@
 
 namespace App\Http\Resources\V1;
 
+use App\Models\Deity;
+use App\Models\DevotionalMedia;
+use App\Models\Temple;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\DevotionalMedia */
+/** @mixin DevotionalMedia */
 class DevotionalMediaResource extends JsonResource
 {
     public function toArray(Request $request): array
@@ -13,6 +16,13 @@ class DevotionalMediaResource extends JsonResource
         return [
             'id' => $this->id,
             'type' => $this->type?->value,
+            // Whose it is: a temple's own song plays on opening its page,
+            // its deity's only when the temple has none of its own.
+            'belongs_to' => match ($this->mediable_type) {
+                Temple::class, 'temple' => 'temple',
+                Deity::class, 'deity' => 'deity',
+                default => 'other',
+            },
             'title' => $this->title,
             'description' => $this->description,
 
