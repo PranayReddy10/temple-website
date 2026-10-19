@@ -134,6 +134,24 @@
         .puja { padding: 10px 0; border-top: 1px solid #efe6d8; }
         .puja b { display: block; }
         .facts dt { font-weight: 600; margin-top: 10px; }
+        .reach h2 { margin: 0 0 12px; font-size: 1.1rem; line-height: 1.3; }
+        .reach h3 { margin: 16px 0 4px; font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
+        .reach-actions { display: grid; gap: 8px; margin-bottom: 6px; }
+        .reach-actions .go { justify-content: center; width: 100%; }
+        .reach-actions .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; }
+        .reach-actions .pair .btn { justify-content: center; padding: 8px 10px; font-size: .9rem; }
+        .reach-row { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 4px 8px; align-items: start; padding: 9px 0; border-top: 1px solid var(--line); font-size: .93rem; overflow-wrap: anywhere; }
+        .reach h3 + .reach-row, .reach-actions + .reach-row { border-top: 0; }
+        .reach-row .ic { font-size: 1.05rem; line-height: 1.4; text-align: center; }
+        .reach-row .lbl { font-size: .78rem; color: var(--muted); font-weight: 600; }
+        .reach-row .gps { font-size: .8rem; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+        .reach-row .copy { border: 1px solid var(--line); background: #fff; color: var(--deep); border-radius: 999px; padding: 3px 10px; font: inherit; font-size: .78rem; cursor: pointer; }
+        .reach-row .copy:hover { border-color: var(--kumkum); }
+        .near { list-style: none; margin: 0; padding: 0; }
+        .near li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: .93rem; }
+        .near li:first-child { border-top: 0; }
+        .near .km { flex: none; color: var(--muted); font-size: .82rem; background: var(--sandal); border-radius: 999px; padding: 1px 8px; height: fit-content; white-space: nowrap; }
+        .reach-foot { margin: 14px 0 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: .78rem; color: var(--muted); }
         .facts dd { margin: 2px 0 0; }
         .more { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
         .more a { display: flex; flex-direction: column; background: #fffdf9; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; text-decoration: none; color: var(--deep); transition: box-shadow .2s, transform .2s; }
@@ -326,7 +344,7 @@
                 @endforeach
             @endif
 
-            @foreach (['significance' => [$significance, __('Significance')], 'history' => [$history, __('History of :name', ['name' => $name])], 'entry_rules' => [$entryRules, __('Entry rules')], 'queue_information' => [$queueInfo, __('Queue and darshan tips')], 'how_to_reach' => [$howToReach ?? null, __('How to reach')]] as $field => [$text, $heading])
+            @foreach (['significance' => [$significance, __('Significance')], 'history' => [$history, __('History of :name', ['name' => $name])], 'entry_rules' => [$entryRules, __('Entry rules')], 'queue_information' => [$queueInfo, __('Queue and darshan tips')]] as $field => [$text, $heading])
                 @if ($text)
                     <h2>{{ $heading }}</h2>
                     <p style="white-space:pre-line">{{ $text }}</p>
@@ -428,31 +446,108 @@
         </div>
 
         <aside>
-            <div class="card">
-                <h2 style="margin-top:0;font-size:1.1rem">{{ __('How to reach :name', ['name' => $name]) }}</h2>
-                <dl class="facts">
-                    @if ($temple->address || $place)<dt>{{ __('Address') }}</dt><dd>{{ collect([$temple->address, $place, $temple->pincode])->filter()->implode(', ') }}</dd>@endif
-                    @if ($temple->hasCoordinates())
-                        <dt>{{ __('Directions') }}</dt>
-                        <dd><a href="https://www.google.com/maps/dir/?api=1&destination={{ $temple->latitude }},{{ $temple->longitude }}" rel="nofollow noopener" target="_blank">{{ __('Open in Google Maps') }}</a></dd>
-                        <dt>{{ __('GPS') }}</dt>
-                        <dd>{{ number_format((float) $temple->latitude, 5) }}, {{ number_format((float) $temple->longitude, 5) }}</dd>
-                    @endif
-                    @if ($nearby->isNotEmpty())
-                        <dt>{{ __('Nearest temples') }}</dt>
-                        <dd>@foreach ($nearby->take(3) as $n)<a href="{{ \App\Support\SiteLocale::templeUrl($n, $locale !== 'en' && in_array($locale, \App\Support\SiteLocale::languagesOf($n), true) ? $locale : null) }}">{{ $n->localName($locale) }}</a> ({{ TempleSeo::km((float) $n->distance_km) }})@if (! $loop->last), @endif @endforeach</dd>
-                    @endif
-                    @if ($dressCode)<dt>{{ __('Dress code') }}</dt><dd>{{ $dressCode }}</dd>@endif
-                    @if ($temple->footwear_policy)<dt>{{ __('Footwear') }}</dt><dd>{{ $temple->footwear_policy }}</dd>@endif
-                    @if ($temple->mobile_policy)<dt>{{ __('Mobile phones') }}</dt><dd>{{ $temple->mobile_policy }}</dd>@endif
-                    @if ($temple->contact_phone)<dt>{{ __('Phone') }}</dt><dd><a href="tel:{{ $temple->contact_phone }}">{{ $temple->contact_phone }}</a></dd>@endif
-                    @if ($temple->source_name)
-                        {{-- OpenStreetMap's licence (ODbL) asks for this credit wherever its data is shown. --}}
-                        <dt>{{ __('Source') }}</dt><dd>@if ($temple->source_url)<a href="{{ $temple->source_url }}" rel="nofollow noopener" target="_blank">{{ $temple->source_name === 'OpenStreetMap contributors' ? '© OpenStreetMap contributors' : $temple->source_name }}</a>@else{{ $temple->source_name }}@endif</dd>
-                    @endif
-                    @if ($temple->official_website)<dt>{{ __('Official website') }}</dt><dd><a href="{{ $temple->official_website }}" rel="nofollow noopener" target="_blank">{{ parse_url($temple->official_website, PHP_URL_HOST) ?: $temple->official_website }}</a></dd>@endif
-                </dl>
-                @if ($updatedAt)<p class="muted" style="font-size:.8rem;margin:10px 0 0">{{ __('Updated') }} <time datetime="{{ $updatedAt->toDateString() }}">{{ $updatedAt->format('d M Y') }}</time></p>@endif
+            @php
+                // "Nearest railway station: Srikakulam Road, 13 km" lines, as rows with an icon.
+                $reachRows = collect(preg_split('/\R/', (string) ($howToReach ?? '')))->map('trim')->filter()->map(function (string $line) {
+                    [$label, $value] = str_contains($line, ':') ? array_map('trim', explode(':', $line, 2)) : [null, $line];
+                    $icon = match (true) {
+                        $label !== null && (bool) preg_match('/rail|train|station/i', $label) => '🚆',
+                        $label !== null && (bool) preg_match('/air|flight/i', $label) => '✈️',
+                        $label !== null && (bool) preg_match('/bus|road/i', $label) => '🚌',
+                        default => '📍',
+                    };
+                    $short = match ($icon) { '🚆' => __('By train'), '✈️' => __('By air'), '🚌' => __('By bus'), default => $label };
+
+                    return ['icon' => $icon, 'label' => $short, 'value' => $value];
+                })->values();
+                // The address, then the town, district and state, each part once:
+                // "Arasavalli, near Srikakulam" and "Arasavalli, Srikakulam, …"
+                // read as "Arasavalli, near Srikakulam, Srikakulam, …" no more.
+                $addressLine = collect([$temple->address, $place, $temple->pincode])->filter()
+                    ->flatMap(fn ($part) => array_map('trim', explode(',', (string) $part)))
+                    ->filter()->unique(fn ($part) => mb_strtolower($part))->implode(', ');
+                $rules = collect([
+                    ['👘', __('Dress code'), $dressCode],
+                    ['👟', __('Footwear'), $temple->footwear_policy],
+                    ['📵', __('Mobile phones'), $temple->mobile_policy],
+                ])->filter(fn ($r) => filled($r[2]));
+            @endphp
+            <div class="card reach">
+                <h2>{{ __('How to reach :name', ['name' => $name]) }}</h2>
+
+                @if ($temple->hasCoordinates() || $temple->contact_phone || $temple->official_website)
+                    <div class="reach-actions">
+                        @if ($temple->hasCoordinates())
+                            <a class="btn primary go" href="https://www.google.com/maps/dir/?api=1&destination={{ $temple->latitude }},{{ $temple->longitude }}" rel="nofollow noopener" target="_blank">🧭 {{ __('Get directions') }}</a>
+                        @endif
+                        @if ($temple->contact_phone || $temple->official_website)
+                            <div class="pair">
+                                @if ($temple->contact_phone)<a class="btn" href="tel:{{ preg_replace('/[^\d+]/', '', $temple->contact_phone) }}">📞 {{ __('Call') }}</a>@endif
+                                @if ($temple->official_website)<a class="btn" href="{{ $temple->official_website }}" rel="nofollow noopener" target="_blank">🌐 {{ __('Website') }}</a>@endif
+                            </div>
+                        @endif
+                    </div>
+                @endif
+
+                @if ($addressLine)
+                    <div class="reach-row">
+                        <span class="ic" aria-hidden="true">📍</span>
+                        <div>
+                            <div class="lbl">{{ __('Address') }}</div>
+                            <div>{{ $addressLine }}</div>
+                            @if ($temple->hasCoordinates())
+                                <div class="gps">{{ __('GPS') }} {{ number_format((float) $temple->latitude, 5) }}, {{ number_format((float) $temple->longitude, 5) }}</div>
+                            @endif
+                        </div>
+                        <button type="button" class="copy" data-copy="{{ $addressLine }}{{ $temple->hasCoordinates() ? ' ('.number_format((float) $temple->latitude, 5).', '.number_format((float) $temple->longitude, 5).')' : '' }}" data-done="{{ __('Copied') }}">{{ __('Copy') }}</button>
+                    </div>
+                @endif
+                @if ($temple->contact_phone)
+                    <div class="reach-row">
+                        <span class="ic" aria-hidden="true">📞</span>
+                        <div><div class="lbl">{{ __('Phone') }}</div><a href="tel:{{ preg_replace('/[^\d+]/', '', $temple->contact_phone) }}">{{ $temple->contact_phone }}</a></div>
+                    </div>
+                @endif
+
+                @if ($reachRows->isNotEmpty())
+                    <h3>{{ __('Getting there') }}</h3>
+                    @foreach ($reachRows as $r)
+                        <div class="reach-row">
+                            <span class="ic" aria-hidden="true">{{ $r['icon'] }}</span>
+                            <div>@if ($r['label'])<div class="lbl">{{ $r['label'] }}</div>@endif<div>{{ $r['value'] }}</div></div>
+                        </div>
+                    @endforeach
+                @endif
+
+                @if ($nearby->isNotEmpty())
+                    <h3>{{ __('Nearest temples') }}</h3>
+                    <ul class="near">
+                        @foreach ($nearby->take(3) as $n)
+                            <li><a href="{{ \App\Support\SiteLocale::templeUrl($n, $locale !== 'en' && in_array($locale, \App\Support\SiteLocale::languagesOf($n), true) ? $locale : null) }}">{{ $n->localName($locale) }}</a><span class="km">{{ TempleSeo::km((float) $n->distance_km) }}</span></li>
+                        @endforeach
+                    </ul>
+                @endif
+
+                @if ($rules->isNotEmpty())
+                    <h3>{{ __('Before you go') }}</h3>
+                    @foreach ($rules as [$icon, $label, $text])
+                        <div class="reach-row">
+                            <span class="ic" aria-hidden="true">{{ $icon }}</span>
+                            <div><div class="lbl">{{ $label }}</div><div>{{ $text }}</div></div>
+                        </div>
+                    @endforeach
+                @endif
+
+                @if ($temple->source_name || $updatedAt)
+                    <p class="reach-foot">
+                        @if ($temple->source_name)
+                            {{-- OpenStreetMap's licence (ODbL) asks for this credit wherever its data is shown. --}}
+                            {{ __('Source') }}: @if ($temple->source_url)<a href="{{ $temple->source_url }}" rel="nofollow noopener" target="_blank">{{ $temple->source_name === 'OpenStreetMap contributors' ? '© OpenStreetMap contributors' : $temple->source_name }}</a>@else{{ $temple->source_name }}@endif
+                        @endif
+                        @if ($temple->source_name && $updatedAt) · @endif
+                        @if ($updatedAt){{ __('Updated') }} <time datetime="{{ $updatedAt->toDateString() }}">{{ $updatedAt->format('d M Y') }}</time>@endif
+                    </p>
+                @endif
             </div>
             <div class="card" style="margin-top:16px">
                 <b>{{ $bookable ? __('Book a seva at :name', ['name' => $name]) : __('Plan your visit to :name', ['name' => $name]) }}</b>
@@ -612,6 +707,18 @@
 
             start();
         })();
+
+        // Copy the address (and GPS) for a cab or a friend.
+        document.querySelectorAll('.reach .copy').forEach(function (b) {
+            b.addEventListener('click', function () {
+                if (!navigator.clipboard) return;
+                navigator.clipboard.writeText(b.dataset.copy).then(function () {
+                    var was = b.textContent;
+                    b.textContent = b.dataset.done;
+                    setTimeout(function () { b.textContent = was; }, 1600);
+                }).catch(function () {});
+            });
+        });
 
         // Share this temple's page: the phone's share sheet, else WhatsApp.
         document.getElementById('share')?.addEventListener('click', function () {
