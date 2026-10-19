@@ -55,4 +55,23 @@ class TempleImagesTest extends TestCase
 
         $this->get(self::SITE.'/sitemap-temples-1.xml')->assertOk()->assertSee('narasimha-commons-1.jpg', false);
     }
+
+    public function test_one_temple_whose_photo_cannot_be_read_does_not_break_the_sitemap(): void
+    {
+        // A deity painting on a storage this server has no settings for.
+        $deity = Deity::create(['name' => 'Shiva', 'slug' => 'shiva', 'image_disk' => 'no-such-disk', 'image_path' => 'deities/shiva.jpg']);
+        Temple::create(['name' => 'Broken Photo Temple', 'slug' => 'broken-photo', 'deity_id' => $deity->id, 'status' => TempleStatus::Published, 'published_at' => now()]);
+        Temple::create(['name' => 'Fine Temple', 'slug' => 'fine-temple', 'status' => TempleStatus::Published, 'published_at' => now()]);
+
+        foreach (['/sitemap.xml', '/sitemap-temples-1.xml', '/sitemap-pages.xml'] as $path) {
+            $xml = $this->get(self::SITE.$path)->assertOk()->assertHeader('Content-Type', 'application/xml; charset=UTF-8')->getContent();
+            $this->assertStringStartsWith('<?xml', $xml, $path);
+            $this->assertNotFalse(simplexml_load_string($xml), $path.' must be well-formed XML');
+        }
+        // Both temples are listed; the one whose photo failed, without it.
+        $this->get(self::SITE.'/sitemap-temples-1.xml')
+            ->assertSee('/temples/broken-photo</loc>', false)
+            ->assertSee('/temples/fine-temple</loc>', false)
+            ->assertDontSee('shiva.jpg', false);
+    }
 }
