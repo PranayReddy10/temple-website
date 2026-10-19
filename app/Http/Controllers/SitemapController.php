@@ -25,7 +25,7 @@ class SitemapController extends Controller
         $pages = max(1, (int) ceil(Temple::query()->published()->count() / self::PER_FILE));
         $latest = Temple::query()->published()->max('updated_at');
 
-        $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n".'<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
+        $xml = self::declaration().'<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
         $xml .= self::entry('sitemap', Seo::url('sitemap-pages.xml'), $latest);
         for ($i = 1; $i <= $pages; $i++) {
             $xml .= self::entry('sitemap', Seo::url("sitemap-temples-{$i}.xml"), $latest);
@@ -131,7 +131,7 @@ class SitemapController extends Controller
 
     protected static function open(bool $images = false, bool $languages = false): string
     {
-        return '<?xml version="1.0" encoding="UTF-8"?>'."\n".'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'
+        return self::declaration().'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'
             .($images ? ' xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"' : '')
             .($languages ? ' xmlns:xhtml="http://www.w3.org/1999/xhtml"' : '').'>'."\n";
     }
@@ -160,6 +160,26 @@ class SitemapController extends Controller
         }
 
         return $out."</{$tag}>\n";
+    }
+
+    /**
+     * The XML declaration, and a stylesheet so a person opening the file
+     * in a browser sees a table rather than run-together text. Search
+     * engines read the XML and ignore the stylesheet.
+     */
+    protected static function declaration(): string
+    {
+        return '<?xml version="1.0" encoding="UTF-8"?>'."\n"
+            .'<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>'."\n";
+    }
+
+    /** The stylesheet named above. */
+    public function stylesheet(): Response
+    {
+        return response((string) file_get_contents(resource_path('sitemap.xsl')), 200, [
+            'Content-Type' => 'text/xsl; charset=UTF-8',
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
     }
 
     /**
