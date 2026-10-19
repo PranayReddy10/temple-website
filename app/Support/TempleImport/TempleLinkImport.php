@@ -3,9 +3,11 @@
 namespace App\Support\TempleImport;
 
 use App\Enums\TempleStatus;
+use App\Models\District;
 use App\Models\Temple;
 use App\Support\OfficialSite\OfficialSiteImport;
 use App\Support\OfficialSite\OfficialSiteReader;
+use Illuminate\Support\Str;
 
 /**
  * New temples from links: a Google Maps link, and the temple's website if
@@ -87,12 +89,53 @@ final class TempleLinkImport
         ]);
 
         $found = OfficialSiteImport::read($temple, $website, null, $mapsUrl);
+        if (! isset($found['error'])) {
+            self::fillDraft($temple, $found, $maps);
+        }
 
         return [
             'status' => 'created',
             'message' => $temple->name.': '.(isset($found['error']) ? $found['error'] : OfficialSiteImport::summary($found)),
             'temple' => $temple,
         ];
+    }
+
+    /**
+     * A new draft takes its place at once: the address and PIN code the
+     * link carries, else what the map has at the pin (or the website
+     * says), with the town, state and district. Staff check it before
+     * publishing, as with every draft; the website's timings and sevas
+     * still wait for review.
+     *
+     * @param  array<string, mixed>  $found
+     * @param  array<string, mixed>|null  $maps
+     */
+    private static function fillDraft(Temple $temple, array $found, ?array $maps): void
+    {
+        $place = $found['place'] ?? [];
+        $pin = fn (?string $p) => $p !== null && preg_match('/^[1-9]\d{5}$/', $p) ? $p : null;
+        $fill = array_filter([
+            'address' => $maps['address'] ?? $place['address'] ?? $found['address'] ?? null,
+            'pincode' => $pin($maps['pincode'] ?? null) ?? $pin($place['pincode'] ?? null) ?? $pin($found['pincode'] ?? null),
+            'city' => $place['city'] ?? null,
+            'latitude' => $temple->latitude === null ? ($found['latitude'] ?? null) : null,
+            'longitude' => $temple->longitude === null ? ($found['longitude'] ?? null) : null,
+            'state_id' => $place['state_id'] ?? null,
+        ], fn ($v) => $v !== null && $v !== '');
+
+        if (isset($fill['state_id'])) {
+            $district = $place['district_id'] ?? null;
+            if ($district === null && filled($place['district'] ?? null)) {
+                $name = trim(preg_replace('/\s+district$/i', '', (string) $place['district']));
+                $district = District::firstOrCreate(
+                    ['state_id' => $fill['state_id'], 'slug' => Str::slug($name)],
+                    ['name' => $name],
+                )->id;
+            }
+            $fill['district_id'] = $district;
+        }
+
+        $temple->forceFill(array_filter($fill, fn ($v) => $v !== null))->save();
     }
 
     /** A temple already listed at that place, or with the same website. */

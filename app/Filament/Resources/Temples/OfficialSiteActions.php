@@ -125,8 +125,8 @@ final class OfficialSiteActions
         return [
             'contact_phone' => $f['phones'][0] ?? null, 'use_contact_phone' => isset($f['phones'][0]) && $empty($t->contact_phone),
             'contact_email' => $f['emails'][0] ?? null, 'use_contact_email' => isset($f['emails'][0]) && $empty($t->contact_email),
-            'address' => $f['address'] ?? $f['place']['address'] ?? null, 'use_address' => isset($f['address']) || isset($f['place']['address']) ? $empty($t->address) : false,
-            'pincode' => $f['pincode'] ?? $f['place']['pincode'] ?? null, 'use_pincode' => isset($f['pincode']) || isset($f['place']['pincode']) ? $empty($t->pincode) : false,
+            'address' => $f['address'] ?? $f['maps']['address'] ?? $f['place']['address'] ?? null, 'use_address' => isset($f['address']) || isset($f['maps']['address']) || isset($f['place']['address']) ? $empty($t->address) : false,
+            'pincode' => $f['pincode'] ?? $f['maps']['pincode'] ?? $f['place']['pincode'] ?? null, 'use_pincode' => isset($f['pincode']) || isset($f['maps']['pincode']) || isset($f['place']['pincode']) ? $empty($t->pincode) : false,
             'city' => $f['place']['city'] ?? null, 'use_city' => isset($f['place']['city']) && $empty($t->city),
             'state_id' => $f['place']['state_id'] ?? null, 'district_id' => $f['place']['district_id'] ?? null,
             'use_region' => isset($f['place']['state_id']) && $empty($t->state_id),
@@ -186,8 +186,8 @@ final class OfficialSiteActions
         $contact = array_filter([
             isset($f['phones']) ? $row('contact_phone', 'Phone'.(count($f['phones']) > 1 ? ' (also found: '.implode(', ', array_slice($f['phones'], 1, 3)).')' : ''), $t->contact_phone) : null,
             isset($f['emails']) ? $row('contact_email', 'Email', $t->contact_email) : null,
-            isset($f['address']) || isset($f['place']['address']) ? $row('address', 'Address', $t->address, true) : null,
-            isset($f['pincode']) || isset($f['place']['pincode']) ? $row('pincode', 'PIN code', $t->pincode) : null,
+            isset($f['address']) || isset($f['maps']['address']) || isset($f['place']['address']) ? $row('address', 'Address', $t->address, true) : null,
+            isset($f['pincode']) || isset($f['maps']['pincode']) || isset($f['place']['pincode']) ? $row('pincode', 'PIN code', $t->pincode) : null,
             isset($f['place']['city']) ? $row('city', 'City / town / village', $t->city) : null,
             isset($f['place']['state_id']) ? Grid::make(['default' => 1, 'md' => 4])->schema([
                 Toggle::make('use_region')->label('Take')->inline(false),

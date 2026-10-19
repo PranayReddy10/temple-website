@@ -69,6 +69,39 @@ final class Geocoder
     }
 
     /**
+     * Where a place is, found by its name and address: for a Maps link that
+     * carries no coordinates. India only, best match first.
+     *
+     * @return array{latitude: float, longitude: float, kind: ?string}|null
+     *
+     * @throws GeocoderUnavailable
+     */
+    public static function search(string $query): ?array
+    {
+        $query = trim(preg_replace('/\s+/', ' ', $query));
+        if ($query === '') {
+            return null;
+        }
+        $key = 'geocode:search:'.md5(mb_strtolower($query));
+        $cached = Cache::get($key);
+        if ($cached !== null) {
+            return $cached === false ? null : $cached;
+        }
+
+        $json = self::ask('/search', ['q' => $query, 'countrycodes' => 'in', 'limit' => 1]);
+        $row = is_array($json) ? ($json[0] ?? null) : null;
+        if (! is_array($row) || ! is_numeric($row['lat'] ?? null) || ! is_numeric($row['lon'] ?? null)) {
+            Cache::put($key, false, now()->addDay());
+
+            return null;
+        }
+        $found = ['latitude' => (float) $row['lat'], 'longitude' => (float) $row['lon'], 'kind' => $row['type'] ?? null];
+        Cache::put($key, $found, now()->addDays(30));
+
+        return $found;
+    }
+
+    /**
      * Where a PIN code is, from the map, in the shape PincodeLookup answers.
      *
      * @return array{pincode: string, state: ?string, state_id: ?int, district: ?string, places: array<int, array{name: string, block: ?string}>}|null

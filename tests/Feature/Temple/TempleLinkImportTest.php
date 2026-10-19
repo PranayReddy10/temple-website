@@ -81,6 +81,47 @@ class TempleLinkImportTest extends TestCase
         $this->assertFalse(MapsLink::isMapsLink('https://example.com/maps'));
     }
 
+    public function test_a_shared_place_gives_its_address_and_pin_code_apart_from_its_name(): void
+    {
+        $place = MapsLink::parse('https://maps.google.com/maps?q=Sri+Lakshmi+Narasimha+Swamy+Temple,+Temple+Road,+Yadagirigutta,+Telangana+508115&ftid=0x3bcb1:0x2a2b');
+
+        $this->assertSame('Sri Lakshmi Narasimha Swamy Temple', $place['name']);
+        $this->assertSame('Temple Road, Yadagirigutta, Telangana 508115', $place['address']);
+        $this->assertSame('508115', $place['pincode']);
+        $this->assertSame('0x3bcb1:0x2a2b', $place['cid']);
+        // A name with its town is still a name.
+        $this->assertSame('Kanaka Durga Temple, Vijayawada', MapsLink::parse('https://www.google.com/maps/search/?api=1&query=Kanaka+Durga+Temple,+Vijayawada')['name']);
+    }
+
+    public function test_a_link_without_coordinates_is_found_on_the_map_by_its_name(): void
+    {
+        $pinless = 'https://www.google.com/maps/place/Swarnagiri+Sri+Venkateswara+Swamy+Temple/data=!4m2!3m1!1s0x3bcb7f9e5b9c3b1d:0x8a7c2f5e2d1b4c3a?utm_source=mstt_1';
+        Http::fake([
+            self::SHORT => Http::response('', 302, ['Location' => $pinless]),
+            'nominatim.openstreetmap.org/search*' => Http::response([['lat' => '17.5098', 'lon' => '78.8862', 'type' => 'place_of_worship']]),
+            '*' => Http::response('', 404),
+        ]);
+
+        $place = MapsLink::read(self::SHORT);
+
+        $this->assertSame('Swarnagiri Sri Venkateswara Swamy Temple', $place['name']);
+        $this->assertSame([17.5098, 78.8862], [$place['latitude'], $place['longitude']]);
+        $this->assertNotNull($place['located']);
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'nominatim.openstreetmap.org/search') && str_contains(urldecode($r->url()), 'Swarnagiri Sri Venkateswara Swamy Temple'));
+    }
+
+    public function test_a_short_link_answered_with_a_page_is_followed_through_it(): void
+    {
+        Http::fake([
+            self::SHORT => Http::response('<html><head><meta http-equiv="refresh" content="0; url='.htmlspecialchars(self::FULL).'"></head></html>', 200, ['Content-Type' => 'text/html']),
+            '*' => Http::response('', 404),
+        ]);
+
+        $place = MapsLink::read(self::SHORT);
+
+        $this->assertSame([17.5098, 78.8862], [$place['latitude'], $place['longitude']]);
+    }
+
     public function test_a_short_link_is_followed_without_reading_googles_page(): void
     {
         $this->fakeWeb();
@@ -148,6 +189,12 @@ class TempleLinkImportTest extends TestCase
         $this->assertSame(TempleStatus::Draft, $temple->status);
         $this->assertSame([17.5098, 78.8862], [(float) $temple->latitude, (float) $temple->longitude]);
         $this->assertSame(self::SITE, rtrim($temple->official_website, '/'));
+        // The draft takes its place at once: address, PIN, town, state and district.
+        $this->assertSame('508116', $temple->pincode);
+        $this->assertSame('Manepally Hills', $temple->address);
+        $this->assertSame('Bhongir', $temple->city);
+        $this->assertSame($this->state->id, $temple->state_id);
+        $this->assertSame($this->district->id, $temple->district_id);
         $this->assertNotNull($temple->official_import);
         $this->assertNull($temple->official_import_reviewed_at);
 
