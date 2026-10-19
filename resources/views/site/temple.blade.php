@@ -94,12 +94,14 @@
         .hero.deity img { width: auto; max-width: 100%; max-height: 420px; object-fit: contain; }
         .cols { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; }
         @media (max-width: 760px) { .cols { grid-template-columns: 1fr; } }
-        .temple-song { position: fixed; left: 12px; bottom: 12px; z-index: 50; display: flex; align-items: center; gap: 8px; max-width: min(420px, calc(100vw - 24px)); padding: 8px 8px 8px 14px; border-radius: 999px; background: #3b1d0e; color: #fff; box-shadow: 0 6px 20px rgba(0,0,0,.25); font-size: .9rem; }
+        /* The temple's song: one small button, top right, below the header. */
+        .temple-song { position: fixed; top: 72px; right: 12px; z-index: 30; width: 38px; height: 38px; padding: 0; border: 0; border-radius: 50%; background: rgba(59,29,14,.82); color: #fff; font-size: 1.1rem; line-height: 38px; text-align: center; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,.2); }
         .temple-song[hidden] { display: none; }
-        .temple-song .ts-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; flex: 1; }
-        .temple-song small { opacity: .75; }
-        .temple-song button { flex: none; width: 34px; height: 34px; border: 0; border-radius: 50%; background: rgba(255,255,255,.15); color: #fff; font-size: .95rem; cursor: pointer; }
-        .temple-song button:hover, .temple-song button:focus-visible { background: rgba(255,255,255,.3); }
+        .temple-song:hover, .temple-song:focus-visible { background: #3b1d0e; }
+        .temple-song[aria-pressed="false"] { opacity: .7; text-decoration: line-through; }
+        .temple-song[aria-pressed="true"] { animation: song-pulse 1.6s ease-in-out infinite; }
+        @keyframes song-pulse { 50% { transform: scale(1.08); } }
+        @media (prefers-reduced-motion: reduce) { .temple-song[aria-pressed="true"] { animation: none; } }
         table { width: 100%; border-collapse: collapse; font-size: .92rem; }
         td { padding: 8px 4px; border-top: 1px solid #efe6d8; vertical-align: top; }
         .scan { display: flex; gap: 14px; align-items: flex-start; background: #eef7ef; border: 1.5px solid #9cc9a3; border-radius: 16px; padding: 14px 16px; margin: 12px 0; }
@@ -366,12 +368,10 @@
             @endphp
 
             @if ($templeSong)
-                <div class="temple-song" id="temple-song" data-src="{{ $templeSong->url() }}" hidden>
-                    <span class="ts-note" aria-hidden="true">♪</span>
-                    <span class="ts-title">{{ $templeSong->title ?: __('Temple song') }}@if ($templeSong->artist)<small> · {{ $templeSong->artist }}</small>@endif</span>
-                    <button type="button" class="ts-play" aria-label="{{ __('Play') }}" data-play="{{ __('Play') }}" data-pause="{{ __('Pause') }}">▶</button>
-                    <button type="button" class="ts-stop" aria-label="{{ __('Stop the song') }}">■</button>
-                </div>
+                <button type="button" class="temple-song" id="temple-song" data-src="{{ $templeSong->url() }}" hidden
+                    title="{{ $templeSong->title ?: __('Temple song') }}" aria-pressed="false"
+                    data-play="{{ __('Play the temple song') }}" data-stop="{{ __('Stop the temple song') }}"
+                    aria-label="{{ __('Play the temple song') }}">♪</button>
             @endif
 
             @if ($pictures->isNotEmpty())
@@ -561,19 +561,18 @@
         // Browsers refuse sound before the visitor has touched the page, so
         // when the first try is refused it starts on their first tap.
         (function () {
-            var bar = document.getElementById('temple-song');
-            if (!bar) return;
-            var audio = new Audio(bar.dataset.src);
+            var button = document.getElementById('temple-song');
+            if (!button) return;
+            var audio = new Audio(button.dataset.src);
             audio.loop = true;
             audio.preload = 'auto';
-            var play = bar.querySelector('.ts-play'), stop = bar.querySelector('.ts-stop');
             var stopped = false;
-            bar.hidden = false;
+            button.hidden = false;
 
             function show() {
                 var on = !audio.paused;
-                play.textContent = on ? '❚❚' : '▶';
-                play.setAttribute('aria-label', on ? play.dataset.pause : play.dataset.play);
+                button.setAttribute('aria-pressed', on ? 'true' : 'false');
+                button.setAttribute('aria-label', on ? button.dataset.stop : button.dataset.play);
             }
             function start() {
                 if (stopped) return;
@@ -586,24 +585,25 @@
                 });
             }
             function firstTouch(e) {
-                if (e && e.target && bar.contains(e.target)) return;
+                if (e && e.target === button) return;
                 ['pointerdown', 'keydown', 'scroll'].forEach(function (ev) { window.removeEventListener(ev, firstTouch); });
                 start();
             }
             audio.addEventListener('play', show);
             audio.addEventListener('pause', show);
-            audio.addEventListener('error', function () { bar.hidden = true; });
+            audio.addEventListener('error', function () { button.hidden = true; });
 
-            play.addEventListener('click', function () {
-                stopped = false;
-                audio.paused ? audio.play().catch(function () {}) : audio.pause();
-            });
-            stop.addEventListener('click', function () {
-                stopped = true;
-                audio.pause();
-                audio.currentTime = 0;
+            // One tap stops it; another plays it again.
+            button.addEventListener('click', function () {
                 ['pointerdown', 'keydown', 'scroll'].forEach(function (ev) { window.removeEventListener(ev, firstTouch); });
-                show();
+                if (audio.paused) {
+                    stopped = false;
+                    audio.play().catch(function () {});
+                } else {
+                    stopped = true;
+                    audio.pause();
+                    audio.currentTime = 0;
+                }
             });
             // Leaving the page, or going back: the song stops.
             window.addEventListener('pagehide', function () { audio.pause(); });

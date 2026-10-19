@@ -37,9 +37,8 @@ class TemplePageSongTest extends TestCase
 
         $this->get('/temples/chilkur')->assertOk()
             ->assertSee('id="temple-song" data-src="https://cdn.example.org/chilkur.mp3"', false)
-            ->assertSee('Chilkur Suprabhatam')
-            ->assertSee('Temple choir')
-            ->assertSee('class="ts-stop"', false)
+            ->assertSee('title="Chilkur Suprabhatam"', false)
+            ->assertSee('aria-label="Play the temple song"', false)
             // It stops when the devotee leaves or goes back.
             ->assertSee("addEventListener('pagehide'", false);
     }
