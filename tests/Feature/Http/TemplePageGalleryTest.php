@@ -43,7 +43,7 @@ class TemplePageGalleryTest extends TestCase
             ->assertSee('id="lightbox"', false)
             ->assertSee('"caption":"Gopuram"', false)
             ->assertSee('Ravi K, CC BY-SA 4.0')
-            ->assertSee('<h2>Videos</h2>', false)
+            ->assertSee('Videos</h2>', false)
             ->assertSee('Maha Shivaratri at Keesaragutta')
             ->assertSee('data-embed="https://www.youtube', false);
     }
@@ -59,7 +59,7 @@ class TemplePageGalleryTest extends TestCase
 
         $this->get('/temples/keesaragutta')->assertOk()
             ->assertSee('data-photo="0"', false)
-            ->assertDontSee('<h2>Videos</h2>', false)
+            ->assertDontSee('Videos</h2>', false)
             ->assertSee('<div class="txt"><b>Chilkur Balaji Temple</b>', false);
     }
 }

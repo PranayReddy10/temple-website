@@ -6,8 +6,8 @@
     $signedIn = auth('devotee_web')->check();
     $mine = $myReview ?? null;
 @endphp
-<section id="reviews" class="reviews">
-    <h2>{{ __('Devotees’ reviews of :name', ['name' => $name]) }}</h2>
+<section id="reviews" class="reviews panel">
+    <h2><span class="pi" aria-hidden="true">⭐</span>{{ __('Devotees’ reviews') }}</h2>
     @if ($reviewSummary['count'] > 0)
         <div class="card rsum">
             <div class="rcount"><b>{{ $reviewSummary['count'] }}</b> {{ \Illuminate\Support\Str::plural('review', $reviewSummary['count']) }}
