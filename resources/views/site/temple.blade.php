@@ -102,6 +102,8 @@
         .temple-song[aria-pressed="true"] { animation: song-pulse 1.6s ease-in-out infinite; }
         @keyframes song-pulse { 50% { transform: scale(1.08); } }
         @media (prefers-reduced-motion: reduce) { .temple-song[aria-pressed="true"] { animation: none; } }
+        /* Shown while the browser waits for the visitor's first tap. */
+        .temple-song-hint { position: fixed; top: 76px; right: 58px; z-index: 30; background: #3b1d0e; color: #fff; font-size: .8rem; padding: 6px 12px; border-radius: 999px; box-shadow: 0 3px 10px rgba(0,0,0,.2); pointer-events: none; white-space: nowrap; }
         table { width: 100%; border-collapse: collapse; font-size: .92rem; }
         td { padding: 8px 4px; border-top: 1px solid #efe6d8; vertical-align: top; }
         .scan { display: flex; gap: 14px; align-items: flex-start; background: #eef7ef; border: 1.5px solid #9cc9a3; border-radius: 16px; padding: 14px 16px; margin: 12px 0; }
@@ -451,6 +453,7 @@
                     title="{{ $templeSong->title ?: __('Temple song') }}" aria-pressed="false"
                     data-play="{{ __('Play the temple song') }}" data-stop="{{ __('Stop the temple song') }}"
                     aria-label="{{ __('Play the temple song') }}">♪</button>
+                <span class="temple-song-hint" id="temple-song-hint" hidden>{{ __('Tap anywhere to hear the temple song') }}</span>
             @endif
 
             @if ($pictures->isNotEmpty())
@@ -736,39 +739,48 @@
         (function () {
             var button = document.getElementById('temple-song');
             if (!button) return;
+            var hint = document.getElementById('temple-song-hint');
             var audio = new Audio(button.dataset.src);
             audio.loop = true;
             audio.preload = 'auto';
             var stopped = false;
             button.hidden = false;
+            // Browsers allow sound only after a real tap, click or key: the
+            // finger lifting (touchend, pointerup), not touching down, and
+            // never a scroll. These are the events that count.
+            var TAPS = ['pointerup', 'touchend', 'click', 'keydown'];
 
             function show() {
                 var on = !audio.paused;
                 button.setAttribute('aria-pressed', on ? 'true' : 'false');
                 button.setAttribute('aria-label', on ? button.dataset.stop : button.dataset.play);
+                if (on && hint) hint.hidden = true;
+            }
+            function listen(on) {
+                TAPS.forEach(function (ev) { (on ? window.addEventListener : window.removeEventListener).call(window, ev, firstTap, true); });
             }
             function start() {
                 if (stopped) return;
                 audio.play().then(show).catch(function () {
-                    // Not allowed yet: wait for the visitor's first touch.
-                    ['pointerdown', 'keydown', 'scroll'].forEach(function (ev) {
-                        window.addEventListener(ev, firstTouch, { once: true, passive: true });
-                    });
+                    // Not allowed yet: say so, and start on the first tap.
+                    if (hint) hint.hidden = false;
+                    listen(true);
                     show();
                 });
             }
-            function firstTouch(e) {
-                if (e && e.target === button) return;
-                ['pointerdown', 'keydown', 'scroll'].forEach(function (ev) { window.removeEventListener(ev, firstTouch); });
+            function firstTap(e) {
+                if (e && e.target === button) return; // The button handles itself.
+                listen(false);
                 start();
             }
             audio.addEventListener('play', show);
             audio.addEventListener('pause', show);
-            audio.addEventListener('error', function () { button.hidden = true; });
+            audio.addEventListener('error', function () { button.hidden = true; if (hint) hint.hidden = true; });
 
             // One tap stops it; another plays it again.
             button.addEventListener('click', function () {
-                ['pointerdown', 'keydown', 'scroll'].forEach(function (ev) { window.removeEventListener(ev, firstTouch); });
+                listen(false);
+                if (hint) hint.hidden = true;
                 if (audio.paused) {
                     stopped = false;
                     audio.play().catch(function () {});
