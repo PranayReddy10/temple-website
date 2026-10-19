@@ -74,16 +74,4 @@ class TempleImagesTest extends TestCase
             ->assertSee('/temples/fine-temple</loc>', false)
             ->assertDontSee('shiva.jpg', false);
     }
-
-    public function test_the_sitemaps_carry_a_stylesheet_for_people_opening_them_in_a_browser(): void
-    {
-        Temple::create(['name' => 'Fine Temple', 'slug' => 'fine-temple', 'status' => TempleStatus::Published, 'published_at' => now()]);
-
-        foreach (['/sitemap.xml', '/sitemap-temples-1.xml', '/sitemap-pages.xml'] as $path) {
-            $xml = $this->get(self::SITE.$path)->getContent();
-            $this->assertStringStartsWith('<?xml version="1.0" encoding="UTF-8"?>'."\n".'<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>', $xml, $path);
-        }
-        $xsl = $this->get(self::SITE.'/sitemap.xsl')->assertOk()->assertHeader('Content-Type', 'text/xsl; charset=UTF-8')->getContent();
-        $this->assertNotFalse(simplexml_load_string($xsl));
-    }
 }

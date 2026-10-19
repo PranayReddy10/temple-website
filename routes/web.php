@@ -214,7 +214,6 @@ Route::get('/{key}.txt', function (string $key) {
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 Route::get('/sitemap-pages.xml', [SitemapController::class, 'pages']);
 Route::get('/sitemap-temples-{page}.xml', [SitemapController::class, 'temples'])->whereNumber('page');
-Route::get('/sitemap.xsl', [SitemapController::class, 'stylesheet']);
 
 // A saved upload, read back same-origin for the admin panel's upload fields.
 // See MediaPreviewController.
