@@ -1,4 +1,5 @@
 @extends('site.layout')
+@section('ads', '1')
 @include('site.festivals._styles')
 
 @section('content')
@@ -14,6 +15,8 @@
         <h2>{{ __('Major festivals ahead') }}</h2>
         <div class="fgrid">@foreach ($major as $f)@include('site.festivals._card')@endforeach</div>
     @endif
+
+    @include('site._ad', ['place' => 'festival'])
 
     @foreach ($months as $ym => $rows)
         @php($m = \Carbon\Carbon::createFromFormat('Y-m-d', $ym.'-01'))

@@ -1,4 +1,5 @@
 @extends('site.layout')
+@section('ads', '1')
 
 @php
     // The list itself, for search engines: which temples this page is about.
@@ -124,6 +125,8 @@
             </a>
         @endforeach
     </div>
+
+    @include('site._ad', ['place' => 'list'])
 
     <nav class="pages">
         <span>@if ($temples->previousPageUrl())<a href="{{ $temples->previousPageUrl() }}">← Previous</a>@endif</span>

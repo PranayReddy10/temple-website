@@ -1,4 +1,5 @@
 @extends('site.layout')
+@section('ads', '1')
 @include('site.festivals._styles')
 
 @php
@@ -32,6 +33,8 @@
             </tbody>
         </table>
     @endif
+
+    @include('site._ad', ['place' => 'festival'])
 
     @include('site.festivals._temples')
 

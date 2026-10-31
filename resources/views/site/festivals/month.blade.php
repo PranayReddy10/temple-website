@@ -1,4 +1,5 @@
 @extends('site.layout')
+@section('ads', '1')
 @include('site.festivals._styles')
 
 @section('content')
@@ -13,6 +14,8 @@
             @endforeach
         </tbody>
     </table>
+    @include('site._ad', ['place' => 'festival'])
+
     <nav class="monthnav">
         <span>@if ($prev)<a href="{{ $prev[1] }}">← {{ $prev[0] }}</a>@endif</span>
         <span>@if ($nextMonth)<a href="{{ $nextMonth[1] }}">{{ $nextMonth[0] }} →</a>@endif</span>

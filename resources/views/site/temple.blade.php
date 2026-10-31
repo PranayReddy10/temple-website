@@ -1,4 +1,5 @@
 @extends('site.layout')
+@section('ads', '1')
 
 @php
     use App\Support\Seo;
@@ -509,6 +510,8 @@
                 </div>
                 </section>
             @endif
+
+            @include('site._ad', ['place' => 'temple'])
 
             @include('site._reviews')
         </div>

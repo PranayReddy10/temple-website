@@ -1,4 +1,5 @@
 @extends('site.layout')
+@section('ads', '1')
 @include('site.festivals._styles')
 
 @section('content')
@@ -19,6 +20,8 @@
             </tbody>
         </table>
     @endforeach
+    @include('site._ad', ['place' => 'festival'])
+
     @include('site.festivals._temples')
     <p style="margin-top:20px"><a href="{{ \App\Support\Seo::url('festivals') }}">← {{ __('Full festival calendar') }}</a></p>
 @endsection

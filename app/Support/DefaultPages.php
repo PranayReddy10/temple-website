@@ -86,7 +86,7 @@ This policy explains how {business} ("we", "us") handles personal data when you 
 
 **Device and usage information.** App version, device type and operating system, language, a push-notification token, sign-in times, crash information, and which screens and features are used (through Google Analytics for Firebase, when switched on). This is used to keep {app} working and to improve it, not to identify you.
 
-**Advertising.** If {app} shows ads, the ad network (Google AdMob or AppLovin) may use your device's advertising identifier to show and measure ads. You can reset it or opt out of personalised ads in your phone's settings. Premium plans remove ads.
+**Advertising.** If {app} shows ads, the ad network (Google AdMob or AppLovin) may use your device's advertising identifier to show and measure ads. You can reset it or opt out of personalised ads in your phone's settings. On our website, Google AdSense and its partners use cookies to show ads based on your visits to this and other sites; you can turn off personalised ads at https://adssettings.google.com, and read how Google uses this data at https://policies.google.com/technologies/partner-sites. Premium plans remove ads.
 
 ## Why we use it
 

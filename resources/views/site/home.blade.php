@@ -1,4 +1,5 @@
 @extends('site.layout')
+@section('ads', '1')
 
 @php
     use App\Http\Controllers\PublicTempleController;
@@ -98,7 +99,9 @@
         </form>
         <div class="stats">
             <span><b>{{ number_format($templeCount) }}</b>{{ Str::plural('temple', $templeCount) }}</span>
-            @if ($states->isNotEmpty())<span><b>{{ $states->count() }}</b>{{ Str::plural('state', $states->count()) }}</span>@endif
+            @include('site._ad', ['place' => 'home'])
+
+        @if ($states->isNotEmpty())<span><b>{{ $states->count() }}</b>{{ Str::plural('state', $states->count()) }}</span>@endif
             <span><b>5</b>{{ __('languages') }}</span>
         </div>
     </section>
