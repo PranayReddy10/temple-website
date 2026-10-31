@@ -25,6 +25,7 @@ use App\Models\Temple;
 use App\Support\AppLinks;
 use App\Support\IndexNow;
 use App\Support\Seo;
+use App\Support\WebAds;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -66,6 +67,12 @@ Route::get('/site.webmanifest', fn () => response()->json([
         ['src' => '/icons/icon-maskable-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
     ],
 ], 200, ['Content-Type' => 'application/manifest+json', 'Cache-Control' => 'public, max-age=86400']));
+
+// ads.txt (AdSense on the website) and app-ads.txt (AdMob in the app): who
+// may sell this site's ad space. Written from Admin → Monetisation → Ads.
+foreach (['/ads.txt', '/app-ads.txt'] as $adsTxt) {
+    Route::get($adsTxt, fn () => response(WebAds::adsTxt(), 200, ['Content-Type' => 'text/plain; charset=utf-8', 'Cache-Control' => 'public, max-age=3600']));
+}
 
 // darshansaathi.com/robots.txt: the website is open to search engines.
 // (temple.darshansaathi.com's own is the static public/robots.txt, which

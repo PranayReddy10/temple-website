@@ -3,15 +3,20 @@
 namespace App\Filament\Pages\Settings;
 
 use BackedEnum;
+use App\Support\Seo;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Support\HtmlString;
 
 /**
- * Ads in the app: which network, which ad units, and where they may appear.
+ * Ads in the app (AdMob or AppLovin MAX) and on the website (AdSense):
+ * which network, which ad units, and where they may appear.
  *
  * Placements are chosen for where an ad interrupts least: between sections of
  * a temple page and among list results, never in the passport, a check-in,
@@ -52,6 +57,15 @@ class ManageAds extends SettingsPage
             'ads_applovin_ios_native' => ['string', null],
             'ads_applovin_android_banner' => ['string', null],
             'ads_applovin_ios_banner' => ['string', null],
+
+            'ads_web_enabled' => ['boolean', false],
+            'adsense_client' => ['string', null],
+            'adsense_test_mode' => ['boolean', false],
+            'adsense_slot_temple' => ['string', null],
+            'adsense_slot_list' => ['string', null],
+            'adsense_slot_home' => ['string', null],
+            'adsense_slot_festival' => ['string', null],
+            'ads_txt_extra' => ['string', null],
         ];
     }
 
@@ -96,6 +110,37 @@ class ManageAds extends SettingsPage
                     TextInput::make('ads_admob_ios_native')->label('iOS native')->placeholder('ca-app-pub-…/…'),
                     TextInput::make('ads_admob_android_banner')->label('Android banner'),
                     TextInput::make('ads_admob_ios_banner')->label('iOS banner'),
+                ]),
+
+            Section::make('Website ads (Google AdSense)')
+                ->description(new HtmlString('On darshansaathi.com: the home page, temple lists, temple pages and festival pages only — never sign-in, account, booking, hundi, ticket or payment pages, and never for a devotee on a no-ads plan. Sign up at <a href="https://adsense.google.com" target="_blank" rel="noopener" class="underline">adsense.google.com</a> with the site darshansaathi.com; Google checks the site, which takes a few days to two weeks.'))
+                ->icon('heroicon-o-globe-alt')
+                ->columns(2)
+                ->schema([
+                    Toggle::make('ads_web_enabled')->label('Show ads on the website')
+                        ->helperText('Needs the publisher id. Before approval, switch it on anyway: Google looks for its code on the site while it reviews.'),
+                    Toggle::make('adsense_test_mode')->label('Test ads only')
+                        ->helperText('Marks requests as tests: nothing is earned or charged. Never click your own live ads.'),
+                    TextInput::make('adsense_client')->label('Publisher id')
+                        ->placeholder('ca-pub-1234567890123456')
+                        ->regex('/^(ca-)?pub-\d{10,20}$/')
+                        ->helperText('AdSense → Account → Settings → Account information. Also writes darshansaathi.com/ads.txt for you.')
+                        ->columnSpanFull(),
+                    Placeholder::make('auto_ads')->label('Auto ads')
+                        ->content('With the publisher id set, Google places ads by itself where you allow it: AdSense → Ads → By site → darshansaathi.com → Auto ads. The ad units below are optional fixed places on top of that.')
+                        ->columnSpanFull(),
+                    TextInput::make('adsense_slot_temple')->label('Temple page — between sections')->placeholder('1234567890')->regex('/^\d{6,20}$/')
+                        ->helperText('AdSense → Ads → By ad unit → Display ads: the data-ad-slot number.'),
+                    TextInput::make('adsense_slot_list')->label('Temple lists — after the results')->placeholder('1234567890')->regex('/^\d{6,20}$/'),
+                    TextInput::make('adsense_slot_home')->label('Home page — between sections')->placeholder('1234567890')->regex('/^\d{6,20}$/'),
+                    TextInput::make('adsense_slot_festival')->label('Festival pages')->placeholder('1234567890')->regex('/^\d{6,20}$/'),
+                    Textarea::make('ads_txt_extra')->label('More ads.txt lines')->rows(3)
+                        ->placeholder('facebook.com, 1234567890, RESELLER, c3e20eee3f780d68')
+                        ->helperText('Only if another ad network asks you to add lines. The AdSense line is written for you.')
+                        ->columnSpanFull(),
+                    Placeholder::make('ads_txt_check')->label('Check')
+                        ->content(fn () => new HtmlString('<a href="'.e(Seo::url('ads.txt')).'" target="_blank" rel="noopener" class="underline">Open ads.txt</a> · <a href="'.e(Seo::url('app-ads.txt')).'" target="_blank" rel="noopener" class="underline">app-ads.txt</a> (the same lines, for AdMob in the app)'))
+                        ->columnSpanFull(),
                 ]),
 
             Section::make('AppLovin MAX ad units')

@@ -101,3 +101,31 @@ Before release: replace Google's **test** AdMob app ids in
 `android/app/src/main/AndroidManifest.xml` and `ios/Runner/Info.plist`, turn
 off **Test ads only**, add `app-ads.txt` to the website root, and set up the
 UMP consent form in AdMob (required for users in the EEA/UK).
+
+## Website ads (Google AdSense)
+
+darshansaathi.com can show Google AdSense ads, set under **Admin →
+Monetisation → Ads → Website ads**.
+
+1. Sign up at [adsense.google.com](https://adsense.google.com) with the
+   site `darshansaathi.com`.
+2. Paste the **publisher id** (`ca-pub-…`, AdSense → Account → Settings →
+   Account information) and switch on **Show ads on the website**. Do this
+   before approval too: Google looks for its code on the site while it
+   reviews it, which takes a few days to two weeks.
+3. Check `https://darshansaathi.com/ads.txt` shows the `google.com, pub-…`
+   line (written for you; AdSense earns less and warns without it).
+   `app-ads.txt` carries the same lines for AdMob in the app.
+4. In AdSense → Ads → By site, switch on **Auto ads**: Google then places
+   ads itself. Optionally create Display ad units and paste their slot
+   numbers for fixed places: between a temple page's sections, after
+   temple lists, on the home page, on festival pages.
+5. Update the live **Privacy policy** (Admin → Website → Pages): it must
+   say that Google uses cookies to show ads. The default text for new
+   installs now says so; copy its Advertising paragraph across.
+
+Ads appear only on reading pages (home, temple lists, temple pages,
+festival pages): never on sign-in, account, booking, hundi, ticket or
+payment pages, never on temple.darshansaathi.com, and never for a
+signed-in devotee whose plan removes ads. Never click your own live ads;
+use **Test ads only** while checking the layout.

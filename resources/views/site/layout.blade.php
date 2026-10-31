@@ -100,6 +100,8 @@
         footer.bottom .note { border-top: 1px solid rgba(255,255,255,.12); margin-top: 24px; padding-top: 16px; font-size: .8rem; opacity: .8; }
         @media (max-width: 720px) { footer.bottom .cols { grid-template-columns: 1fr 1fr; } footer.bottom .cols > div:first-child { grid-column: 1 / -1; } }
         img { max-width: 100%; }
+        .ad { margin: 24px 0; text-align: center; min-height: 100px; }
+        .ad small { display: block; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
         .flash { background: #eef7ea; border: 1px solid #b9dcae; color: #23511a; border-radius: 12px; padding: 10px 14px; margin: 16px auto 0; max-width: 1048px; }
         .form { display: grid; gap: 14px; }
         .form label { display: grid; gap: 4px; font-weight: 600; font-size: .92rem; }
@@ -126,6 +128,10 @@
         form.find button { font: inherit; font-weight: 600; background: var(--kumkum); color: #fff; border: 0; border-radius: 999px; padding: 10px 18px; cursor: pointer; }
     </style>
     @stack('head')
+    @if (View::hasSection('ads') && \App\Support\WebAds::enabled())
+        {{-- Google AdSense: auto ads and the page's own ad places (site._ad). Only pages that allow ads say so with @section('ads'). --}}
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ \App\Support\WebAds::client() }}" crossorigin="anonymous"></script>
+    @endif
     {{-- Verification tags and the code pasted under Analytics & SEO, on every page. --}}
     {!! \App\Support\Seo::headExtras() !!}
 </head>
