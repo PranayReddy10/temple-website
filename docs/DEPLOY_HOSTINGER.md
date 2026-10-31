@@ -393,10 +393,12 @@ php artisan down
 git pull origin main
 composer install --no-dev --optimize-autoloader
 php artisan app:deploy --force
+cp deploy/website.htaccess ../.htaccess
 php artisan up
 ```
 
-The routine is written up on its own in **[UPDATING.md](UPDATING.md)**.
+The `cp` keeps darshansaathi.com's `.htaccess` in step with the code; it is
+the file in `public_html`, one folder up from the project. The routine is written up on its own in **[UPDATING.md](UPDATING.md)**.
 
 `app:deploy` runs the pending migrations, seeds reference data a release
 introduced, rebuilds the caches, and checks the two things that fail silently
@@ -450,6 +452,7 @@ notifications later in the roadmap.
 | `SQLSTATE[HY000] [1045]` | Wrong DB username or password, or the user was never granted access to the database. |
 | `SQLSTATE[HY000] [2002]` | Wrong `DB_HOST`. Use the host shown in hPanel. |
 | Admin panel unstyled | Confirm `public/css/temple-admin.css` deployed and `php artisan storage:link` ran. |
+| Admin sign-in page blank, unstyled, looping or 500 on temple.darshansaathi.com, while darshansaathi.com works | The website's `public_html/.htaccess` is an older copy: the server applies it to `laravel/public` too, and its rules sent the admin's own addresses round in circles. Copy the current one: `cp ~/domains/darshansaathi.com/public_html/laravel/deploy/website.htaccess ~/domains/darshansaathi.com/public_html/.htaccess`. If the page is still unstyled, `php artisan filament:assets` rebuilds the admin's CSS and JS. |
 | Every uploaded image blank at once | Open **Administration → Storage**. It checks the `public/storage` link, whether the host allows symlinks, whether the folder is writable, and fetches a real image over the web to prove it. |
 | An upload appears to do nothing | PHP's own `upload_max_filesize` / `post_max_size`, which shared plans ship at 2 MB. The upload fails before any of this application runs, so nothing reaches the log. The Storage screen shows the server's real limit beside each form's. Raise both in hPanel under PHP Configuration, or in a `.user.ini` at the site root. |
 | "Add to Home Screen" is missing on an iPhone | They are not in Safari. Chrome and Firefox on iOS cannot add to the home screen at all — it is an iOS restriction, not a setting. |
