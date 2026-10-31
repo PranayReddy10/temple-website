@@ -3,13 +3,14 @@
 Run this after every code change. It is the same lines every time.
 
 ```bash
-cd ~/domains/madeforu.co.in/public_html/temple
+cd ~/domains/darshansaathi.com/public_html/laravel
 
 php artisan down
 git checkout main          # once: older instructions left servers on a feature branch
 git pull origin main
 composer install --no-dev --optimize-autoloader
 php artisan app:deploy --force
+cp deploy/website.htaccess ../.htaccess   # darshansaathi.com's own .htaccess, one folder up
 php artisan up
 ```
 

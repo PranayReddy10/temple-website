@@ -6,19 +6,30 @@
 # in public_html/laravel, which also answers as temple.darshansaathi.com
 # (document root laravel/public). Nothing else in public_html is served.
 
-# Hostinger drops a placeholder (default.php / index.php) into a new site's
-# public_html; never open it.
-DirectoryIndex disabled
+# temple.darshansaathi.com (the admin panel, temple portal and API) lives
+# inside this folder, at laravel/public, and some servers (LiteSpeed on
+# Hostinger among them) apply this file to it as well. So everything here
+# is either harmless there or limited to darshansaathi.com by the host
+# check below; otherwise /admin would redirect to itself and the admin's
+# sign-in would never load. Every address on the website goes to Laravel
+# through the rules below, so no DirectoryIndex or ErrorDocument is set.
 Options -Indexes
-
-# Any address that is not found shows the site's own 404 page.
-ErrorDocument 404 /laravel/public/index.php
 
 <IfModule mod_deflate.c>
     AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json application/xml image/svg+xml
 </IfModule>
 
 RewriteEngine On
+
+# Any other host (temple.darshansaathi.com reading this file from its
+# parent folder): none of these rules are for it.
+RewriteCond %{HTTP_HOST} !^(www\.)?darshansaathi\.com$ [NC]
+RewriteRule ^ - [L]
+
+# A request this file already handed to laravel/public: done (on servers
+# that apply this file there too, it would otherwise go round again).
+RewriteCond %{ENV:REDIRECT_STATUS} .
+RewriteRule ^ - [L]
 
 # One address per page: www.darshansaathi.com moves to darshansaathi.com,
 # so search engines do not split a temple's ranking between two copies.
